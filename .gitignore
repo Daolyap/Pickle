@@ -13,3 +13,6 @@ TestResults/
 *.binlog
 __pycache__/
 .venv/
+
+# Agent worktrees (local only)
+.claude/worktrees/

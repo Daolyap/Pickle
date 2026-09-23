@@ -232,7 +232,7 @@ public sealed class SettingsPanel : PanelWindow
             Schemes = Schemes,
         };
         _content.Add(help, _bindings);
-        _bindings.Accepted += (_, row) => EditBinding(row.Chord);
+        _bindings.ItemAccepted += (_, row) => EditBinding(row.Chord);
         _bindings.Filter.KeyDown += (_, key) =>
         {
             if (key == Key.F2 || key == Key.InsertChar)
@@ -285,7 +285,7 @@ public sealed class SettingsPanel : PanelWindow
 
         SetStatus($"✓ {normalized} → {action}", false);
         _bindings?.SetItems(BindingRows());
-        _bindings?.Select(_bindings.Visible.FirstOrDefault(r => r.Chord == normalized) ?? default!);
+        _bindings?.Select(_bindings.VisibleItems.FirstOrDefault(r => r.Chord == normalized) ?? default!);
     }
 
     internal void RemoveBinding(string chord) => SetBinding(chord, "none");

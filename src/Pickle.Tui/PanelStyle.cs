@@ -127,7 +127,7 @@ public static class PanelStyle
             var scheme = view switch
             {
                 ListView or TableView or TreeView => schemes.List,
-                TextField or TextView => schemes.Input,
+                TextField => schemes.Input,
                 Dialog => schemes.Dialog,
                 _ => null,
             };

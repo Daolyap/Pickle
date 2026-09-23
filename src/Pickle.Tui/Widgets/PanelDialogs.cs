@@ -32,7 +32,7 @@ public static class PanelDialogs
         var list = new FilterableList<T>(text) { Hint = hint, Schemes = schemes, Height = Dim.Fill(1) };
         var picked = default(T);
         var done = false;
-        list.Accepted += (_, item) =>
+        list.ItemAccepted += (_, item) =>
         {
             picked = item;
             done = true;

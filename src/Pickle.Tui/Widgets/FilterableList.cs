@@ -108,12 +108,12 @@ public class FilterableList<T> : View, IThemedWidget
 
     public IReadOnlyCollection<T> Marked => _marked;
 
-    public IReadOnlyList<T> Visible => [.. _visible.Select(v => v.Item)];
+    public IReadOnlyList<T> VisibleItems => [.. _visible.Select(v => v.Item)];
 
     public int TotalCount => _all.Count;
 
     /// <summary>Raised on Enter (or double-click) with the selected item.</summary>
-    public event EventHandler<T>? Accepted;
+    public event EventHandler<T>? ItemAccepted;
 
     public event EventHandler<T?>? SelectionChanged;
 
@@ -288,7 +288,7 @@ public class FilterableList<T> : View, IThemedWidget
     {
         if (Selected is { } item)
         {
-            Accepted?.Invoke(this, item);
+            ItemAccepted?.Invoke(this, item);
         }
     }
 

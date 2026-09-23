@@ -49,7 +49,7 @@ public sealed class PalettePanel : PanelWindow
         _description = new Label { X = 1, Y = Pos.AnchorEnd(1), Width = Dim.Fill(1), Height = 1 };
         Body.Add(_list, _description);
 
-        _list.Accepted += (_, item) => Run(item);
+        _list.ItemAccepted += (_, item) => Run(item);
         _list.SelectionChanged += (_, item) => _description.Text = item is null ? string.Empty : Describe(item);
         AddHint(Key.Enter, "Run", () =>
         {

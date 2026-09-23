@@ -248,7 +248,10 @@ public class PanelWindow : Window
         {
             if (_started && App is { } app)
             {
-                _timers.Add(app.AddTimeout(interval, Tick));
+                if (app.AddTimeout(interval, Tick) is { } timer)
+                {
+                    _timers.Add(timer);
+                }
             }
             else
             {
@@ -319,7 +322,10 @@ public class PanelWindow : Window
             _pendingUi.Clear();
             foreach (var (interval, tick) in _pendingTimers)
             {
-                _timers.Add(app.AddTimeout(interval, tick));
+                if (app.AddTimeout(interval, tick) is { } timer)
+                {
+                    _timers.Add(timer);
+                }
             }
 
             _pendingTimers.Clear();

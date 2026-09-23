@@ -54,7 +54,7 @@ public sealed class PluginListPanel : PanelWindow
         _preview = new PreviewPane("Details") { X = Pos.Right(_list), Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), Schemes = Schemes };
         Body.Add(_list, _preview);
 
-        _list.Accepted += (_, item) =>
+        _list.ItemAccepted += (_, item) =>
         {
             if (_spec.Actions.Count > 0)
             {

@@ -52,7 +52,7 @@ public sealed class FilesPanel : PanelWindow
         _preview = new PreviewPane() { X = Pos.Right(_list), Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), Schemes = Schemes };
         Body.Add(_list, _preview);
 
-        _list.Accepted += (_, _) => Accept();
+        _list.ItemAccepted += (_, _) => Accept();
         _list.SelectionChanged += (_, entry) => UpdatePreview(entry);
         _list.Filter.KeyDown += (_, key) =>
         {

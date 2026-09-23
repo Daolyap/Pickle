@@ -24,6 +24,7 @@
     "brightWhite": "#FFFFFF"
   },
   "syntax": {
+    "default": "default",
     "command": "#B5E36B",
     "unknownCommand": "#FF7A72",
     "parameter": "#7D8C75",
@@ -68,11 +69,12 @@
     "continuationPrompt": "∙ ",
     "transientTemplate": "{promptChar} ",
     "left": [
-      { "type": "admin", "foreground": "#E0605A", "template": "{value} " },
+      { "type": "admin", "foreground": "#E0605A", "options": { "symbol": "ADMIN" } },
+      { "type": "venv", "foreground": "#E5C07B", "template": "({value})" },
       { "type": "cwd", "foreground": "#82C4FF", "options": { "maxDepth": "3" } },
-      { "type": "git", "foreground": "#8FC34A", "template": " {icon} {value}", "icon": "" },
-      { "type": "duration", "foreground": "#E5C07B", "template": " took {value}" },
-      { "type": "jobs", "foreground": "#56B6C2", "template": " ⚙ {value}" }
+      { "type": "git", "foreground": "#8FC34A", "template": "{icon} {value}", "icon": "\uE0A0" },
+      { "type": "duration", "foreground": "#E5C07B", "template": "took {value}" },
+      { "type": "jobs", "foreground": "#56B6C2", "template": "⚙ {value}" }
     ],
     "right": [
       { "type": "status", "foreground": "#E0605A" },

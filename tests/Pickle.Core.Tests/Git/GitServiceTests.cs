@@ -125,7 +125,7 @@ public class GitServiceTests
         Assert.Equal("wt", status.Branch);
         Assert.Null(status.Operation);
 
-        Assert.False(repo.Git.RunAsync(worktree, ["merge", "other"]).GetAwaiter().GetResult().Success);
+        Assert.False((await repo.Git.RunAsync(worktree, ["merge", "other"])).Success);
         Assert.Equal("merge", (await repo.Git.GetStatusAsync(worktree))!.Operation);
         Assert.Null(repo.Status().Operation);
     }

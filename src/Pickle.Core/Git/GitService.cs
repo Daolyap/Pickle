@@ -379,16 +379,17 @@ public sealed class GitService(IPickleLogger log) : IGitService
         TimeSpan timeout,
         CancellationToken cancellationToken,
         string? stdin = null,
-        bool literalPathspecs = true)
+        bool? literalPathspecs = null)
     {
         if (GitPath is not { } git)
         {
             return Task.FromResult(new GitProcessResult(-1, string.Empty, NotFoundMessage, false));
         }
 
-        // quotepath=off: UTF-8 paths verbatim. literal-pathspecs: file names like ":x" or "a[1]" are never magic/globs.
+        // quotepath=off: UTF-8 paths verbatim. literal-pathspecs (only where paths follow "--"; it breaks
+        // `stash push -u`): file names like ":x" or "a[1]" are never pathspec magic or globs.
         List<string> argv = ["-c", "core.quotepath=off", "-c", "color.ui=false"];
-        if (literalPathspecs)
+        if (literalPathspecs ?? args.Contains("--"))
         {
             argv.Add("--literal-pathspecs");
         }

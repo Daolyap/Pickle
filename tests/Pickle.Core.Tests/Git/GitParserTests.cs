@@ -115,7 +115,8 @@ public class GitParserTests
     [Fact]
     public void LogWithoutGraphHasEmptyGraph()
     {
-        var commits = GitOutputParsers.ParseLog("\x1fsha\x1fs\x1fA\x1f2024-01-01T00:00:00Z\x1fsubject\x1f\x1e\n");
+        const char f = '\x1f';
+        var commits = GitOutputParsers.ParseLog($"{f}sha{f}s{f}A{f}2024-01-01T00:00:00Z{f}subject{f}\x1e\n");
         Assert.Equal(string.Empty, Assert.Single(commits).Graph);
     }
 

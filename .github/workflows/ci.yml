@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  CI: true
+
+jobs:
+  build-test:
+    name: Build & test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Pickle.slnx
+
+      - name: Build (warnings are errors)
+        run: dotnet build Pickle.slnx --no-restore
+
+      - name: Format check
+        if: runner.os == 'Linux'
+        run: dotnet format Pickle.slnx --no-restore --verify-no-changes
+
+      - name: Unit tests
+        run: dotnet test --solution Pickle.slnx --no-build
+
+      - name: End-to-end tests (real pty)
+        if: runner.os == 'Linux'
+        run: |
+          pip install --quiet pyte
+          python3 tests/Pickle.E2E/run_e2e.py
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = 'src/Pickle/bin/Debug/net10.0/pickle.exe'
+          & $exe --version
+          if ($LASTEXITCODE -ne 0) { throw "pickle --version failed" }
+          & $exe -c 'Get-Process | Select-Object -First 1 Name, Id; pk version'
+          if ($LASTEXITCODE -ne 0) { throw "pickle -c failed" }
+
+  package-windows:
+    name: Package (win-x64 single file + MSI)
+    needs: build-test
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish single-file exe
+        shell: pwsh
+        run: ./packaging/publish.ps1 -Rid win-x64 -Output artifacts/publish/win-x64
+
+      - name: Smoke test published exe
+        shell: pwsh
+        run: |
+          $exe = 'artifacts/publish/win-x64/pickle.exe'
+          & $exe -c 'Get-Date -Format yyyy; (Get-Command Get-FileHash).Source'
+          if ($LASTEXITCODE -ne 0) { throw "published pickle.exe failed" }
+
+      - name: Build MSI
+        shell: pwsh
+        run: ./packaging/wix/build-msi.ps1 -Rid win-x64 -PublishDir artifacts/publish/win-x64 -Output artifacts/msi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pickle-win-x64
+          path: |
+            artifacts/publish/win-x64/pickle.exe
+            artifacts/msi/*.msi
+          if-no-files-found: error

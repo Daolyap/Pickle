@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pickle MSI (WiX Toolset 5.0.2, MS-RL). Built by packaging/wix/build-msi.ps1.
+  Installs pickle.exe per-machine, adds it to PATH, registers a Windows Terminal profile fragment for all users
+  (C:\ProgramData\Microsoft\Windows Terminal\Fragments\Pickle) and a Start menu shortcut.
+  Do not change UpgradeCode: it ties every version together for major upgrades.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Pickle"
+           Manufacturer="Pickle contributors"
+           Version="$(var.Version)"
+           UpgradeCode="B43ECF48-F9E2-414A-9877-388859B0AC27"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="Pickle - a PowerShell 7 shell with superpowers" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/daolyap/milkshell" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/daolyap/milkshell/issues" />
+    <Property Id="ARPCOMMENTS" Value="A PowerShell 7 shell with superpowers" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Pickle">
+        <Component Id="PickleExe">
+          <File Id="PickleExeFile" Source="$(var.PublishDir)\pickle.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="PickleOnPath" Guid="85050476-7241-4273-9831-481EA44095FF">
+          <Environment Id="PickleOnPathEnv" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+          <RegistryValue Root="HKLM" Key="Software\Pickle" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="WtMicrosoft" Name="Microsoft">
+        <Directory Id="WtRoot" Name="Windows Terminal">
+          <Directory Id="WtFragments" Name="Fragments">
+            <Directory Id="WtPickleFragment" Name="Pickle">
+              <Component Id="TerminalFragment" Guid="865E260F-AD67-4A22-8B7C-6D1E64E09D80">
+                <File Id="TerminalFragmentFile" Source="$(var.FragmentFile)" Name="pickle.json" KeyPath="yes" />
+              </Component>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="0747B76E-BF64-4130-9B53-C826A107C024">
+        <Shortcut Id="PickleStartMenu"
+                  Name="Pickle"
+                  Description="A PowerShell 7 shell with superpowers"
+                  Target="[INSTALLFOLDER]pickle.exe" />
+        <RegistryValue Root="HKLM" Key="Software\Pickle" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="Pickle" Level="1">
+      <ComponentRef Id="PickleExe" />
+      <ComponentRef Id="PickleOnPath" />
+      <ComponentRef Id="TerminalFragment" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+  </Package>
+</Wix>

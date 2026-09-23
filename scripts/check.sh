@@ -51,7 +51,8 @@ fi
 step "tests"
 if [ -n "$filter" ]; then
   # xunit.v3 on Microsoft.Testing.Platform: wildcard match on Namespace.Class.Method.
-  dotnet test --solution Pickle.slnx --no-build -- --filter-method "*${filter}*"
+  # Exit code 8 = "zero tests ran" in projects the filter did not match.
+  dotnet test --solution Pickle.slnx --no-build -- --filter-method "*${filter}*" --ignore-exit-code 8
 else
   dotnet test --solution Pickle.slnx --no-build
 fi

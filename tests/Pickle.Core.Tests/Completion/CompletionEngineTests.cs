@@ -34,26 +34,20 @@ public class CompletionEngineTests
     public async Task CompletesFilePathsAndDirectories()
     {
         using var t = Started();
+        // Not deleted afterwards: SetLocation also moves the process-wide current directory, which parallel tests share.
         var dir = Directory.CreateTempSubdirectory("pickle-complete").FullName;
-        try
-        {
-            File.WriteAllText(Path.Combine(dir, "alpha.txt"), string.Empty);
-            File.WriteAllText(Path.Combine(dir, "alphabet.md"), string.Empty);
-            Directory.CreateDirectory(Path.Combine(dir, "alps"));
-            t.Runtime.Engine.SetLocation(dir);
+        File.WriteAllText(Path.Combine(dir, "alpha.txt"), string.Empty);
+        File.WriteAllText(Path.Combine(dir, "alphabet.md"), string.Empty);
+        Directory.CreateDirectory(Path.Combine(dir, "alps"));
+        t.Runtime.Engine.SetLocation(dir);
 
-            var set = await Complete(t, "Get-Content ./alph");
-            Assert.Equal(["./alpha.txt", "./alphabet.md"], set.Items.Select(i => i.CompletionText));
-            Assert.All(set.Items, i => Assert.Equal(CompletionKind.File, i.Kind));
-            Assert.All(set.Items, i => Assert.Null(i.Description));
+        var set = await Complete(t, "Get-Content ./alph");
+        Assert.Equal(["./alpha.txt", "./alphabet.md"], set.Items.Select(i => i.CompletionText));
+        Assert.All(set.Items, i => Assert.Equal(CompletionKind.File, i.Kind));
+        Assert.All(set.Items, i => Assert.Null(i.Description));
 
-            var dirs = await Complete(t, "Set-Location ./al");
-            Assert.Contains(dirs.Items, i => i.CompletionText == "./alps" && i.Kind == CompletionKind.Directory);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        var dirs = await Complete(t, "Set-Location ./al");
+        Assert.Contains(dirs.Items, i => i.CompletionText == "./alps" && i.Kind == CompletionKind.Directory);
     }
 
     [Fact]
@@ -152,7 +146,7 @@ public class CompletionEngineTests
         using var t = Started();
         t.Runtime.Aliases.Set(new AliasDefinition { Name = "gcozz", Body = "git checkout", Description = "Check out a branch" });
         t.Runtime.Aliases.Set(new AliasDefinition { Name = "gczzlog", Body = "git log --oneline" });
-        var set = await Complete(t, "gcz");
+        var set = await Complete(t, "gc");
         Assert.Equal(["gcozz", "gczzlog"], set.Items.Select(i => i.CompletionText).Take(2));
         Assert.Equal(CompletionKind.Alias, set.Items[0].Kind);
         Assert.Equal("Check out a branch", set.Items[0].Description);

@@ -28,6 +28,16 @@ public class HistoryCommandTests
     }
 
     [Fact]
+    public void ListAcceptsQuotedDashN()
+    {
+        using var t = Seeded();
+        t.Runtime.Engine.ExecuteInteractive("pk history list '-n' 1");
+        var screen = t.Terminal.GetScreenText();
+        Assert.Contains("git status", screen, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet build", screen, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SearchIsFuzzy()
     {
         using var t = Seeded();
@@ -38,10 +48,10 @@ public class HistoryCommandTests
     }
 
     [Fact]
-    public void StatsReturnsAnObject()
+    public async Task StatsReturnsAnObject()
     {
         using var t = Seeded();
-        var result = t.Runtime.Shell.InvokeAsync("pk history stats").GetAwaiter().GetResult();
+        var result = await t.Runtime.Shell.InvokeAsync("pk history stats");
         var stats = Assert.Single(result.Output);
         Assert.Equal(3, (int)stats.Properties["Entries"].Value);
         Assert.Equal(66.7, (double)stats.Properties["SuccessRate"].Value);
@@ -49,27 +59,27 @@ public class HistoryCommandTests
     }
 
     [Fact]
-    public void ClearRequiresForceWhenNotInteractive()
+    public async Task ClearRequiresForceWhenNotInteractive()
     {
         using var t = Seeded();
         t.Terminal.IsInteractive = false;
-        t.Runtime.Shell.InvokeAsync("pk history clear").GetAwaiter().GetResult();
+        await t.Runtime.Shell.InvokeAsync("pk history clear");
         Assert.Equal(3, t.Runtime.History.Entries.Count);
 
-        t.Runtime.Shell.InvokeAsync("pk history clear --force").GetAwaiter().GetResult();
+        await t.Runtime.Shell.InvokeAsync("pk history clear --force");
         Assert.Empty(t.Runtime.History.Entries);
     }
 
     [Fact]
-    public void UnknownSubcommandFails()
+    public async Task UnknownSubcommandFails()
     {
         using var t = Seeded();
-        var result = t.Runtime.Shell.InvokeAsync("pk history frobnicate").GetAwaiter().GetResult();
+        var result = await t.Runtime.Shell.InvokeAsync("pk history frobnicate");
         Assert.True(result.HadErrors);
     }
 
     [Fact]
-    public void GetPickleHistoryFiltersAndRanks()
+    public async Task GetPickleHistoryFiltersAndRanks()
     {
         using var t = Seeded();
         Assert.Equal(["git clone https://example.com/r.git", "dotnet build", "git status"], t.Run("(Get-PickleHistory).CommandLine"));
@@ -77,7 +87,7 @@ public class HistoryCommandTests
         Assert.Equal(["git status", "git clone https://example.com/r.git"], t.Run("(Get-PickleHistory git).CommandLine"));
         Assert.Equal(["dotnet build"], t.Run("(Get-PickleHistory -Directory '/work/app').CommandLine"));
         Assert.Equal(["git status"], t.Run("(Get-PickleHistory -Query stat -Count 1).CommandLine"));
-        Assert.IsType<HistoryEntry>(t.Runtime.Shell.InvokeAsync("Get-PickleHistory -Count 1").GetAwaiter().GetResult().Output[0].BaseObject);
+        Assert.IsType<HistoryEntry>((await t.Runtime.Shell.InvokeAsync("Get-PickleHistory -Count 1")).Output[0].BaseObject);
     }
 
     private static TestPickle Seeded()

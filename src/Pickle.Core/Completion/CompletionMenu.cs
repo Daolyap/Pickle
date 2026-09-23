@@ -121,6 +121,12 @@ public sealed class CompletionMenu : IEditorOverlay
         }
 
         var word = text[start..cursor];
+        if (word.Length == 0 && _originalWord.Length > 0)
+        {
+            Close(buffer);
+            return;
+        }
+
         var quoted = _originalWord.Length > 0 && _originalWord[0] is '\'' or '"';
         if (!quoted && word.AsSpan().IndexOfAny(' ', '\t', '\n') >= 0)
         {

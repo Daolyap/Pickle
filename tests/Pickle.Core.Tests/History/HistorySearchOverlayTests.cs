@@ -172,7 +172,7 @@ public class HistorySearchOverlayTests
     }
 
     [Fact]
-    public void HistorySearchActionOpensTheOverlayWithTheBufferText()
+    public async Task HistorySearchActionOpensTheOverlayWithTheBufferText()
     {
         using var t = TestPickle.Create();
         t.Runtime.InitializeComponents();
@@ -181,7 +181,7 @@ public class HistorySearchOverlayTests
         var action = t.Runtime.KeyBindingRegistry.GetAction(EditorActionNames.HistorySearch);
         Assert.NotNull(action);
         var buffer = new FakeEditorBuffer("hel");
-        action.Handler(buffer, CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        await action.Handler(buffer, CancellationToken.None);
 
         var overlay = Assert.IsType<HistorySearchOverlay>(buffer.Overlay);
         Assert.Equal("hel", overlay.Query);

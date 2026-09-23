@@ -16,7 +16,7 @@ public sealed record HistoryStats(
     string File,
     long FileBytes);
 
-/// <summary><c>pk history [list [-n N]] | search &lt;query&gt; [-n N] | clear [--force] | stats</c>.</summary>
+/// <summary><c>pk history [list [N | -n N]] | search &lt;query&gt; [-n N] | clear [--force] | stats</c>.</summary>
 internal sealed class HistoryCommand(IHistoryStore store, PickleRuntime runtime) : IPickleCommand
 {
     private const int DefaultCount = 20;
@@ -25,12 +25,25 @@ internal sealed class HistoryCommand(IHistoryStore store, PickleRuntime runtime)
 
     public string Description => "List, search, clear or summarize command history";
 
-    public string Usage => "pk history [list [-n N]] | search <query> [-n N] | clear [--force] | stats";
+    public string Usage => "pk history [list [N | -n N]] | search <query> [-n N] | clear [--force] | stats";
 
     public ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         var sub = args.Count == 0 ? "list" : args[0].ToLowerInvariant();
         var rest = args.Skip(1).ToList();
+
+        // `pk history 50` / `pk history list 50`: a bare count, since `-n` is taken by pk's own -Name when unquoted.
+        if (IsCount(sub))
+        {
+            rest.Insert(0, sub);
+            sub = "list";
+        }
+
+        if (sub is "list" or "ls" && rest.Count == 1 && IsCount(rest[0]))
+        {
+            rest.Insert(0, "--count");
+        }
+
         if (!TryTakeCount(rest, out var count))
         {
             context.WriteError("-n expects a positive number. Usage: " + Usage);
@@ -150,6 +163,9 @@ internal sealed class HistoryCommand(IHistoryStore store, PickleRuntime runtime)
 
         return true;
     }
+
+    private static bool IsCount(string text) =>
+        int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var n) && n > 0;
 
     private static string FirstWord(string commandLine)
     {

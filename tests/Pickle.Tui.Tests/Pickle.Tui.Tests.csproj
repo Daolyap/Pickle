@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pickle.Tui\Pickle.Tui.csproj" />
+  </ItemGroup>
+</Project>

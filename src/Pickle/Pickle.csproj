@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>pickle</AssemblyName>
+    <RootNamespace>Pickle</RootNamespace>
+    <Description>Pickle — a PowerShell 7 shell with superpowers.</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <!-- Release publishing: self-contained single file (see scripts/publish.sh). NativeAOT is unsupported by the PowerShell SDK. -->
+  <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Core\Pickle.Core.csproj" />
+    <ProjectReference Include="..\Pickle.Tui\Pickle.Tui.csproj" />
+    <ProjectReference Include="..\Pickle.Windows\Pickle.Windows.csproj" />
+    <ProjectReference Include="..\Pickle.Wizards\Pickle.Wizards.csproj" />
+  </ItemGroup>
+</Project>

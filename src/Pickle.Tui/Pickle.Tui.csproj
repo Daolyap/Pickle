@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Full-screen Terminal.Gui v2 panels for Pickle: panel host, command palette, and built-in panels.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+    <ProjectReference Include="..\Pickle.Wizards\Pickle.Wizards.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Terminal.Gui" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickle.Tui.Tests" />
+  </ItemGroup>
+</Project>

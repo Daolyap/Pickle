@@ -1,0 +1,15 @@
+bin/
+obj/
+artifacts/
+publish/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+TestResults/
+*.received.*
+*.trx
+*.binlog
+__pycache__/
+.venv/

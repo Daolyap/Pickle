@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Interactive command wizards: schema, command builder/parser engine, and built-in wizard definitions.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Definitions\*.json" LogicalName="Pickle.Wizards.Definitions.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickle.Wizards.Tests" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Pickle shell engine: PowerShell hosting, line editor, prompt, completion, history, aliases, translation, config, plugins, sync, git.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.PowerShell.SDK" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- PowerShell modules shipped inside the binary (Pickle, Pickle.Translate, PSReadLine shim). -->
+    <EmbeddedResource Include="Modules\**\*.psm1;Modules\**\*.psd1;Modules\**\*.ps1" LogicalName="Pickle.Modules.%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- Built-in themes and JSON schemas. -->
+    <EmbeddedResource Include="..\..\themes\*.json" LogicalName="Pickle.Themes.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Config\Schemas\*.json" LogicalName="Pickle.Schemas.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickle.Core.Tests" />
+    <InternalsVisibleTo Include="Pickle.Testing" />
+  </ItemGroup>
+</Project>

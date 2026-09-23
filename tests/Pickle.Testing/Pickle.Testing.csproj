@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Shared test doubles: VirtualTerminal (ANSI screen model), fake services, in-memory stores.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Pickle.Core\Pickle.Core.csproj" />
+  </ItemGroup>
+</Project>

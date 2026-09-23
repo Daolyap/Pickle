@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Windows integrations for Pickle: winget, Windows Update (WUA COM), Task Scheduler, elevation broker, Windows Terminal fragment.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="TaskScheduler" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickle.Windows.Tests" />
+  </ItemGroup>
+</Project>

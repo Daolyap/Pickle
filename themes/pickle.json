@@ -1,0 +1,82 @@
+{
+  "name": "pickle",
+  "description": "The default Pickle theme: brined greens on a deep jar-glass background.",
+  "terminal": {
+    "background": "#1B1F1A",
+    "foreground": "#DDE5D6",
+    "cursorColor": "#A6E22E",
+    "selectionBackground": "#3A4A32",
+    "black": "#1B1F1A",
+    "red": "#E0605A",
+    "green": "#8FC34A",
+    "yellow": "#E5C07B",
+    "blue": "#61AFEF",
+    "purple": "#C678DD",
+    "cyan": "#56B6C2",
+    "white": "#DDE5D6",
+    "brightBlack": "#5C6A55",
+    "brightRed": "#FF7A72",
+    "brightGreen": "#B5E36B",
+    "brightYellow": "#F2D68F",
+    "brightBlue": "#82C4FF",
+    "brightPurple": "#DA9BEF",
+    "brightCyan": "#7FD4DE",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "command": "#B5E36B",
+    "unknownCommand": "#FF7A72",
+    "parameter": "#7D8C75",
+    "string": "#E5C07B",
+    "number": "#DA9BEF",
+    "variable": "#7FD4DE",
+    "operator": "#7D8C75",
+    "keyword": "#C678DD",
+    "comment": "#5C6A55",
+    "type": "#82C4FF",
+    "member": "#DDE5D6",
+    "error": "#FF7A72",
+    "suggestion": "#5C6A55",
+    "selectionBackground": "#3A4A32",
+    "translated": "#5C6A55"
+  },
+  "ui": {
+    "accent": "#8FC34A",
+    "muted": "#5C6A55",
+    "success": "#8FC34A",
+    "warning": "#E5C07B",
+    "error": "#E0605A",
+    "info": "#61AFEF",
+    "panelBackground": "#1B1F1A",
+    "panelForeground": "#DDE5D6",
+    "panelBorder": "#3A4A32",
+    "highlightBackground": "#3A4A32",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#232922",
+    "menuForeground": "#DDE5D6",
+    "menuSelectedBackground": "#8FC34A",
+    "menuSelectedForeground": "#1B1F1A",
+    "menuDescription": "#7D8C75",
+    "matchHighlight": "#E5C07B"
+  },
+  "prompt": {
+    "separator": "plain",
+    "newlineBeforeInput": false,
+    "promptChar": "❯",
+    "promptCharColor": "#8FC34A",
+    "promptCharErrorColor": "#E0605A",
+    "continuationPrompt": "∙ ",
+    "transientTemplate": "{promptChar} ",
+    "left": [
+      { "type": "admin", "foreground": "#E0605A", "template": "{value} " },
+      { "type": "cwd", "foreground": "#82C4FF", "options": { "maxDepth": "3" } },
+      { "type": "git", "foreground": "#8FC34A", "template": " {icon} {value}", "icon": "" },
+      { "type": "duration", "foreground": "#E5C07B", "template": " took {value}" },
+      { "type": "jobs", "foreground": "#56B6C2", "template": " ⚙ {value}" }
+    ],
+    "right": [
+      { "type": "status", "foreground": "#E0605A" },
+      { "type": "time", "foreground": "#5C6A55", "options": { "format": "HH:mm" } }
+    ]
+  }
+}

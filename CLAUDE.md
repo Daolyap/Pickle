@@ -99,7 +99,9 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
 ## Gotchas
 
 - Single-file publish: PowerShell's built-in modules live under `runtimes/<os>/lib/net10.0/Modules` and are added to
-  `PSModulePath` explicitly (`ShellEngine.FindBundledModulesDirectory`). NativeAOT is not possible (PowerShell uses
+  `PSModulePath` explicitly (`ShellEngine.FindBundledModulesDirectories`). PSResourceGet, ThreadJob and Archive are
+  not in the SDK: `src/Pickle/BundledModules.targets` downloads them (pinned SHA-256) into `<output>/Modules/`;
+  cache in `artifacts/module-cache`, `-p:PickleBundleModules=false` for offline builds. NativeAOT is not possible (PowerShell uses
   reflection/dynamic code).
 - Terminal.Gui v2 must use the **instance** model (`Application.Create()`); never touch the static
   `Application.Init/Run` (it throws once the instance model was used in-process).

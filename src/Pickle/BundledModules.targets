@@ -1,0 +1,58 @@
+<Project>
+  <!--
+    PowerShell modules that pwsh ships but Microsoft.PowerShell.SDK does not: PSResourceGet (Install-PSResource),
+    ThreadJob (Start-ThreadJob) and Archive (Compress/Expand-Archive). They are downloaded once from the PowerShell
+    Gallery, verified against pinned SHA-256 hashes, and copied to <output>/Modules/<Name>/, which
+    ShellEngine adds to PSModulePath (and which the single-file bundle embeds).
+    To update a module: change Version, delete artifacts/module-cache, rebuild, and pin the new hash printed by
+    `sha256sum artifacts/module-cache/*.nupkg`.
+    Set PickleBundleModules=false to skip (offline builds).
+  -->
+  <PropertyGroup>
+    <PickleBundleModules Condition="'$(PickleBundleModules)' == ''">true</PickleBundleModules>
+    <PickleModuleCache>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'artifacts', 'module-cache'))</PickleModuleCache>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PickleBundledModule Include="Microsoft.PowerShell.PSResourceGet" Version="1.2.0" Sha256="90E4C97B2F5ECF8C7D4730CA3B7028739E2B7665DED27249390483F73BE71944" />
+    <PickleBundledModule Include="Microsoft.PowerShell.ThreadJob" Version="2.2.0" Sha256="1678C5A5A5CF8AE65E127ECC77DFB7241513A61A1A398A4F79F44F12767108BC" />
+    <PickleBundledModule Include="Microsoft.PowerShell.Archive" Version="1.2.6" Sha256="FC7E304BFFCC14EA95828EEDF52C5992432C6233FEF36416A6F5FB4628D13C47" />
+  </ItemGroup>
+
+  <Target Name="PickleStageBundledModules" BeforeTargets="AssignTargetPaths" Condition="'$(PickleBundleModules)' == 'true'">
+    <PropertyGroup>
+      <!-- Computed here: IntermediateOutputPath isn't set yet when this file is imported. -->
+      <PickleModuleStaging>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(IntermediateOutputPath)', 'bundled-modules'))</PickleModuleStaging>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PickleModule Include="@(PickleBundledModule)">
+        <Nupkg>$(PickleModuleCache)%(Identity).%(Version).nupkg</Nupkg>
+        <Staging>$(PickleModuleStaging)%(Identity)</Staging>
+        <Marker>$(PickleModuleStaging)%(Identity)\.pickle-%(Version)</Marker>
+      </_PickleModule>
+    </ItemGroup>
+
+    <MakeDir Directories="$(PickleModuleCache)" />
+    <DownloadFile SourceUrl="https://www.powershellgallery.com/api/v2/package/%(_PickleModule.Identity)/%(_PickleModule.Version)"
+                  DestinationFolder="$(PickleModuleCache)"
+                  DestinationFileName="%(_PickleModule.Identity).%(_PickleModule.Version).nupkg"
+                  Retries="3"
+                  Condition="!Exists('%(_PickleModule.Nupkg)')" />
+    <VerifyFileHash File="%(_PickleModule.Nupkg)" Hash="%(_PickleModule.Sha256)" Algorithm="SHA256" />
+
+    <RemoveDir Directories="%(_PickleModule.Staging)" Condition="!Exists('%(_PickleModule.Marker)')" />
+    <Unzip SourceFiles="%(_PickleModule.Nupkg)" DestinationFolder="%(_PickleModule.Staging)"
+           Exclude="_rels/**;package/**;[Content_Types].xml;*.nuspec;.signature.p7s;*.pdb"
+           Condition="!Exists('%(_PickleModule.Marker)')" />
+    <Touch Files="%(_PickleModule.Marker)" AlwaysCreate="true" Condition="!Exists('%(_PickleModule.Marker)')" />
+
+    <ItemGroup>
+      <_PickleModuleFile Include="$(PickleModuleStaging)**\*" Exclude="$(PickleModuleStaging)**\.pickle-*" />
+      <!-- Qualified metadata so this doesn't batch over the project's other None items. -->
+      <None Include="@(_PickleModuleFile)"
+            Link="Modules\%(_PickleModuleFile.RecursiveDir)%(_PickleModuleFile.Filename)%(_PickleModuleFile.Extension)"
+            CopyToOutputDirectory="PreserveNewest"
+            CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

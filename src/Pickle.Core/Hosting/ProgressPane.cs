@@ -20,6 +20,12 @@ internal sealed class ProgressPane
 
     public void Update(long sourceId, ProgressRecord record)
     {
+        // A bar redrawn with \r and erase sequences is garbage in a file or pipe (pwsh skips it too).
+        if (!_runtime.Terminal.SupportsAnsi)
+        {
+            return;
+        }
+
         var key = (sourceId, record.ActivityId);
         if (record.RecordType == ProgressRecordType.Completed)
         {

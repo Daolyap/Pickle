@@ -418,10 +418,13 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         // The SDK's built-in modules (Utility, Management, Security...) live under runtimes/<os>/lib/<tfm>/Modules.
         // PowerShell finds them next to System.Management.Automation.dll, but not in a single-file bundle where
         // the assembly has no location, so add the directory explicitly.
-        var bundled = FindBundledModulesDirectory();
-        if (bundled is not null && !parts.Contains(bundled, StringComparer.OrdinalIgnoreCase))
+        var insertAt = 1;
+        foreach (var bundled in FindBundledModulesDirectories())
         {
-            parts.Insert(1, bundled);
+            if (!parts.Contains(bundled, StringComparer.OrdinalIgnoreCase))
+            {
+                parts.Insert(insertAt++, bundled);
+            }
         }
 
         // If pwsh 7 is installed, make its bundled modules (PSResourceGet, ThreadJob, Archive...) discoverable too.
@@ -434,22 +437,15 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         Environment.SetEnvironmentVariable("PSModulePath", string.Join(Path.PathSeparator, parts));
     }
 
-    private static string? FindBundledModulesDirectory()
+    /// <summary>SDK built-ins (runtimes/&lt;os&gt;/…/Modules) and modules bundled by BundledModules.targets (Modules/).</summary>
+    private static IEnumerable<string> FindBundledModulesDirectories()
     {
         var os = OperatingSystem.IsWindows() ? "win" : "unix";
-        foreach (var candidate in new[]
+        return new[]
         {
             Path.Combine(AppContext.BaseDirectory, "runtimes", os, "lib", "net10.0", "Modules"),
             Path.Combine(AppContext.BaseDirectory, "Modules"),
-        })
-        {
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
+        }.Where(Directory.Exists);
     }
 
     private static string? FindPwshModulesDirectory()

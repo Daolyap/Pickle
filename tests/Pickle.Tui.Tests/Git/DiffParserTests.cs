@@ -83,7 +83,7 @@ public class DiffParserTests
         var file = DiffParser.Parse(TwoHunks)[0];
 
         var unstageRemoval = DiffParser.BuildLinePatch(file, file.Hunks[0], new HashSet<int> { 1 }, reverse: true);
-        Assert.EndsWith("@@ -1,4 +1,4 @@ header\n one\n-two\n TWO\n three\n four\n", unstageRemoval, StringComparison.Ordinal);
+        Assert.EndsWith("@@ -1,5 +1,4 @@ header\n one\n-two\n TWO\n three\n four\n", unstageRemoval, StringComparison.Ordinal);
 
         var unstageAdd = DiffParser.BuildLinePatch(file, file.Hunks[0], new HashSet<int> { 2 }, reverse: true);
         Assert.EndsWith("@@ -1,3 +1,4 @@ header\n one\n+TWO\n three\n four\n", unstageAdd, StringComparison.Ordinal);

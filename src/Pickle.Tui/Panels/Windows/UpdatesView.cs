@@ -1,19 +1,10 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using Pickle.Abstractions.Services;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Panels.Windows;
-
-/// <summary>A selectable row in the updates list.</summary>
-internal sealed class UpdateRow(WindowsUpdateInfo update)
-{
-    public WindowsUpdateInfo Update { get; } = update;
-
-    public int Group { get; } = UpdateGrouping.Of(update);
-
-    public bool Selected { get; set; } = UpdateGrouping.Of(update) <= UpdateGrouping.Other;
-}
 
 /// <summary>Security/critical first, then other, drivers and optional (same order as <c>pk update check</c>).</summary>
 internal static class UpdateGrouping
@@ -47,23 +38,32 @@ internal static class UpdateGrouping
         Optional => "Optional",
         _ => "Other",
     };
+
+    public static string Short(int group) => group switch
+    {
+        SecurityCritical => "Security",
+        Drivers => "Driver",
+        Optional => "Optional",
+        _ => "Other",
+    };
 }
 
 /// <summary>
-/// Available Windows updates: status header, Check (background search), a checkbox list grouped by kind, a details
-/// pane and Install selected. Used by the updates panel and the winget panel's "Windows Updates" tab.
+/// Available Windows updates: status header, Check (background search with progress), a ticked list grouped by kind
+/// (same selection keys and mouse gestures as the winget lists), a details pane, Install selected and Install KB….
+/// Used by the updates panel and the winget panel's "Windows Updates" tab.
 /// </summary>
-public sealed class UpdatesView : View
+public sealed partial class UpdatesView : View
 {
     private readonly WindowsPanelBase _owner;
     private readonly IWindowsUpdateService _service;
     private readonly Label _status;
     private readonly CheckBox _drivers;
     private readonly CheckBox _optional;
-    private readonly TableView _table;
+    private readonly SelectionTable<WindowsUpdateInfo> _table;
     private readonly TextPane _details;
     private readonly TextPane _log;
-    private List<UpdateRow> _rows = [];
+    private List<WindowsUpdateInfo> _rows = [];
 
     public UpdatesView(WindowsPanelBase owner, IWindowsUpdateService service)
     {
@@ -81,35 +81,63 @@ public sealed class UpdatesView : View
         var install = WindowsPanelBase.MakeButton("_Install selected", InstallSelected);
         install.X = Pos.Right(_optional) + 2;
         install.Y = 1;
+        var kb = WindowsPanelBase.MakeButton("Install _KB…", () => InstallKb());
+        kb.X = Pos.Right(install) + 1;
+        kb.Y = 1;
 
-        _table = new TableView { X = 0, Y = 3, Width = Dim.Percent(60), Height = Dim.Fill(6), FullRowSelect = true };
+        _table = new SelectionTable<WindowsUpdateInfo>(
+            u => u.UpdateId,
+            u => UpdateGrouping.Of(u) <= UpdateGrouping.Other,
+            ("Kind", u => UpdateGrouping.Short(UpdateGrouping.Of(u))),
+            ("KB", u => u.KbArticle),
+            ("Title", u => u.Title),
+            ("Size", u => WindowsPanelBase.Size(u.SizeBytes)))
+        {
+            X = 0,
+            Y = 3,
+            Width = Dim.Percent(60),
+            Height = Dim.Fill(6),
+        };
         _table.ValueChanged += (_, _) => ShowDetails();
         _details = WindowsPanelBase.MakeText("Details");
         _details.X = Pos.Right(_table);
         _details.Y = 3;
         _details.Height = Dim.Fill(6);
-        _log = WindowsPanelBase.MakeText("Progress");
+        _log = WindowsPanelBase.MakeText("Progress · Space tick · Shift+click range · Ctrl+A all");
         _log.Y = Pos.AnchorEnd(6);
         _log.Height = 6;
-        Add(_status, check, _drivers, _optional, install, _table, _details, _log);
+        Add(_status, check, _drivers, _optional, install, kb, _table, _details, _log);
         SetRows([]);
     }
 
-    internal IReadOnlyList<UpdateRow> Rows => _rows;
+    /// <summary>The listed updates in display order (security/critical first).</summary>
+    internal IReadOnlyList<WindowsUpdateInfo> Rows => _rows;
 
-    internal TableView Table => _table;
+    internal SelectionTable<WindowsUpdateInfo> Table => _table;
 
     internal string StatusText => _status.Text;
 
     internal string LogText => _log.Content;
 
+    internal bool IsSelected(WindowsUpdateInfo update) => _table.IsMarked(update);
+
     /// <summary>Loads the status header (does not search; searching can take minutes).</summary>
     public void Start() => _owner.Load(_service.GetStatusAsync, ApplyStatus, "status…");
 
-    public void Check() => _owner.Load(
-        ct => _service.SearchAsync(new WindowsUpdateQuery(_drivers.Value == CheckState.Checked, _optional.Value == CheckState.Checked), ct),
-        updates => SetRows(updates),
-        "searching…");
+    public void Check()
+    {
+        var query = new WindowsUpdateQuery(_drivers.Value == CheckState.Checked, _optional.Value == CheckState.Checked);
+        _log.Content = "Searching Windows Update (the first search after a restart can take a few minutes)…";
+        var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => _log.Content = Describe(p));
+        _owner.Load(
+            ct => _service.SearchAsync(query, progress, ct),
+            updates =>
+            {
+                SetRows(updates);
+                _log.Content = updates.Count == 0 ? "No updates available." : $"{updates.Count} update(s) available.";
+            },
+            "searching…");
+    }
 
     internal void ApplyStatus(WindowsUpdateStatus status)
     {
@@ -131,38 +159,84 @@ public sealed class UpdatesView : View
 
     internal void SetRows(IReadOnlyList<WindowsUpdateInfo> updates)
     {
-        _rows = [.. updates.Select(u => new UpdateRow(u)).OrderBy(r => r.Group).ThenBy(r => r.Update.Title, StringComparer.CurrentCultureIgnoreCase)];
-        var source = new EnumerableTableSource<UpdateRow>(_rows, new Dictionary<string, Func<UpdateRow, object>>
-        {
-            ["Group"] = r => UpdateGrouping.Title(r.Group),
-            ["KB"] = r => r.Update.KbArticle ?? string.Empty,
-            ["Title"] = r => r.Update.Title,
-            ["Size"] = r => WindowsPanelBase.Size(r.Update.SizeBytes),
-        });
-        _table.Table = new CheckBoxTableSourceWrapperByObject<UpdateRow>(_table, source, r => r.Selected, (r, v) => r.Selected = v);
-        _table.Update();
+        _rows = [.. updates.OrderBy(UpdateGrouping.Of).ThenBy(u => u.Title, StringComparer.CurrentCultureIgnoreCase)];
+        _table.SetItems(_rows);
         ShowDetails();
     }
 
     internal void InstallSelected()
     {
-        var selected = _rows.Where(r => r.Selected).Select(r => r.Update).ToList();
+        var selected = _table.Marked.ToList();
         if (selected.Count == 0)
         {
-            _owner.Tell("Windows Update", "Nothing selected. Press Check, then tick the updates to install.");
+            _owner.Tell("Windows Update", "Nothing selected. Press Check, then tick the updates to install (or use Install KB…).");
             return;
         }
 
-        var message = $"Install {selected.Count} update(s)?\n\nWindows will ask for administrator permission (UAC) unless Pickle is already elevated.";
+        Install(selected);
+    }
+
+    /// <summary>Install one update by KB number: asks for it when <paramref name="kb"/> is null.</summary>
+    internal void InstallKb(string? kb = null)
+    {
+        kb ??= _owner.AskText("Install a KB", "KB number (e.g. KB5031455):");
+        if (kb is null)
+        {
+            return;
+        }
+
+        if (KbRegex().Match(kb.Trim()) is not { Success: true } match)
+        {
+            _owner.Tell("Windows Update", $"'{kb.Trim()}' is not a KB number (e.g. KB5031455).");
+            return;
+        }
+
+        var wanted = "KB" + match.Groups[1].Value;
+        var listed = _rows.Where(u => SameKb(u, wanted)).ToList();
+        if (listed.Count > 0)
+        {
+            Install(listed);
+            return;
+        }
+
+        // Not in the list (not searched yet, or a driver/optional update that wasn't included): look everywhere.
+        _log.Content = $"Looking for {wanted}…";
+        var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => _log.Content = $"Looking for {wanted}: {Describe(p)}");
+        _owner.Load(
+            ct => _service.SearchAsync(new WindowsUpdateQuery(IncludeDrivers: true, IncludeOptional: true), progress, ct),
+            updates =>
+            {
+                var found = updates.Where(u => SameKb(u, wanted)).ToList();
+                if (found.Count == 0)
+                {
+                    _log.Content = $"{wanted} is not offered for this PC.";
+                    _owner.Tell("Windows Update", $"{wanted} is not offered for this PC: it is already installed, superseded by a newer update, or not applicable.");
+                    return;
+                }
+
+                Install(found);
+            },
+            "searching…");
+    }
+
+    private void Install(IReadOnlyList<WindowsUpdateInfo> updates)
+    {
+        var list = string.Join("\n", updates.Take(10).Select(u => $"{u.KbArticle ?? "—",-10} {u.Title}")) + (updates.Count > 10 ? $"\n… and {updates.Count - 10} more" : string.Empty);
+        var message = $"Install {updates.Count} update(s)?\n\n{list}\n\nWindows will ask for administrator permission (UAC) unless Pickle is already elevated.";
         if (!_owner.Ask("Install updates", message))
         {
             return;
         }
 
+        foreach (var update in updates)
+        {
+            _table.SetMarked(update, true);
+        }
+
         _log.Content = string.Empty;
-        var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => AppendLog($"{p.Stage} {p.CurrentUpdate}{(p.Percent is { } pct ? $" {pct:0}%" : string.Empty)}".TrimEnd()));
+        var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => AppendLog(Describe(p)));
         _owner.Load(
-            ct => _service.InstallAsync([.. selected.Select(u => u.UpdateId)], progress, ct),
+            ct => _service.InstallAsync([.. updates.Select(u => u.UpdateId)], progress, ct),
             result =>
             {
                 foreach (var (_, title, ok, error) in result.Results)
@@ -176,21 +250,29 @@ public sealed class UpdatesView : View
             "installing…");
     }
 
+    private static bool SameKb(WindowsUpdateInfo update, string kb) =>
+        string.Equals(update.KbArticle, kb, StringComparison.OrdinalIgnoreCase) || update.Title.Contains(kb, StringComparison.OrdinalIgnoreCase);
+
+    private static string Describe(WindowsUpdateProgress p) =>
+        string.Join(' ', new[] { p.Stage, p.CurrentUpdate, p.Percent is { } pct ? $"{pct:0}%" : null }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+    [GeneratedRegex(@"^(?:KB)?(\d{4,8})$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex KbRegex();
+
     private void AppendLog(string line) => _log.Content = string.IsNullOrEmpty(_log.Content) ? line : _log.Content + "\n" + line;
 
     private void ShowDetails()
     {
-        var row = WindowsPanelBase.SelectedRow(_table);
-        if (row < 0 || row >= _rows.Count)
+        if (_table.Current is not { } u)
         {
             _details.Content = _rows.Count == 0 ? "Press Check to search for updates." : string.Empty;
             return;
         }
 
-        var u = _rows[row].Update;
         var sb = new StringBuilder();
         sb.AppendLine(u.Title);
         sb.AppendLine();
+        sb.AppendLine($"Kind:      {UpdateGrouping.Title(UpdateGrouping.Of(u))}");
         sb.AppendLine($"KB:        {u.KbArticle ?? "—"}");
         sb.AppendLine($"Severity:  {u.Severity ?? "—"}");
         sb.AppendLine($"Size:      {WindowsPanelBase.Size(u.SizeBytes)}");

@@ -35,7 +35,33 @@ public abstract class WindowsPanelBase : PanelWindow
     /// <summary>Runs once the window is running (App is set, so background results reach the UI).</summary>
     protected abstract void Opened();
 
+    /// <summary>Tests replace the multi-button question (title, message, buttons) → index, or -1 for cancel.</summary>
+    internal Func<string, string, string[], int>? ChoiceHook { get; set; }
+
+    /// <summary>Tests replace the text prompt (title, label) → text, or null for cancel.</summary>
+    internal Func<string, string, string?>? PromptHook { get; set; }
+
     internal bool Ask(string title, string message) => ConfirmHook?.Invoke(title, message) ?? Confirm(title, message);
+
+    /// <summary>Index of the chosen button; -1 when cancelled (Esc). Without a <see cref="ChoiceHook"/>, a
+    /// <see cref="ConfirmHook"/> answers "yes" with the first button.</summary>
+    internal int Choose(string title, string message, params string[] buttons)
+    {
+        if (ChoiceHook is { } choose)
+        {
+            return choose(title, message, buttons);
+        }
+
+        if (ConfirmHook is { } confirm)
+        {
+            return confirm(title, message) ? 0 : -1;
+        }
+
+        return App is { } app ? MessageBox.Query(app, title, message, buttons) ?? -1 : -1;
+    }
+
+    internal string? AskText(string title, string label, string initial = "") =>
+        PromptHook is { } prompt ? prompt(title, label) : Prompt(title, label, initial);
 
     internal void Tell(string title, string message)
     {

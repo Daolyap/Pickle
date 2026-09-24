@@ -24,7 +24,8 @@ internal static partial class WingetSourceRepair
         "Add-AppxPackage -Path $url -ForceApplicationShutdown"
         "Account: $([Environment]::UserDomainName)\$([Environment]::UserName)"
         try {
-            Import-Module Appx -ErrorAction Stop
+            # By path: elevated, a module named Appx in a user-writable PSModulePath folder must not be loaded instead.
+            Import-Module (Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\Modules\Appx\Appx.psd1') -ErrorAction Stop
             Add-AppxPackage -Path $url -ForceApplicationShutdown -ErrorAction Stop
             'PICKLE-REPAIR: OK'
             exit 0

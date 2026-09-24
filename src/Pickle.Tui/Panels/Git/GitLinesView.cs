@@ -35,9 +35,9 @@ internal sealed class GitLinesView : View
 
     public IReadOnlyList<GitRow> Rows => _rows;
 
-    public int Cursor { get; private set; } = -1;
+    public int SelectedIndex { get; private set; } = -1;
 
-    public GitRow? Current => Cursor >= 0 && Cursor < _rows.Count ? _rows[Cursor] : null;
+    public GitRow? Current => SelectedIndex >= 0 && SelectedIndex < _rows.Count ? _rows[SelectedIndex] : null;
 
     /// <summary>Optional one-column marker drawn left of each row (e.g. the selected hunk or marked lines).</summary>
     public Func<int, string?>? Gutter { get; set; }
@@ -48,7 +48,7 @@ internal sealed class GitLinesView : View
     {
         _rows = rows;
         _top = 0;
-        Cursor = -1;
+        SelectedIndex = -1;
         MoveTo(Math.Clamp(cursor, 0, Math.Max(0, rows.Count - 1)), preferForward: true, force: true);
         SetNeedsDraw();
     }
@@ -56,12 +56,12 @@ internal sealed class GitLinesView : View
     public void MoveTo(int index, bool preferForward = true, bool force = false)
     {
         var target = FindSelectable(index, preferForward ? 1 : -1) ?? FindSelectable(index, preferForward ? -1 : 1) ?? -1;
-        if (target == Cursor && !force)
+        if (target == SelectedIndex && !force)
         {
             return;
         }
 
-        Cursor = target;
+        SelectedIndex = target;
         EnsureVisible();
         SetNeedsDraw();
         CursorChanged?.Invoke();
@@ -88,11 +88,11 @@ internal sealed class GitLinesView : View
         }
         else if (key == Key.PageDown)
         {
-            MoveTo(Math.Min(_rows.Count - 1, Math.Max(Cursor, 0) + page), preferForward: false);
+            MoveTo(Math.Min(_rows.Count - 1, Math.Max(SelectedIndex, 0) + page), preferForward: false);
         }
         else if (key == Key.PageUp)
         {
-            MoveTo(Math.Max(0, Cursor - page), preferForward: true);
+            MoveTo(Math.Max(0, SelectedIndex - page), preferForward: true);
         }
         else if (key == Key.Home)
         {
@@ -157,7 +157,7 @@ internal sealed class GitLinesView : View
 
             var row = _rows[i];
             var attr = RowAttribute(row.Style, normal);
-            if (i == Cursor)
+            if (i == SelectedIndex)
             {
                 attr = HasFocus
                     ? new Attribute(ToColor(_colors.HighlightForeground) ?? normal.Foreground, ToColor(_colors.HighlightBackground) ?? normal.Background)
@@ -196,7 +196,7 @@ internal sealed class GitLinesView : View
 
     private void Step(int direction)
     {
-        var next = FindSelectable(Cursor + direction, direction);
+        var next = FindSelectable(SelectedIndex + direction, direction);
         if (next is { } index)
         {
             MoveTo(index, preferForward: direction > 0);
@@ -219,13 +219,13 @@ internal sealed class GitLinesView : View
     private void EnsureVisible()
     {
         var height = Math.Max(1, Viewport.Height);
-        if (Cursor >= 0 && Cursor < _top)
+        if (SelectedIndex >= 0 && SelectedIndex < _top)
         {
-            _top = Cursor;
+            _top = SelectedIndex;
         }
-        else if (Cursor >= _top + height)
+        else if (SelectedIndex >= _top + height)
         {
-            _top = Cursor - height + 1;
+            _top = SelectedIndex - height + 1;
         }
 
         _top = Math.Clamp(_top, 0, Math.Max(0, _rows.Count - 1));

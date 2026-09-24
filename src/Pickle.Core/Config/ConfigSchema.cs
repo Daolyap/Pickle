@@ -60,7 +60,7 @@ public static class ConfigSchema
 
     private static readonly Lazy<JsonObject> SchemaLazy = new(() => JsonNode.Parse(SchemaTextLazy.Value)!.AsObject());
 
-    private static readonly NullabilityInfoContext Nullability = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<PropertyInfo, bool> NullableCache = new();
 
     public static string SchemaText => SchemaTextLazy.Value;
 
@@ -468,9 +468,11 @@ public static class ConfigSchema
     private static PropertyInfo? FindProperty(Type type, string jsonName) =>
         SettableProperties(type).FirstOrDefault(p => string.Equals(JsonName(p), jsonName, StringComparison.OrdinalIgnoreCase));
 
+    // NullabilityInfoContext is not thread-safe, so each lookup gets its own and results are cached.
     private static bool IsNullable(PropertyInfo property) =>
-        Nullable.GetUnderlyingType(property.PropertyType) is not null
-        || (!property.PropertyType.IsValueType && Nullability.Create(property).WriteState == NullabilityState.Nullable);
+        NullableCache.GetOrAdd(property, p =>
+            Nullable.GetUnderlyingType(p.PropertyType) is not null
+            || (!p.PropertyType.IsValueType && new NullabilityInfoContext().Create(p).WriteState == NullabilityState.Nullable));
 
     public static ConfigNodeKind KindOf(Type type)
     {

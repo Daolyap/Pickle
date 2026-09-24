@@ -24,7 +24,7 @@ public sealed class GetPickleConfigCmdlet : PickleCmdlet
 
         try
         {
-            WriteObject(ConfigValues.Get(store.Current, ConfigSchema.Resolve(Path)), enumerateCollection: false);
+            WriteObject(ConfigValues.Get(store.Current, ConfigSchema.Resolve(Path)), enumerateCollection: true);
         }
         catch (ConfigValidationException ex)
         {

@@ -1,0 +1,1 @@
+«fg=#B5E36B»Get-Date«» «fg=#5C6A55»# trailing comment«»

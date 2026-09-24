@@ -1,174 +1,640 @@
+using System.Management.Automation.Language;
 using System.Text;
 using Pickle.Abstractions;
 using Pickle.Core.Contracts;
+using Pickle.Core.Render;
+using Pickle.Core.Syntax;
 
 namespace Pickle.Core.Input;
 
 /// <summary>
-/// FOUNDATION PLACEHOLDER (workstream W1 replaces this file): a minimal single-line editor so the shell works
-/// end to end. Supports typing, Backspace/Delete, Left/Right/Home/End, Up/Down history, Enter, Ctrl+C, Ctrl+D,
-/// Esc, and key-bound actions from the registry (panels etc.).
+/// The interactive multi-line editor: prompt + syntax-highlighted input + autosuggestion ghost text + overlay rows,
+/// rendered as a diffed <see cref="Frame"/>. Keys go to the open overlay first, then to the key binding registry
+/// (every editing action in <see cref="EditorActionNames"/> is registered here), then self-insert.
+/// Keys that arrive in a burst (a paste) are inserted literally, including newlines, and never execute mid-burst.
 /// </summary>
-public sealed class LineEditor : ILineEditor, IEditorBuffer, IRuntimeComponent
+public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeComponent
 {
+    private static readonly TimeSpan IdlePoll = TimeSpan.FromMilliseconds(50);
+
+    // A paste can reach us in several chunks; an Enter that ends a chunk waits this long for the rest.
+    private static readonly TimeSpan PasteGrace = TimeSpan.FromMilliseconds(15);
+
     private readonly PickleRuntime _runtime;
-    private readonly StringBuilder _buffer = new();
+    private readonly UndoStack _undo = new();
+    private FrameRenderer? _renderer;
+    private IClipboard? _clipboard;
+
+    private string _text = string.Empty;
     private int _cursor;
-    private bool _accepted;
-    private string _promptLastLine = string.Empty;
+    private int? _anchor;
     private IEditorOverlay? _overlay;
+    private PromptRender _prompt = new(string.Empty, null, string.Empty);
+    private PromptContext? _promptContext;
+    private bool _reading;
+    private Outcome _outcome;
+    private string? _suggestion;
+    private string? _suggestionFor;
+    private int? _preferredColumn;
+    private char? _pendingHighSurrogate;
+    private bool _burst;
+    private bool _inBurst;
+    private HistoryNavigator? _history;
+    private bool _keepHistory;
+    private int _renderedHighlightVersion;
+    private (int Width, int Height) _renderedSize;
+    private volatile bool _promptRefreshPending;
 
     public LineEditor(PickleRuntime runtime) => _runtime = runtime;
 
-    public string Text => _buffer.ToString();
+    private enum Outcome
+    {
+        None,
+        Accept,
+        Cancel,
+        EndOfFile,
+    }
+
+    public string Text => _text;
 
     public int Cursor => _cursor;
 
-    public string? Suggestion => null;
+    public string? Suggestion
+    {
+        get
+        {
+            UpdateSuggestion();
+            return _suggestion;
+        }
+    }
+
+    /// <summary>The currently open overlay (for tests and diagnostics).</summary>
+    internal IEditorOverlay? Overlay => _overlay;
+
+    internal (int Start, int End)? Selection =>
+        _anchor is { } anchor && anchor != _cursor ? (Math.Min(anchor, _cursor), Math.Max(anchor, _cursor)) : null;
+
+    internal IClipboard ClipboardService
+    {
+        get => _clipboard ??= Clipboard.Create(_runtime);
+        set => _clipboard = value;
+    }
+
+    private FrameRenderer Renderer => _renderer ??= new FrameRenderer(_runtime.Terminal);
+
+    private EditorSettings Settings => _runtime.Config.Current.Editor;
+
+    private Theme Theme => _runtime.Themes.Current;
 
     public void Initialize()
     {
         DefaultKeyBindings.Apply(_runtime);
-        var registry = _runtime.KeyBindingRegistry;
-        void Register(string name, string description, Action action) =>
-            registry.RegisterAction(name, description, (_, _) =>
-            {
-                action();
-                return ValueTask.CompletedTask;
-            });
-
-        Register(EditorActionNames.AcceptLine, "Run the command", Accept);
-        Register(EditorActionNames.CancelLine, "Cancel the current line", Cancel);
-        Register(EditorActionNames.ClearLine, "Clear the current line", () => Replace(string.Empty, 0));
-        Register(EditorActionNames.BackwardChar, "Move left", BackwardChar);
-        Register(EditorActionNames.ForwardChar, "Move right", ForwardChar);
-        Register(EditorActionNames.BeginningOfLine, "Move to start of line", Home);
-        Register(EditorActionNames.EndOfLine, "Move to end of line", End);
-        Register(EditorActionNames.BackwardDeleteChar, "Delete previous character", Backspace);
-        Register(EditorActionNames.DeleteChar, "Delete next character", Delete);
-        Register(EditorActionNames.ExitIfEmpty, "Exit when the line is empty", () => { });
+        RegisterActions();
+        HookPromptRefresh();
     }
+
+    // The prompt engine raises SegmentsRefreshed (on a background thread) when a slow segment finishes after the
+    // prompt was drawn. Bound by name so any EventHandler/EventHandler<T>/Action signature works.
+    private void HookPromptRefresh()
+    {
+        var prompt = _runtime.Prompt;
+        if (prompt.GetType().GetEvent("SegmentsRefreshed") is not { EventHandlerType: { } type } evt)
+        {
+            return;
+        }
+
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var handler = Delegate.CreateDelegate(type, this, GetType().GetMethod(nameof(OnPromptRefreshed), flags)!, throwOnBindFailure: false)
+            ?? Delegate.CreateDelegate(type, this, GetType().GetMethod(nameof(OnPromptRefreshedNoArgs), flags)!, throwOnBindFailure: false);
+        if (handler is not null)
+        {
+            evt.AddEventHandler(prompt, handler);
+        }
+    }
+
+    private void OnPromptRefreshed(object? sender, object? args) => _promptRefreshPending = true;
+
+    private void OnPromptRefreshedNoArgs() => _promptRefreshPending = true;
+
+    // ───────────── ReadLine ─────────────
 
     public string? ReadLine(PromptRender prompt, PromptContext promptContext, CancellationToken cancellationToken = default)
     {
-        _buffer.Clear();
+        _prompt = prompt;
+        _promptContext = promptContext;
+        _text = string.Empty;
         _cursor = 0;
-        _accepted = false;
-        var promptLines = prompt.Left.Split('\n');
-        for (var i = 0; i < promptLines.Length - 1; i++)
+        _anchor = null;
+        _overlay = null;
+        _outcome = Outcome.None;
+        _suggestion = null;
+        _suggestionFor = null;
+        _preferredColumn = null;
+        _pendingHighSurrogate = null;
+        _history = null;
+        _burst = false;
+        _promptRefreshPending = false;
+        _undo.Clear();
+        _reading = true;
+        try
         {
-            _runtime.Terminal.Write(promptLines[i] + "\n");
-        }
-
-        _promptLastLine = promptLines[^1];
-        var historyIndex = _runtime.History.Entries.Count;
-        Render();
-
-        while (!_accepted)
-        {
+            StartOnFreshLine();
+            Renderer.Reset();
             DrainRequests();
-            var key = _runtime.Terminal.ReadKey(cancellationToken);
-            var action = _runtime.KeyBindingRegistry.Lookup(key);
-            if (action is not null && _runtime.KeyBindingRegistry.GetAction(action) is { } info
-                && action is not (EditorActionNames.HistoryPrevious or EditorActionNames.HistoryNext))
-            {
-                info.Handler(this, cancellationToken).AsTask().GetAwaiter().GetResult();
-                if (_accepted)
-                {
-                    break;
-                }
-
-                if (action == EditorActionNames.ExitIfEmpty && _buffer.Length == 0)
-                {
-                    _runtime.Terminal.Write("\n");
-                    return null;
-                }
-
-                Render();
-                continue;
-            }
-
-            switch (key.Key)
-            {
-                case ConsoleKey.UpArrow when historyIndex > 0:
-                    historyIndex--;
-                    Replace(_runtime.History.Entries[historyIndex].CommandLine, int.MaxValue);
-                    break;
-                case ConsoleKey.DownArrow when historyIndex < _runtime.History.Entries.Count:
-                    historyIndex++;
-                    Replace(historyIndex < _runtime.History.Entries.Count ? _runtime.History.Entries[historyIndex].CommandLine : string.Empty, int.MaxValue);
-                    break;
-                default:
-                    if (key.KeyChar != '\0' && !char.IsControl(key.KeyChar))
-                    {
-                        Insert(key.KeyChar.ToString());
-                    }
-
-                    break;
-            }
-
             Render();
-        }
+            while (_outcome == Outcome.None)
+            {
+                var key = NextKey(cancellationToken);
+                ProcessKey(key, cancellationToken);
+                if (_outcome == Outcome.None && !_burst)
+                {
+                    DrainRequests();
+                    Render();
+                }
+            }
 
-        _runtime.Terminal.Write("\n");
-        return Text;
+            return Finish();
+        }
+        finally
+        {
+            _reading = false;
+            _overlay = null;
+        }
     }
 
-    public string? ReadSimpleLine(string prompt, bool mask)
+    private ConsoleKeyInfo NextKey(CancellationToken cancellationToken)
     {
-        var sb = new StringBuilder();
-        _runtime.Terminal.Write(prompt);
-        while (true)
+        while (!_runtime.Terminal.WaitForInput(IdlePoll, cancellationToken))
         {
-            var key = _runtime.Terminal.ReadKey();
-            if (key.Key == ConsoleKey.Enter)
+            OnIdle();
+        }
+
+        return _runtime.Terminal.ReadKey(cancellationToken);
+    }
+
+    private void OnIdle()
+    {
+        var terminal = _runtime.Terminal;
+        var changed = DrainRequests();
+        changed |= RefreshPrompt();
+        changed |= (terminal.Width, terminal.Height) != _renderedSize;
+        changed |= _runtime.Highlighter is SyntaxHighlighter highlighter && highlighter.Version != _renderedHighlightVersion;
+        if (changed)
+        {
+            Render();
+        }
+    }
+
+    // Only the main prompt: nested and debugger prompts are read while a pipeline is executing.
+    private bool RefreshPrompt()
+    {
+        if (!_promptRefreshPending || _runtime.Engine.IsExecuting || _promptContext is not { } context)
+        {
+            return false;
+        }
+
+        _promptRefreshPending = false;
+        try
+        {
+            _prompt = _runtime.Prompt.Render(context);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Warn("editor", "prompt refresh failed", ex);
+            return false;
+        }
+    }
+
+    private void ProcessKey(ConsoleKeyInfo key, CancellationToken cancellationToken)
+    {
+        // Requests queued while we waited apply before the key (terminals that can't poll never report idle).
+        DrainRequests();
+        var terminal = _runtime.Terminal;
+        var more = terminal.KeyAvailable;
+        if (!more && _burst && key.Key == ConsoleKey.Enter)
+        {
+            more = terminal.WaitForInput(PasteGrace, cancellationToken) && terminal.KeyAvailable;
+        }
+
+        _inBurst = more || _burst;
+        _burst = more;
+        _keepHistory = false;
+
+        var overlay = _overlay;
+        var textBefore = _text;
+        var cursorBefore = _cursor;
+        if (overlay is not null)
+        {
+            switch (OverlayHandleKey(overlay, key))
             {
-                _runtime.Terminal.Write("\n");
-                return sb.ToString();
+                case OverlayKeyResult.Handled:
+                    _history = null;
+                    return;
+                case OverlayKeyResult.Close:
+                    if (ReferenceEquals(_overlay, overlay))
+                    {
+                        _overlay = null;
+                    }
+
+                    _history = null;
+                    return;
+            }
+        }
+
+        if (more && IsLiteralPasteKey(key))
+        {
+            InsertLiteral(key);
+        }
+        else
+        {
+            Dispatch(key, cancellationToken);
+        }
+
+        if (!_keepHistory)
+        {
+            _history = null;
+        }
+
+        if (_overlay is { } open && ReferenceEquals(open, overlay) && (_text != textBefore || _cursor != cursorBefore))
+        {
+            try
+            {
+                open.OnBufferChanged(this);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                OverlayFailed(open, ex);
+            }
+        }
+    }
+
+    private void Dispatch(ConsoleKeyInfo key, CancellationToken cancellationToken)
+    {
+        var name = _runtime.KeyBindingRegistry.Lookup(key);
+        if (name is not null && _runtime.KeyBindingRegistry.GetAction(name) is { } action)
+        {
+            RunAction(action, cancellationToken);
+            return;
+        }
+
+        if (IsPrintable(key))
+        {
+            SelfInsert(key.KeyChar);
+            return;
+        }
+
+        Bell();
+    }
+
+    private void RunAction(EditorActionInfo action, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pending = action.Handler(this, cancellationToken);
+            if (!pending.IsCompletedSuccessfully)
+            {
+                pending.AsTask().GetAwaiter().GetResult();
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Warn("editor", $"Action '{action.Name}' failed", ex);
+            Bell();
+        }
+    }
+
+    private string? Finish()
+    {
+        var outcome = _outcome;
+        _overlay = null;
+        _anchor = null;
+        var transient = outcome == Outcome.Accept && _runtime.Config.Current.Prompt.TransientPrompt;
+        Renderer.Render(BuildFrame(live: false, transient, outcome == Outcome.Cancel ? "^C" : null));
+        Renderer.Finish();
+        return outcome switch
+        {
+            Outcome.Accept => _text,
+            Outcome.Cancel => string.Empty,
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// If earlier output did not end with a newline, keep it and start below it (marked with an inverse '%', like zsh):
+    /// the mark plus width-1 spaces wraps only when the cursor was not in column 0, then CR + erase cleans up.
+    /// </summary>
+    private void StartOnFreshLine()
+    {
+        var width = Math.Max(1, _runtime.Terminal.Width);
+        var mark = Ansi.Style(Theme.Ui.Muted) + Ansi.Reverse + "%" + Ansi.Reset;
+        _runtime.Terminal.Write(mark + new string(' ', width - 1) + "\r" + Ansi.ClearToEndOfLine);
+    }
+
+    private bool DrainRequests()
+    {
+        var changed = false;
+        while (_runtime.Engine.EditorRequests.TryDequeue(out var request))
+        {
+            if (request.Replace)
+            {
+                Replace(request.Text, request.Text.Length);
+            }
+            else
+            {
+                Insert(request.Text);
             }
 
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                if (sb.Length > 0)
-                {
-                    sb.Length--;
-                    _runtime.Terminal.Write("\b \b");
-                }
+            changed = true;
+        }
 
+        if (changed && _overlay is { } overlay)
+        {
+            try
+            {
+                overlay.OnBufferChanged(this);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                OverlayFailed(overlay, ex);
+            }
+        }
+
+        return changed;
+    }
+
+    // ───────────── Rendering ─────────────
+
+    private void Render()
+    {
+        if (!_reading)
+        {
+            return;
+        }
+
+        var terminal = _runtime.Terminal;
+        _renderedSize = (terminal.Width, terminal.Height);
+        Renderer.Render(BuildFrame(live: true, transient: false, trailer: null));
+        if (_runtime.Highlighter is SyntaxHighlighter highlighter)
+        {
+            _renderedHighlightVersion = highlighter.Version;
+        }
+    }
+
+    private Frame BuildFrame(bool live, bool transient, string? trailer)
+    {
+        var theme = Theme;
+        var builder = new FrameBuilder(_runtime.Terminal.Width);
+        builder.WriteAnsi(transient ? TransientPrompt() : _prompt.Left);
+        var inputRow = builder.Row;
+
+        var overlay = live ? _overlay : null;
+        var lineOverride = overlay is null ? null : OverlayInputLine(overlay);
+        if (lineOverride is not null)
+        {
+            builder.WriteAnsi(lineOverride);
+            builder.MarkCursor();
+        }
+        else
+        {
+            WriteInput(builder, theme, markCursor: live);
+            if (live && overlay is null && Suggestion is { } suggestion)
+            {
+                WriteMultiline(builder, suggestion[_text.Length..], Ansi.Style(theme.Syntax.Suggestion));
+            }
+
+            if (trailer is not null)
+            {
+                builder.Write(trailer, Ansi.Style(theme.Ui.Muted));
+            }
+        }
+
+        if (!transient && lineOverride is null && !string.IsNullOrEmpty(_prompt.Right))
+        {
+            builder.TryPlaceRight(inputRow, _prompt.Right);
+        }
+
+        if (overlay is not null)
+        {
+            var maxRows = Math.Max(1, _runtime.Terminal.Height - (builder.Row + 1));
+            var lines = OverlayRender(overlay, builder.Width, maxRows);
+            foreach (var line in lines.Take(maxRows))
+            {
+                builder.NewLine();
+                builder.WriteAnsi(line, clip: true);
+            }
+        }
+
+        return builder.Build();
+    }
+
+    private void WriteInput(FrameBuilder builder, Theme theme, bool markCursor)
+    {
+        var styles = ComputeStyles(theme);
+        var i = 0;
+        while (i < _text.Length)
+        {
+            if (markCursor && i == _cursor)
+            {
+                builder.MarkCursor();
+            }
+
+            if (_text[i] == '\n')
+            {
+                builder.NewLine();
+                builder.WriteAnsi(_prompt.Continuation);
+                i++;
                 continue;
             }
 
-            if (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control))
+            var next = TextNavigation.NextGrapheme(_text, i);
+            builder.Write(_text[i..next], styles[i]);
+            i = next;
+        }
+
+        if (markCursor && _cursor >= _text.Length)
+        {
+            builder.MarkCursor();
+        }
+    }
+
+    private void WriteMultiline(FrameBuilder builder, string text, string style)
+    {
+        var lines = text.Split('\n');
+        for (var l = 0; l < lines.Length; l++)
+        {
+            if (l > 0)
             {
-                _runtime.Terminal.Write("\n");
-                return null;
+                builder.NewLine();
+                builder.WriteAnsi(_prompt.Continuation);
             }
 
-            if (!char.IsControl(key.KeyChar))
+            builder.Write(lines[l], style);
+        }
+    }
+
+    private string[] ComputeStyles(Theme theme)
+    {
+        var styles = new string[_text.Length];
+        Array.Fill(styles, Ansi.Style(theme.Syntax.Default));
+        if (Settings.SyntaxHighlighting && _text.Length > 0)
+        {
+            try
             {
-                sb.Append(key.KeyChar);
-                _runtime.Terminal.Write(mask ? "*" : key.KeyChar.ToString());
+                foreach (var span in _runtime.Highlighter.Highlight(_text))
+                {
+                    var end = Math.Min(styles.Length, span.Start + span.Length);
+                    for (var k = Math.Max(0, span.Start); k < end; k++)
+                    {
+                        styles[k] = span.Style;
+                    }
+                }
             }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _runtime.Log.Debug("editor", $"highlighting failed: {ex.Message}");
+            }
+        }
+
+        if (Selection is { } selection)
+        {
+            var background = Ansi.Style(background: theme.Syntax.SelectionBackground);
+            if (background.Length == 0)
+            {
+                background = Ansi.Reverse;
+            }
+
+            for (var k = selection.Start; k < selection.End; k++)
+            {
+                styles[k] += background;
+            }
+        }
+
+        return styles;
+    }
+
+    private string TransientPrompt()
+    {
+        try
+        {
+            return _runtime.Prompt.RenderTransient(_promptContext ?? _runtime.CreatePromptContext());
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Warn("editor", "transient prompt failed", ex);
+            return _prompt.Left;
+        }
+    }
+
+    private void UpdateSuggestion()
+    {
+        if (!_reading || !Settings.Autosuggestions || _text.Length == 0 || _cursor != _text.Length || _anchor is not null)
+        {
+            _suggestion = null;
+            _suggestionFor = null;
+            return;
+        }
+
+        if (string.Equals(_suggestionFor, _text, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _suggestionFor = _text;
+        _suggestion = null;
+        try
+        {
+            var suggestion = _runtime.Autosuggest.Suggest(_text, _runtime.Engine.CurrentDirectory);
+            if (suggestion is not null && suggestion.Length > _text.Length && suggestion.StartsWith(_text, StringComparison.OrdinalIgnoreCase))
+            {
+                _suggestion = suggestion.Replace("\r\n", "\n", StringComparison.Ordinal);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Debug("editor", $"autosuggest failed: {ex.Message}");
+        }
+    }
+
+    // ───────────── Overlay safety ─────────────
+
+    private OverlayKeyResult OverlayHandleKey(IEditorOverlay overlay, ConsoleKeyInfo key)
+    {
+        try
+        {
+            return overlay.HandleKey(key, this);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            OverlayFailed(overlay, ex);
+            return OverlayKeyResult.NotHandled;
+        }
+    }
+
+    private IReadOnlyList<string> OverlayRender(IEditorOverlay overlay, int width, int maxRows)
+    {
+        try
+        {
+            return overlay.Render(width, maxRows);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            OverlayFailed(overlay, ex);
+            return [];
+        }
+    }
+
+    private string? OverlayInputLine(IEditorOverlay overlay)
+    {
+        try
+        {
+            return overlay.InputLineOverride;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            OverlayFailed(overlay, ex);
+            return null;
+        }
+    }
+
+    private void OverlayFailed(IEditorOverlay overlay, Exception ex)
+    {
+        _runtime.Log.Warn("editor", $"Overlay {overlay.GetType().Name} failed; closing it", ex);
+        if (ReferenceEquals(_overlay, overlay))
+        {
+            _overlay = null;
         }
     }
 
     // ───────────── IEditorBuffer ─────────────
 
-    public void Insert(string text)
-    {
-        _buffer.Insert(_cursor, text);
-        _cursor += text.Length;
-    }
+    public void Insert(string text) => InsertText(NormalizeNewlines(text), EditKind.Other);
 
     public void Replace(string text, int cursor)
     {
-        _buffer.Clear().Append(text);
-        _cursor = Math.Clamp(cursor, 0, _buffer.Length);
+        text = NormalizeNewlines(text);
+        _undo.Checkpoint(_text, _cursor, EditKind.Other);
+        _text = text;
+        _cursor = Math.Clamp(cursor, 0, text.Length);
+        _anchor = null;
+        _preferredColumn = null;
+        _undo.AfterEdit(_cursor);
     }
 
-    public void Accept() => _accepted = true;
+    public void Accept() => _outcome = Outcome.Accept;
 
-    public void Redraw() => Render();
+    public void Redraw()
+    {
+        if (_reading)
+        {
+            Renderer.Invalidate();
+            Render();
+        }
+    }
 
     public void OpenOverlay(IEditorOverlay overlay) => _overlay = overlay;
 
@@ -179,12 +645,39 @@ public sealed class LineEditor : ILineEditor, IEditorBuffer, IRuntimeComponent
         var host = _runtime.ServiceRegistry.Get<IPanelHost>();
         if (host is null)
         {
+            _runtime.Log.Debug("editor", $"No panel host; ignoring panel '{panelId}'");
             return;
         }
 
-        _runtime.Terminal.Write("\r" + Ansi.ClearToEndOfLine);
-        var result = host.Show(panelId, argument, Text);
+        if (!_reading)
+        {
+            ApplyPanelResult(this, host.Show(panelId, argument, _text));
+            return;
+        }
+
+        // Clear our frame so the panel (alternate screen) returns to a clean spot, then draw a fresh frame there.
+        _overlay = null;
+        Renderer.Invalidate();
+        Renderer.Render(new Frame([[]], 0, 0, _runtime.Terminal.Width));
+        Renderer.Reset();
+
+        PanelResult? result = null;
+        try
+        {
+            result = host.Show(panelId, argument, _text);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Error("editor", $"Panel '{panelId}' failed", ex);
+        }
+        finally
+        {
+            _runtime.Terminal.SetEditMode(true);
+        }
+
         ApplyPanelResult(this, result);
+        StartOnFreshLine();
+        Renderer.Reset();
         Render();
     }
 
@@ -210,67 +703,238 @@ public sealed class LineEditor : ILineEditor, IEditorBuffer, IRuntimeComponent
         }
     }
 
-    // ───────────── Built-in actions used by DefaultKeyBindings ─────────────
+    // ───────────── Editing primitives ─────────────
 
-    internal void BackwardChar() => _cursor = Math.Max(0, _cursor - 1);
-
-    internal void ForwardChar() => _cursor = Math.Min(_buffer.Length, _cursor + 1);
-
-    internal void Home() => _cursor = 0;
-
-    internal void End() => _cursor = _buffer.Length;
-
-    internal void Backspace()
+    private void Edit(EditKind kind, int start, int length, string insert, bool startsNewWord = false)
     {
-        if (_cursor > 0)
+        _undo.Checkpoint(_text, _cursor, kind, startsNewWord);
+        _text = string.Concat(_text.AsSpan(0, start), insert, _text.AsSpan(start + length));
+        _cursor = start + insert.Length;
+        _anchor = null;
+        _preferredColumn = null;
+        _undo.AfterEdit(_cursor);
+    }
+
+    private void InsertText(string text, EditKind kind, bool startsNewWord = false)
+    {
+        var (start, end) = Selection ?? (_cursor, _cursor);
+        Edit(kind, start, end - start, text, startsNewWord);
+    }
+
+    private void SelfInsert(char c)
+    {
+        if (char.IsHighSurrogate(c))
         {
-            _buffer.Remove(_cursor - 1, 1);
-            _cursor--;
+            _pendingHighSurrogate = c;
+            return;
         }
-    }
 
-    internal void Delete()
-    {
-        if (_cursor < _buffer.Length)
+        string text;
+        if (char.IsLowSurrogate(c))
         {
-            _buffer.Remove(_cursor, 1);
-        }
-    }
-
-    internal void Cancel()
-    {
-        _runtime.Terminal.Write(Ansi.Colorize("^C", _runtime.Themes.Current.Ui.Muted));
-        Replace(string.Empty, 0);
-        _accepted = true;
-    }
-
-    private void DrainRequests()
-    {
-        var changed = false;
-        while (_runtime.Engine.EditorRequests.TryDequeue(out var request))
-        {
-            if (request.Replace)
+            if (_pendingHighSurrogate is not { } high)
             {
-                Replace(request.Text, request.Text.Length);
-            }
-            else
-            {
-                Insert(request.Text);
+                return;
             }
 
-            changed = true;
+            text = string.Concat(high, c);
+        }
+        else
+        {
+            text = c.ToString();
         }
 
-        if (changed)
+        _pendingHighSurrogate = null;
+        var newWord = !_inBurst && char.IsWhiteSpace(c) && _cursor > 0 && !char.IsWhiteSpace(_text[_cursor - 1]);
+        InsertText(text, _inBurst ? EditKind.Paste : EditKind.Typing, newWord);
+    }
+
+    private void InsertLiteral(ConsoleKeyInfo key)
+    {
+        switch (key.Key)
         {
-            Render();
+            case ConsoleKey.Enter:
+                InsertText("\n", EditKind.Paste);
+                break;
+            case ConsoleKey.Tab:
+                InsertText("\t", EditKind.Paste);
+                break;
+            default:
+                SelfInsert(key.KeyChar);
+                break;
         }
     }
 
-    private void Render()
+    private void MoveCursor(int position)
     {
-        var text = Text;
-        var tail = TextWidth.VisibleWidth(text[_cursor..]);
-        _runtime.Terminal.Write("\r" + _promptLastLine + text + Ansi.ClearToEndOfLine + Ansi.CursorBack(tail));
+        _cursor = Math.Clamp(position, 0, _text.Length);
+        _anchor = null;
+        _preferredColumn = null;
+        _undo.BreakSequence();
+    }
+
+    private void Bell()
+    {
+        switch (Settings.BellStyle?.Trim().ToLowerInvariant())
+        {
+            case "audible":
+                _runtime.Terminal.Write("\u0007");
+                break;
+            case "visual":
+                _runtime.Terminal.Write("\u001b[?5h");
+                _runtime.Terminal.Flush();
+                Thread.Sleep(60);
+                _runtime.Terminal.Write("\u001b[?5l");
+                break;
+        }
+    }
+
+    internal static bool IsIncompleteInput(string text)
+    {
+        Parser.ParseInput(text, out _, out var errors);
+        return errors.Length > 0 && errors.All(e => e.IncompleteInput);
+    }
+
+    private static bool IsPrintable(ConsoleKeyInfo key)
+    {
+        var c = key.KeyChar;
+        if (c == '\0' || char.IsControl(c))
+        {
+            return false;
+        }
+
+        // Ctrl or Alt alone makes a shortcut; both together is AltGr, which types characters on many layouts.
+        return key.Modifiers.HasFlag(ConsoleModifiers.Control) == key.Modifiers.HasFlag(ConsoleModifiers.Alt);
+    }
+
+    private static bool IsLiteralPasteKey(ConsoleKeyInfo key) =>
+        (key.Key is ConsoleKey.Enter or ConsoleKey.Tab && key.Modifiers == 0) || IsPrintable(key);
+
+    private static string NormalizeNewlines(string text) =>
+        text.Contains('\r', StringComparison.Ordinal) ? text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n') : text;
+
+    // ───────────── ReadSimpleLine ─────────────
+
+    public string? ReadSimpleLine(string prompt, bool mask)
+    {
+        var terminal = _runtime.Terminal;
+        var nested = _reading;
+        if (!nested)
+        {
+            terminal.SetEditMode(true);
+        }
+
+        var renderer = new FrameRenderer(terminal);
+        var indent = Math.Clamp(terminal.OutputColumn, 0, Math.Max(0, terminal.Width - 1));
+        renderer.Reset(indent);
+        var text = new StringBuilder();
+        var cursor = 0;
+        char? high = null;
+        try
+        {
+            while (true)
+            {
+                renderer.Render(BuildSimpleFrame(prompt, text.ToString(), cursor, mask, indent, trailer: null));
+                var key = terminal.ReadKey();
+                var chord = KeyChord.FromKeyInfo(key).ToString();
+                switch (chord)
+                {
+                    case "Enter":
+                        renderer.Render(BuildSimpleFrame(prompt, text.ToString(), text.Length, mask, indent, trailer: null));
+                        renderer.Finish();
+                        return text.ToString();
+                    case "Ctrl+C":
+                        renderer.Render(BuildSimpleFrame(prompt, text.ToString(), text.Length, mask, indent, trailer: "^C"));
+                        renderer.Finish();
+                        _runtime.Engine.StopCurrent();
+                        return null;
+                    case "Ctrl+D" when text.Length == 0:
+                        renderer.Finish();
+                        return null;
+                    case "Backspace" when cursor > 0:
+                        var previous = TextNavigation.PreviousGrapheme(text.ToString(), cursor);
+                        text.Remove(previous, cursor - previous);
+                        cursor = previous;
+                        break;
+                    case "Delete" when cursor < text.Length:
+                        text.Remove(cursor, TextNavigation.NextGrapheme(text.ToString(), cursor) - cursor);
+                        break;
+                    case "LeftArrow":
+                        cursor = TextNavigation.PreviousGrapheme(text.ToString(), cursor);
+                        break;
+                    case "RightArrow":
+                        cursor = TextNavigation.NextGrapheme(text.ToString(), cursor);
+                        break;
+                    case "Home" or "Ctrl+A":
+                        cursor = 0;
+                        break;
+                    case "End" or "Ctrl+E":
+                        cursor = text.Length;
+                        break;
+                    case "Escape":
+                        text.Clear();
+                        cursor = 0;
+                        break;
+                    case "Ctrl+U":
+                        text.Remove(0, cursor);
+                        cursor = 0;
+                        break;
+                    default:
+                        if (char.IsHighSurrogate(key.KeyChar))
+                        {
+                            high = key.KeyChar;
+                        }
+                        else if (IsPrintable(key))
+                        {
+                            var insert = char.IsLowSurrogate(key.KeyChar) && high is { } h ? string.Concat(h, key.KeyChar) : key.KeyChar.ToString();
+                            high = null;
+                            if (!char.IsSurrogate(insert[0]) || insert.Length == 2)
+                            {
+                                text.Insert(cursor, insert);
+                                cursor += insert.Length;
+                            }
+                        }
+
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            if (!nested)
+            {
+                terminal.SetEditMode(false);
+            }
+        }
+    }
+
+    private Frame BuildSimpleFrame(string prompt, string text, int cursor, bool mask, int indent, string? trailer)
+    {
+        var builder = new FrameBuilder(_runtime.Terminal.Width, indent);
+        builder.WriteAnsi(prompt);
+        var i = 0;
+        while (i < text.Length)
+        {
+            if (i == cursor)
+            {
+                builder.MarkCursor();
+            }
+
+            var next = TextNavigation.NextGrapheme(text, i);
+            builder.Write(mask ? "•" : text[i..next], string.Empty);
+            i = next;
+        }
+
+        if (cursor >= text.Length)
+        {
+            builder.MarkCursor();
+        }
+
+        if (trailer is not null)
+        {
+            builder.Write(trailer, Ansi.Style(Theme.Ui.Muted));
+        }
+
+        return builder.Build();
     }
 }

@@ -1,0 +1,1 @@
+«fg=#C678DD»function«» Invoke-Mine { «fg=#C678DD»param«»(«fg=#7FD4DE»$p«») }«fg=#7D8C75»;«» «fg=#B5E36B»Invoke-Mine«» «fg=#7D8C75»-p«» «fg=#DA9BEF»1«»

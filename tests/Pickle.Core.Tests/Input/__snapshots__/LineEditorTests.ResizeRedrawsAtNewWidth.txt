@@ -1,0 +1,2 @@
+> Get-ChildItem -Rec
+urse -Force x│

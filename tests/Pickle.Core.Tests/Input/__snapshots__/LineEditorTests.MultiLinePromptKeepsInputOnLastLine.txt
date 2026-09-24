@@ -1,0 +1,2 @@
+~/src main
+❯ git status│                rp

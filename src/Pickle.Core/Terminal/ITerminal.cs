@@ -36,4 +36,13 @@ public interface ITerminal
     (int Column, int Row) GetCursorPosition();
 
     string Title { get; set; }
+
+    /// <summary>
+    /// Waits up to <paramref name="timeout"/> for input. Returns false on timeout. Terminals that cannot wait return
+    /// true, meaning "call <see cref="ReadKey"/>" (which then blocks).
+    /// </summary>
+    bool WaitForInput(TimeSpan timeout, CancellationToken cancellationToken = default) => true;
+
+    /// <summary>Best-effort 0-based column where the next output lands, without a round trip to the terminal.</summary>
+    int OutputColumn => GetCursorPosition().Column;
 }

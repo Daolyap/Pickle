@@ -1,0 +1,1 @@
+[«fg=#82C4FF»System.IO.Path«»]«fg=#7D8C75»::«fg=#DDE5D6»GetTempPath«»()

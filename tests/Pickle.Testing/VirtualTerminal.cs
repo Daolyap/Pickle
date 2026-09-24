@@ -12,7 +12,7 @@ namespace Pickle.Testing;
 /// </summary>
 public sealed class VirtualTerminal : ITerminal
 {
-    private readonly Queue<ConsoleKeyInfo> _keys = new();
+    private readonly Queue<(ConsoleKeyInfo Key, bool Burst)> _keys = new();
     private readonly StringBuilder _raw = new();
     private Cell[,] _cells;
     private Cell[,]? _savedMainScreen;
@@ -60,7 +60,14 @@ public sealed class VirtualTerminal : ITerminal
     /// <summary>Called when the input queue is empty and a key is requested. Default throws <see cref="EndOfScriptedInputException"/>.</summary>
     public Func<ConsoleKeyInfo>? OnInputExhausted { get; set; }
 
-    public bool KeyAvailable => _keys.Count > 0;
+    /// <summary>
+    /// True only while the next queued key belongs to a <see cref="Paste"/> burst: keys scripted with
+    /// <see cref="Type"/>/<see cref="Press"/> model a user typing one key at a time, so they are never "already available".
+    /// </summary>
+    public bool KeyAvailable => _keys.Count > 0 && _keys.Peek().Burst;
+
+    /// <summary>Number of scripted keys not yet read.</summary>
+    public int PendingKeyCount => _keys.Count;
 
     // ───────────── Input scripting ─────────────
 
@@ -68,13 +75,18 @@ public sealed class VirtualTerminal : ITerminal
     {
         foreach (var c in text)
         {
-            _keys.Enqueue(c switch
-            {
-                '\n' or '\r' => Key(ConsoleKey.Enter, '\r'),
-                '\t' => Key(ConsoleKey.Tab, '\t'),
-                ' ' => Key(ConsoleKey.Spacebar, ' '),
-                _ => new ConsoleKeyInfo(c, CharToKey(c), shift: char.IsUpper(c), alt: false, control: false),
-            });
+            _keys.Enqueue((CharKey(c), false));
+        }
+
+        return this;
+    }
+
+    /// <summary>Enqueue text that arrives in one burst (like a terminal paste): <see cref="KeyAvailable"/> stays true within it.</summary>
+    public VirtualTerminal Paste(string text)
+    {
+        foreach (var c in text.Replace("\r\n", "\n", StringComparison.Ordinal))
+        {
+            _keys.Enqueue((CharKey(c), true));
         }
 
         return this;
@@ -99,12 +111,12 @@ public sealed class VirtualTerminal : ITerminal
                 _ => '\0',
             };
             var key = parsed.Key == 0 ? CharToKey(parsed.Char) : parsed.Key;
-            _keys.Enqueue(new ConsoleKeyInfo(
+            _keys.Enqueue((new ConsoleKeyInfo(
                 ch,
                 key,
                 parsed.Modifiers.HasFlag(ConsoleModifiers.Shift),
                 parsed.Modifiers.HasFlag(ConsoleModifiers.Alt),
-                parsed.Modifiers.HasFlag(ConsoleModifiers.Control)));
+                parsed.Modifiers.HasFlag(ConsoleModifiers.Control)), false));
         }
 
         return this;
@@ -112,7 +124,7 @@ public sealed class VirtualTerminal : ITerminal
 
     public VirtualTerminal Enqueue(ConsoleKeyInfo key)
     {
-        _keys.Enqueue(key);
+        _keys.Enqueue((key, false));
         return this;
     }
 
@@ -121,7 +133,7 @@ public sealed class VirtualTerminal : ITerminal
         cancellationToken.ThrowIfCancellationRequested();
         if (_keys.Count > 0)
         {
-            return _keys.Dequeue();
+            return _keys.Dequeue().Key;
         }
 
         return OnInputExhausted?.Invoke() ?? throw new EndOfScriptedInputException();
@@ -785,6 +797,14 @@ public sealed class VirtualTerminal : ITerminal
     }
 
     private static ConsoleKeyInfo Key(ConsoleKey key, char ch) => new(ch, key, false, false, false);
+
+    private static ConsoleKeyInfo CharKey(char c) => c switch
+    {
+        '\n' or '\r' => Key(ConsoleKey.Enter, '\r'),
+        '\t' => Key(ConsoleKey.Tab, '\t'),
+        ' ' => Key(ConsoleKey.Spacebar, ' '),
+        _ => new ConsoleKeyInfo(c, CharToKey(c), shift: char.IsUpper(c), alt: false, control: false),
+    };
 
     private static ConsoleKey CharToKey(char c) => c switch
     {

@@ -106,4 +106,6 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
 - Terminal.Gui v2 must use the **instance** model (`Application.Create()`); never touch the static
   `Application.Init/Run` (it throws once the instance model was used in-process).
 - The Verify snapshot library is intentionally not used (its build-time license check); use `Pickle.Testing.Snapshot`.
+- `$PSStyle` is one static instance per process, shared by every runspace. Tests asserting on it (or other
+  process-wide PowerShell state) must use `[Collection(ProcessWideStateCollection.Name)]` (non-parallel).
 - `PSReadLine` is not used; a shim module maps common `Set-PSReadLineOption` calls to Pickle config.

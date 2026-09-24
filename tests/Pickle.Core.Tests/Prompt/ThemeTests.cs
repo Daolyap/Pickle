@@ -6,6 +6,7 @@ using Pickle.Testing;
 
 namespace Pickle.Core.Tests.Prompt;
 
+[Collection(ProcessWideStateCollection.Name)]
 public class ThemeTests
 {
     public static TheoryData<string> Themes() => new(PromptRenderTests.BuiltInThemes);

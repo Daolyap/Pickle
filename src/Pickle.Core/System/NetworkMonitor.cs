@@ -43,7 +43,8 @@ public sealed class NetworkMonitor : INetworkMonitor
         using var ping = new Ping();
         try
         {
-            var reply = await ping.SendPingAsync(host, timeout, new byte[32], null, cancellationToken).ConfigureAwait(false);
+            // No custom buffer: unprivileged Linux/macOS falls back to the ping utility, which only sends the default one.
+            var reply = await ping.SendPingAsync(host, timeout, buffer: null, options: null, cancellationToken).ConfigureAwait(false);
             var address = reply.Address is { } a && !a.Equals(IPAddress.Any) ? a.ToString() : null;
             return new PingResult(reply.Status == IPStatus.Success, reply.Status.ToString(), address, reply.RoundtripTime, reply.Options?.Ttl);
         }
@@ -51,7 +52,7 @@ public sealed class NetworkMonitor : INetworkMonitor
         {
             return new PingResult(false, (ex.InnerException ?? ex).Message, null, 0, null);
         }
-        catch (Exception ex) when (ex is ArgumentException or SocketException or InvalidOperationException)
+        catch (Exception ex) when (ex is ArgumentException or SocketException or InvalidOperationException or PlatformNotSupportedException)
         {
             return new PingResult(false, ex.Message, null, 0, null);
         }

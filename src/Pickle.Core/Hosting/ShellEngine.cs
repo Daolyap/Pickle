@@ -281,8 +281,8 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             return InvokeBackgroundAsync(script, parameters, cancellationToken);
         }
 
-        // Called from inside a running pipeline (same thread): run nested.
-        if (IsExecuting && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace)
+        // Called from inside a running pipeline in the main runspace (same thread): run nested.
+        if (IsOnPipelineThread)
         {
             return Task.FromResult(InvokeNested(script, parameters));
         }
@@ -298,9 +298,16 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         return Task.Run(() => InvokeMain(script, parameters, cancellationToken), cancellationToken);
     }
 
+    /// <summary>
+    /// The calling thread is running a pipeline in the main runspace (interactive or InvokeAsync). Work from here must
+    /// nest: waiting for the runspace lock would wait on ourselves.
+    /// </summary>
+    private bool IsOnPipelineThread =>
+        MainRunspace is not null && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace;
+
     private ShellResult InvokeMain(string script, IReadOnlyDictionary<string, object?>? parameters, CancellationToken cancellationToken = default)
     {
-        if (IsExecuting && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace)
+        if (IsOnPipelineThread)
         {
             return InvokeNested(script, parameters);
         }

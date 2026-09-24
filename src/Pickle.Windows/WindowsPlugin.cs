@@ -34,7 +34,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         context.Commands.Register(new UpdateCommand());
         context.Commands.Register(new ScheduleCommand());
 
-        // Windows Terminal integration (workstream W3) is registered here as well.
+        Terminal.WindowsTerminalIntegration.Register(context);
     }
 
     private static IWindowsUpdateService CreateWindowsUpdateService(IPickleContext context)

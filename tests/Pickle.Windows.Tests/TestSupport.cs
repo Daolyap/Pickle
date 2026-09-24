@@ -28,6 +28,12 @@ internal sealed class NullShell : IPickleShell
 
     public bool IsInteractive => false;
 
+    public bool IsBusy => false;
+
+    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null)
+    {
+    }
+
     public Task<ShellResult> InvokeAsync(string script, IReadOnlyDictionary<string, object?>? parameters = null, ShellTarget target = ShellTarget.Main, CancellationToken cancellationToken = default)
     {
         Scripts.Add(script);

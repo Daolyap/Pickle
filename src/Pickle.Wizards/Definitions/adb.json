@@ -1,0 +1,176 @@
+{
+  "id": "adb",
+  "title": "adb",
+  "description": "Android Debug Bridge: devices, apps, logs, shell, file transfer and port forwarding.",
+  "command": "adb",
+  "aliases": ["adb.exe"],
+  "wingetId": "Google.PlatformTools",
+  "homepage": "https://developer.android.com/tools/adb",
+  "sections": [
+    {
+      "title": "Device",
+      "description": "Pick a device when several are connected.",
+      "options": [
+        { "id": "serial", "label": "Serial", "type": "text", "flag": "-s", "placeholder": "emulator-5554" },
+        { "id": "usb", "label": "The USB device", "type": "flag", "flag": "-d" },
+        { "id": "emulator", "label": "The emulator", "type": "flag", "flag": "-e" }
+      ]
+    }
+  ],
+  "modes": [
+    {
+      "id": "devices",
+      "title": "devices",
+      "subcommand": ["devices"],
+      "sections": [
+        { "title": "Devices", "options": [ { "id": "long", "label": "Details", "type": "flag", "flag": "-l" } ] }
+      ]
+    },
+    {
+      "id": "install",
+      "title": "install",
+      "subcommand": ["install"],
+      "sections": [
+        {
+          "title": "Install",
+          "options": [
+            { "id": "replace", "label": "Replace existing app", "type": "flag", "flag": "-r" },
+            { "id": "downgrade", "label": "Allow downgrade", "type": "flag", "flag": "-d" },
+            { "id": "grant", "label": "Grant all runtime permissions", "type": "flag", "flag": "-g" },
+            { "id": "allowTest", "label": "Allow test packages", "type": "flag", "flag": "-t" },
+            { "id": "apk", "label": "APK", "type": "path", "position": 1, "required": true, "placeholder": "app-debug.apk" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uninstall",
+      "title": "uninstall",
+      "subcommand": ["uninstall"],
+      "sections": [
+        {
+          "title": "Uninstall",
+          "options": [
+            { "id": "keepData", "label": "Keep data and cache", "type": "flag", "flag": "-k" },
+            { "id": "package", "label": "Package", "type": "positional", "position": 1, "required": true, "placeholder": "com.example.app" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "logcat",
+      "title": "logcat",
+      "subcommand": ["logcat"],
+      "sections": [
+        {
+          "title": "Logcat",
+          "options": [
+            { "id": "dump", "label": "Dump and exit", "type": "flag", "flag": "-d" },
+            { "id": "clear", "label": "Clear the log", "type": "flag", "flag": "-c", "warning": "Clears the device log buffer." },
+            {
+              "id": "format", "label": "Format", "type": "choice", "flag": "-v",
+              "choices": [ { "value": "brief" }, { "value": "time" }, { "value": "threadtime" }, { "value": "long" }, { "value": "color" }, { "value": "tag" }, { "value": "raw" } ]
+            },
+            {
+              "id": "buffer", "label": "Buffer", "type": "choice", "flag": "-b",
+              "choices": [ { "value": "main" }, { "value": "system" }, { "value": "crash" }, { "value": "events" }, { "value": "radio" }, { "value": "all" } ]
+            },
+            { "id": "pid", "label": "Process id", "type": "number", "flag": "--pid", "valueStyle": "equals" },
+            { "id": "regex", "label": "Only lines matching", "type": "text", "flag": "-e" },
+            { "id": "filters", "label": "Filter specs", "type": "list", "position": 1, "placeholder": "ActivityManager:I", "description": "tag:priority (V D I W E F S), e.g. *:E for errors only." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "title": "shell",
+      "subcommand": ["shell"],
+      "sections": [
+        {
+          "title": "Shell",
+          "options": [
+            { "id": "command", "label": "Command", "type": "positional", "position": 1, "raw": true, "placeholder": "pm list packages", "description": "Empty opens an interactive shell." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "push",
+      "title": "push",
+      "subcommand": ["push"],
+      "sections": [
+        {
+          "title": "Push",
+          "options": [
+            { "id": "local", "label": "Local file(s)", "type": "list", "position": 1, "required": true },
+            { "id": "remote", "label": "Device path", "type": "positional", "position": 2, "required": true, "placeholder": "/sdcard/Download/" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pull",
+      "title": "pull",
+      "subcommand": ["pull"],
+      "sections": [
+        {
+          "title": "Pull",
+          "options": [
+            { "id": "preserve", "label": "Preserve timestamps and mode", "type": "flag", "flag": "-a" },
+            { "id": "remote", "label": "Device path(s)", "type": "list", "position": 1, "required": true, "placeholder": "/sdcard/DCIM/Camera/" },
+            { "id": "local", "label": "Local folder", "type": "path", "position": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reverse",
+      "title": "reverse",
+      "description": "Device port → this machine (e.g. a dev server).",
+      "subcommand": ["reverse"],
+      "sections": [
+        {
+          "title": "Reverse",
+          "options": [
+            { "id": "operation", "label": "Instead", "type": "choice", "choices": [ { "value": "--list", "label": "List reversals" }, { "value": "--remove-all", "label": "Remove all" } ] },
+            { "id": "noRebind", "label": "Fail if already used", "type": "flag", "flag": "--no-rebind" },
+            { "id": "remote", "label": "Device side", "type": "positional", "position": 1, "placeholder": "tcp:8081" },
+            { "id": "local", "label": "Local side", "type": "positional", "position": 2, "placeholder": "tcp:8081" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "forward",
+      "title": "forward",
+      "description": "Local port → device.",
+      "subcommand": ["forward"],
+      "sections": [
+        {
+          "title": "Forward",
+          "options": [
+            { "id": "operation", "label": "Instead", "type": "choice", "choices": [ { "value": "--list", "label": "List forwards" }, { "value": "--remove-all", "label": "Remove all" } ] },
+            { "id": "noRebind", "label": "Fail if already used", "type": "flag", "flag": "--no-rebind" },
+            { "id": "local", "label": "Local side", "type": "positional", "position": 1, "placeholder": "tcp:9222" },
+            { "id": "remote", "label": "Device side", "type": "positional", "position": 2, "placeholder": "localabstract:chrome_devtools_remote" }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "List devices", "description": "", "mode": "devices", "values": { "long": "true" } },
+    { "name": "Install an APK (replace)", "description": "", "mode": "install", "values": { "replace": "true", "apk": "app-debug.apk" } },
+    { "name": "Install on a specific device", "description": "", "mode": "install", "values": { "serial": "emulator-5554", "apk": "app-debug.apk" } },
+    { "name": "Uninstall an app", "description": "", "mode": "uninstall", "values": { "package": "com.example.app" } },
+    { "name": "Errors only", "description": "", "mode": "logcat", "values": { "format": "time", "filters": "*:E" } },
+    { "name": "Dump the log to a file", "description": "Pipe or redirect the output.", "mode": "logcat", "values": { "dump": "true", "format": "threadtime" } },
+    { "name": "Interactive shell", "description": "", "mode": "shell", "values": {} },
+    { "name": "List installed packages", "description": "", "mode": "shell", "values": { "command": "pm list packages -3" } },
+    { "name": "Push a file", "description": "", "mode": "push", "values": { "local": "photo.jpg", "remote": "/sdcard/Download/" } },
+    { "name": "Pull camera photos", "description": "", "mode": "pull", "values": { "remote": "/sdcard/DCIM/Camera/", "local": "." } },
+    { "name": "Reverse dev server port", "description": "", "mode": "reverse", "values": { "remote": "tcp:8081", "local": "tcp:8081" } },
+    { "name": "Chrome DevTools on the device", "description": "", "mode": "forward", "values": { "local": "tcp:9222", "remote": "localabstract:chrome_devtools_remote" } }
+  ]
+}

@@ -5,6 +5,7 @@
     <RootNamespace>Pickle</RootNamespace>
     <Description>Pickle — a PowerShell 7 shell with superpowers.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\logo\pickle.ico</ApplicationIcon>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>

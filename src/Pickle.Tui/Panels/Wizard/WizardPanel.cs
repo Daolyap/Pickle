@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
+using Pickle.Tui.Widgets;
 using Pickle.Wizards;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
@@ -474,15 +475,15 @@ internal sealed class WizardPanel : PanelWindow
             X = 0,
             Y = 2,
             Width = Dim.Fill(),
-            Height = Dim.Fill(8),
+            Height = Dim.Fill(7 + 1 + InputBox.Chrome),
             CanFocus = true,
             BorderStyle = LineStyle.Single,
             Title = "Options",
         };
         _form.ViewportSettings |= ViewportSettingsFlags.HasVerticalScrollBar;
 
-        var extrasLabel = new Label { Text = "Extra arguments:", X = 0, Y = Pos.AnchorEnd(8) };
-        _extras = Outlined(new TextField { X = LabelWidth + 2, Y = Pos.AnchorEnd(8), Width = Dim.Fill(1), Text = extras });
+        var extrasLabel = new Label { Text = "Extra arguments:", X = 0, Y = Pos.AnchorEnd(9) };
+        _extras = InputBox.Boxed(new TextField { X = LabelWidth + 2, Y = Pos.AnchorEnd(8 + InputBox.Chrome), Width = Dim.Fill(1), Text = extras });
         _extras.TextChanged += (_, _) => Refresh();
         _help = new Label { X = 0, Y = Pos.AnchorEnd(7), Width = Dim.Fill(), Height = 1 };
         _messages = new Label { X = 0, Y = Pos.AnchorEnd(6), Width = Dim.Fill(), Height = 2 };
@@ -571,13 +572,19 @@ internal sealed class WizardPanel : PanelWindow
     private (View Row, int Height) CreateRow(WizardOption option)
     {
         var template = option.GetTemplate();
-        var height = template is not null ? template.Placeholders.Count
-            : option.IsMultiValued() ? Math.Clamp(WizardEngine.Items(option, _values.GetValueOrDefault(option.Id)).Count + 1, 2, 5)
-            : 1;
+        const int Box = 1 + InputBox.Chrome;
+        var listHeight = Math.Clamp(WizardEngine.Items(option, _values.GetValueOrDefault(option.Id)).Count + 1, 2, 5);
+        var height = template is not null ? template.Placeholders.Count * Box
+            : option.IsMultiValued() ? listHeight + InputBox.Chrome
+            : option.Type == WizardOptionType.Flag ? 1
+            : Box;
+
+        // Boxed editors put their text on the box's middle row; labels line up with it.
+        var labelY = height == 1 ? 0 : 1;
         var row = new View { X = 0, Width = Dim.Fill(), Height = height, CanFocus = true };
         var label = option.Label + (option.Required ? " *" : string.Empty);
-        row.Add(new Label { Text = label.Length > LabelWidth ? label[..(LabelWidth - 1)] + "…" : label, X = 0, Y = 0, Width = LabelWidth });
-        var marker = new Label { Text = string.Empty, X = LabelWidth, Y = 0, Width = 2, Id = "marker" };
+        row.Add(new Label { Text = label.Length > LabelWidth ? label[..(LabelWidth - 1)] + "…" : label, X = 0, Y = labelY, Width = LabelWidth });
+        var marker = new Label { Text = string.Empty, X = LabelWidth, Y = labelY, Width = 2, Id = "marker" };
         row.Add(marker);
         var x = LabelWidth + 2;
         var value = _values.GetValueOrDefault(option.Id);
@@ -588,8 +595,8 @@ internal sealed class WizardPanel : PanelWindow
             {
                 var key = option.Id + "." + template.Placeholders[i];
                 var optional = !template.RequiredPlaceholders.Contains(template.Placeholders[i]);
-                row.Add(new Label { Text = Humanize(template.Placeholders[i]) + (optional ? " (opt.)" : string.Empty), X = x, Y = i, Width = 22 });
-                var field = Outlined(new TextField { X = x + 22, Y = i, Width = Dim.Fill(1), Text = _values.GetValueOrDefault(key) ?? string.Empty });
+                row.Add(new Label { Text = Humanize(template.Placeholders[i]) + (optional ? " (opt.)" : string.Empty), X = x, Y = (i * Box) + 1, Width = 22 });
+                var field = InputBox.Boxed(new TextField { X = x + 22, Y = i * Box, Width = Dim.Fill(1), Text = _values.GetValueOrDefault(key) ?? string.Empty });
                 Bind(field, key, option);
                 row.Add(field);
             }
@@ -618,7 +625,7 @@ internal sealed class WizardPanel : PanelWindow
                     choices.Add(value);
                 }
 
-                var dropDown = Outlined(new DropDownList
+                var dropDown = InputBox.Boxed(new DropDownList
                 {
                     X = x,
                     Y = 0,
@@ -631,11 +638,11 @@ internal sealed class WizardPanel : PanelWindow
                 break;
             case WizardOptionType.List:
             case WizardOptionType.KeyValueList:
-                editor = CreateListEditor(option.Id, value, x, height);
+                editor = CreateListEditor(option.Id, value, x, listHeight);
                 break;
             case WizardOptionType.Path:
-                var path = Outlined(new TextField { X = x, Y = 0, Width = Dim.Fill(5), Text = value ?? string.Empty });
-                var browse = new Button { Text = "…", X = Pos.AnchorEnd(4), Y = 0, NoDecorations = true };
+                var path = InputBox.Boxed(new TextField { X = x, Y = 0, Width = Dim.Fill(5), Text = value ?? string.Empty });
+                var browse = new Button { Text = "…", X = Pos.AnchorEnd(4), Y = 1, NoDecorations = true };
                 browse.Accepting += (_, e) =>
                 {
                     e.Handled = true;
@@ -646,7 +653,7 @@ internal sealed class WizardPanel : PanelWindow
                 editor = path;
                 break;
             default:
-                var text = Outlined(new TextField { X = x, Y = 0, Width = Dim.Fill(1), Text = value ?? string.Empty });
+                var text = InputBox.Boxed(new TextField { X = x, Y = 0, Width = Dim.Fill(1), Text = value ?? string.Empty });
                 Bind(text, option.Id, option);
                 editor = text;
                 break;
@@ -667,18 +674,9 @@ internal sealed class WizardPanel : PanelWindow
     // Terminal.Gui 2.5 marks TextView obsolete in favour of a separate editor package; it is still the only
     // multi-line input that ships with it, and list values are one item per line.
 #pragma warning disable CS0618
-    /// <summary>A bar at each end (no extra rows) so a field's extent is visible whatever the theme's input colors.</summary>
-    private static T Outlined<T>(T field)
-        where T : View
-    {
-        field.BorderStyle = LineStyle.Single;
-        field.Border!.Thickness = new Thickness(1, 0, 1, 0);
-        return field;
-    }
-
     private View CreateListEditor(string key, string? value, int x, int height)
     {
-        var list = Outlined(new TextView { X = x, Y = 0, Width = Dim.Fill(1), Height = height, Text = value ?? string.Empty, TabKeyAddsTab = false });
+        var list = InputBox.Boxed(new TextView { X = x, Y = 0, Width = Dim.Fill(1), Text = value ?? string.Empty, TabKeyAddsTab = false }, height);
         list.ContentsChanged += (_, _) => SetValue(key, list.Text);
         return list;
     }
@@ -896,7 +894,7 @@ internal sealed class WizardPanel : PanelWindow
         }
 
         using var dialog = new Dialog { Title = "Save as alias" };
-        var field = new TextField { X = 0, Y = 1, Width = 40, Text = _definition?.Id ?? string.Empty };
+        var field = InputBox.Boxed(new TextField { X = 0, Y = 1, Width = 40, Text = _definition?.Id ?? string.Empty });
         dialog.Add(new Label { Text = "Alias name:", X = 0, Y = 0 }, field);
         dialog.AddButton(new Button { Text = "_Cancel" });
         dialog.AddButton(new Button { Text = "_Save" });

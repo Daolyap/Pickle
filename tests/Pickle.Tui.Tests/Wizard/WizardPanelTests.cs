@@ -2,6 +2,7 @@ using Pickle.Abstractions;
 using Pickle.Testing;
 using Pickle.Testing.Fakes;
 using Pickle.Tui.Panels.Wizard;
+using Pickle.Tui.Tests.SystemMonitoring;
 using Pickle.Wizards;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
@@ -56,6 +57,21 @@ public sealed class WizardPanelTests : IDisposable
 
         panel.ExtraArgumentsField!.Text = "--ipv4";
         Assert.EndsWith("--ipv4 https://example.com", panel.PreviewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TextFieldsAreDrawnAsFullBoxes()
+    {
+        var context = new PanelContext { Pickle = _pickle.Runtime, Argument = "curl", CurrentInput = "curl https://example.com" };
+        var panel = new WizardPanel(context, _ => true);
+
+        var lines = SystemPanelRunner.RunAndDraw(panel).Split('\n');
+
+        var url = Array.FindIndex(lines, l => l.Contains("https://example.com", StringComparison.Ordinal) && l.Contains('│'));
+        Assert.True(url > 0, string.Join('\n', lines));
+        var column = lines[url].IndexOf("https://example.com", StringComparison.Ordinal);
+        Assert.Contains('─', lines[url - 1][(column - 2)..(column + 5)]);
+        Assert.Contains('─', lines[url + 1][(column - 2)..(column + 5)]);
     }
 
     [Fact]

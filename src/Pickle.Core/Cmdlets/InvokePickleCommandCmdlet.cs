@@ -4,6 +4,7 @@ using System.Management.Automation.Host;
 using System.Text;
 using Pickle.Abstractions;
 using Pickle.Core.Commands;
+using Pickle.Core.Hosting;
 
 namespace Pickle.Core.Cmdlets;
 
@@ -179,7 +180,18 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
         }
 
         var width = Math.Max(40, runtime.Terminal.Width - 1);
-        Host.UI.WriteLine(Ansi.Colorize("Pickle commands", theme.Ui.Accent, bold: true) + Ansi.Colorize("  pk <command> --help for details", theme.Ui.Muted));
+        if (topic is null && StartupBanner.Logo(theme, width) is { } logo)
+        {
+            foreach (var line in logo)
+            {
+                Host.UI.WriteLine(line);
+            }
+
+            Host.UI.WriteLine(string.Empty);
+        }
+
+        Host.UI.WriteLine(Ansi.Colorize("Pickle commands", theme.Ui.Accent, bold: true)
+            + Ansi.Colorize($"  v{PickleRuntime.Version}  ·  pk <command> --help for details", theme.Ui.Muted));
         var commands = runtime.CommandRegistry.All.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
         var nameWidth = commands.Count == 0 ? 8 : Math.Min(14, commands.Max(c => c.Name.Length)) + 2;
         var descriptionWidth = Math.Max(20, width - 2 - nameWidth);

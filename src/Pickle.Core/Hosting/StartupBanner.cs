@@ -93,6 +93,24 @@ internal static class StartupBanner
         terminal.Write(info + "\r\n");
     }
 
+    /// <summary>The art in its resting gradient (no animation) with a left margin, or null when it doesn't fit.</summary>
+    internal static IReadOnlyList<string>? Logo(Theme theme, int width, int indent = 2)
+    {
+        if (width < ArtWidth + indent + 1)
+        {
+            return null;
+        }
+
+        var palette = Palette(theme);
+        var margin = new string(' ', indent);
+        return [.. Art.Select((text, row) =>
+        {
+            var sb = new StringBuilder(margin);
+            AppendRow(sb, text, row, double.NaN, palette, theme.Ui.Accent);
+            return sb.Append(Ansi.Reset).ToString();
+        })];
+    }
+
     /// <summary>"🥒 Pickle x · PowerShell y · F1 commands · pk help", dropping trailing parts that don't fit.</summary>
     private static string InfoLine(Theme theme, int width)
     {

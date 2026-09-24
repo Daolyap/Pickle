@@ -1,5 +1,6 @@
 using System.Globalization;
 using Pickle.Abstractions.Services;
+using Pickle.Tui.Widgets;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -495,7 +496,7 @@ public sealed partial class GitPanel
             }
 
             using var dialog = new Dialog { Title = title, Width = Dim.Percent(60) };
-            var field = new TextField { X = 0, Y = 1, Width = Dim.Fill(), Text = initial };
+            var field = InputBox.Boxed(new TextField { X = 0, Y = 1, Width = Dim.Fill(), Text = initial });
             dialog.Add(new Label { X = 0, Y = 0, Text = label }, field);
             dialog.AddButton(new Button { Title = "_Cancel" });
             dialog.AddButton(new Button { Title = "_OK" });
@@ -513,7 +514,7 @@ public sealed partial class GitPanel
 
             using var dialog = new Dialog { Title = "Commit", Width = Dim.Percent(80) };
 #pragma warning disable CS0618 // TextView is superseded by an external editor package; it is still the built-in multi-line input.
-            var message = new TextView { X = 0, Y = 0, Width = Dim.Fill(), Height = 8, TabKeyAddsTab = false };
+            var message = InputBox.Boxed(new TextView { X = 0, Y = 0, Width = Dim.Fill(), TabKeyAddsTab = false }, 8);
 #pragma warning restore CS0618
             var amend = new CheckBox { X = 0, Y = Pos.Bottom(message), Text = "_Amend previous commit (empty message keeps the old one)" };
             var hint = new Label { X = 0, Y = Pos.Bottom(amend), Text = "Ctrl+S commit · Tab to buttons · Esc cancel" };
@@ -548,8 +549,8 @@ public sealed partial class GitPanel
             }
 
             using var dialog = new Dialog { Title = "Stash changes", Width = Dim.Percent(60) };
-            var field = new TextField { X = 0, Y = 1, Width = Dim.Fill() };
-            var untracked = new CheckBox { X = 0, Y = 3, Text = "Include _untracked files", Value = CheckState.Checked };
+            var field = InputBox.Boxed(new TextField { X = 0, Y = 1, Width = Dim.Fill() });
+            var untracked = new CheckBox { X = 0, Y = Pos.Bottom(field) + 1, Text = "Include _untracked files", Value = CheckState.Checked };
             dialog.Add(new Label { X = 0, Y = 0, Text = "Message (optional):" }, field, untracked);
             dialog.AddButton(new Button { Title = "_Cancel" });
             dialog.AddButton(new Button { Title = "_Stash" });

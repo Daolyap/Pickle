@@ -1,4 +1,6 @@
-# 🥒 Pickle
+<p align="center"><img src="assets/logo/pickle.svg" alt="Pickle logo" width="160"></p>
+
+# Pickle
 
 **A PowerShell 7 shell with superpowers.** Pickle runs the real PowerShell 7 engine — your cmdlets, modules,
 scripts and profile all work — but replaces the interactive experience with something much nicer, and adds

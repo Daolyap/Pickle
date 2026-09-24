@@ -31,15 +31,16 @@ if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
 $work = Join-Path $root 'artifacts/msi-work'
 New-Item -ItemType Directory -Force -Path $work, $Output | Out-Null
 
-# Windows Terminal fragment installed for all users; commandline relies on the PATH entry the MSI adds.
+# Windows Terminal fragment installed for all users; commandline relies on the PATH entry the MSI adds and the icon
+# is the pickle.png the MSI puts next to pickle.exe (Terminal expands environment variables in icon paths).
 $fragment = Join-Path $work 'pickle.json'
-& $exe --write-terminal-fragment $fragment --fragment-commandline 'pickle.exe' 2>$null
+& $exe --write-terminal-fragment $fragment --fragment-commandline 'pickle.exe' --fragment-icon '%ProgramFiles%\Pickle\pickle.png' 2>$null
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $fragment)) {
     @{
         profiles = @(@{
                 name        = 'Pickle'
                 commandline = 'pickle.exe'
-                icon        = 'ms-appx:///ProfileIcons/pwsh.png'
+                icon        = '%ProgramFiles%\Pickle\pickle.png'
             })
     } | ConvertTo-Json -Depth 5 | Set-Content -Path $fragment -Encoding utf8
 }
@@ -51,6 +52,7 @@ wix build packaging/wix/Package.wxs `
     -d "Version=$msiVersion" `
     -d "PublishDir=$(Resolve-Path $PublishDir)" `
     -d "FragmentFile=$fragment" `
+    -d "AssetsDir=$(Resolve-Path assets/logo)" `
     -o $msi
 if ($LASTEXITCODE -ne 0) { throw "wix build failed ($LASTEXITCODE)" }
 

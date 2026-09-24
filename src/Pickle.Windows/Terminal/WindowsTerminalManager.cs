@@ -9,7 +9,12 @@ public sealed record WindowsTerminalLocations(string FragmentDirectory, IReadOnl
 {
     public const string FragmentFileName = "pickle.json";
 
+    public const string IconFileName = "pickle.png";
+
     public string FragmentFile => Path.Combine(FragmentDirectory, FragmentFileName);
+
+    /// <summary>The profile icon, written next to the fragment (Terminal only reads *.json files from there).</summary>
+    public string IconFile => Path.Combine(FragmentDirectory, IconFileName);
 
     /// <summary>The all-users fragment the MSI installs (under ProgramData), if any.</summary>
     public string? MachineFragmentFile { get; init; }
@@ -60,7 +65,8 @@ public sealed class WindowsTerminalManager(WindowsTerminalLocations locations, F
         lock (_gate)
         {
             Directory.CreateDirectory(locations.FragmentDirectory);
-            return WriteIfChanged(locations.FragmentFile, WindowsTerminalFragment.Build(executablePath, settings, palette));
+            var (icon, iconChanged) = WriteIcon();
+            return WriteIfChanged(locations.FragmentFile, WindowsTerminalFragment.Build(executablePath, settings, palette, icon)) | iconChanged;
         }
     }
 
@@ -74,7 +80,8 @@ public sealed class WindowsTerminalManager(WindowsTerminalLocations locations, F
                 return false;
             }
 
-            return WriteIfChanged(locations.FragmentFile, WindowsTerminalFragment.Build(exe, settings, palette));
+            var (icon, iconChanged) = WriteIcon();
+            return WriteIfChanged(locations.FragmentFile, WindowsTerminalFragment.Build(exe, settings, palette, icon)) | iconChanged;
         }
     }
 
@@ -88,6 +95,10 @@ public sealed class WindowsTerminalManager(WindowsTerminalLocations locations, F
             }
 
             File.Delete(locations.FragmentFile);
+            if (File.Exists(locations.IconFile))
+            {
+                File.Delete(locations.IconFile);
+            }
             if (Directory.Exists(locations.FragmentDirectory) && !Directory.EnumerateFileSystemEntries(locations.FragmentDirectory).Any())
             {
                 Directory.Delete(locations.FragmentDirectory);
@@ -150,6 +161,36 @@ public sealed class WindowsTerminalManager(WindowsTerminalLocations locations, F
         catch (FormatException)
         {
             return null;
+        }
+    }
+
+    /// <summary>The Pickle logo as a PNG sized for Terminal's tabs and menus.</summary>
+    public static byte[] IconPng()
+    {
+        using var stream = typeof(WindowsTerminalManager).Assembly.GetManifestResourceStream("Pickle.Windows.pickle-terminal.png")
+            ?? throw new InvalidOperationException("The embedded Windows Terminal icon is missing.");
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    }
+
+    /// <summary>Writes the icon next to the fragment; a failure only costs the icon (null path), never the profile.</summary>
+    private (string? Path, bool Changed) WriteIcon()
+    {
+        try
+        {
+            var png = IconPng();
+            if (File.Exists(locations.IconFile) && File.ReadAllBytes(locations.IconFile).AsSpan().SequenceEqual(png))
+            {
+                return (locations.IconFile, false);
+            }
+
+            File.WriteAllBytes(locations.IconFile, png);
+            return (locations.IconFile, true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return (null, false);
         }
     }
 

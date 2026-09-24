@@ -74,6 +74,17 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.Equal(WindowsTerminalProfile.BuildFragment("\"C:\\Program Files\\Pickle\\pickle.exe\""), File.ReadAllText(path));
         Assert.NotEqual(0xEF, File.ReadAllBytes(path)[0]);
         Assert.Equal(2, WindowsTerminalProfile.WriteFragment(path, " "));
+
+        Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "pickle.exe", icon: "%ProgramFiles%\\Pickle\\pickle.png"));
+        using var withIcon = JsonDocument.Parse(File.ReadAllText(path));
+        Assert.Equal("%ProgramFiles%\\Pickle\\pickle.png", withIcon.RootElement.GetProperty("profiles")[0].GetProperty("icon").GetString());
+    }
+
+    [Fact]
+    public void EmbeddedIconIsAPng()
+    {
+        var png = WindowsTerminalManager.IconPng();
+        Assert.Equal([0x89, (byte)'P', (byte)'N', (byte)'G'], png[..4]);
     }
 
     [Fact]
@@ -87,6 +98,12 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.True(manager.Install(Exe, new TerminalSettings(), new TerminalPalette()));
         Assert.True(File.Exists(Path.Combine(_root, "Microsoft", "Windows Terminal", "Fragments", "Pickle", "pickle.json")));
         Assert.Equal(Exe, manager.InstalledExecutable);
+        Assert.Equal(WindowsTerminalManager.IconPng(), File.ReadAllBytes(locations.IconFile));
+        using (var doc = JsonDocument.Parse(File.ReadAllText(locations.FragmentFile)))
+        {
+            Assert.Equal(locations.IconFile, doc.RootElement.GetProperty("profiles")[0].GetProperty("icon").GetString());
+        }
+
         Assert.False(manager.Install(Exe, new TerminalSettings(), new TerminalPalette()));
 
         Assert.True(manager.Update(new TerminalSettings { FontSize = 15 }, new TerminalPalette()));

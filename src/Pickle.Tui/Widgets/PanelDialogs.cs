@@ -13,7 +13,7 @@ public static class PanelDialogs
     {
         using var dialog = new Dialog { Title = title };
         var text = new Label { Text = label, X = 1, Y = 0 };
-        var field = new TextField { X = 1, Y = 1, Width = width, Text = initial };
+        var field = InputBox.Boxed(new TextField { X = 1, Y = 1, Width = width, Text = initial });
         dialog.Add(text, field);
         dialog.AddButton(new Button { Title = "_Cancel" });
         dialog.AddButton(new Button { Title = "_OK" });

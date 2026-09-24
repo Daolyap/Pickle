@@ -1,22 +1,16 @@
+using Pickle.Abstractions;
+
 namespace Pickle.Tui.Widgets;
 
-/// <summary>A successful fuzzy match: higher <see cref="Score"/> is better; <see cref="Positions"/> are matched char indexes.</summary>
-public sealed record FuzzyMatch(int Score, IReadOnlyList<int> Positions)
-{
-    public static FuzzyMatch Empty { get; } = new(0, []);
-}
-
 /// <summary>
-/// Fuzzy filtering for panels. <see cref="Match"/> is the single scoring seam: it is a small local matcher until the
-/// shared <c>Pickle.Abstractions.FuzzyMatcher</c> is available, then only that method's body needs to change.
+/// Fuzzy filtering for panels on top of the shared <see cref="FuzzyMatcher"/> (the same scoring as completion and
+/// history search), adding space-separated terms that must all match and keyword fallbacks.
 /// </summary>
 public static class FuzzyFilter
 {
-    private const int MaxStarts = 12;
-
     /// <summary>
-    /// Matches <paramref name="pattern"/> against <paramref name="text"/> (case-insensitive subsequence; space-separated
-    /// terms must all match). Returns null when it doesn't match; an empty pattern matches everything with score 0.
+    /// Matches <paramref name="pattern"/> against <paramref name="text"/>; space-separated terms must all match.
+    /// Returns null when it doesn't match; an empty pattern matches everything with score 0.
     /// </summary>
     public static FuzzyMatch? Match(string pattern, string text)
     {
@@ -29,16 +23,23 @@ public static class FuzzyFilter
         var positions = new SortedSet<int>();
         foreach (var term in pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries))
         {
-            if (MatchTerm(term, text) is not { } match)
+            if (FuzzyMatcher.Match(term, text) is not { } match)
             {
                 return null;
             }
 
-            total += match.Score;
+            total += match.Score + PathBonus(text, match);
             positions.UnionWith(match.Positions);
         }
 
         return new FuzzyMatch(total, [.. positions]);
+    }
+
+    // Panels list paths a lot: prefer matches inside the last path segment (file names over directory names).
+    private static int PathBonus(string text, FuzzyMatch match)
+    {
+        var lastSeparator = text.LastIndexOfAny(['/', '\\']);
+        return lastSeparator >= 0 && match.Positions.Count > 0 && match.Positions[0] > lastSeparator ? 24 : 0;
     }
 
     /// <summary>Filter and rank items (stable for equal scores); an empty pattern keeps the original order.</summary>
@@ -94,111 +95,5 @@ public static class FuzzyFilter
         }
 
         return [.. results.Select(r => (r.Item, r.Match))];
-    }
-
-    private static FuzzyMatch? MatchTerm(string term, string text)
-    {
-        // Quick reject: the term must be a subsequence at all.
-        var ti = 0;
-        for (var i = 0; i < text.Length && ti < term.Length; i++)
-        {
-            if (Same(text[i], term[ti]))
-            {
-                ti++;
-            }
-        }
-
-        if (ti < term.Length)
-        {
-            return null;
-        }
-
-        // Score greedy matches from several start positions (word starts first) and keep the best.
-        FuzzyMatch? best = null;
-        var starts = 0;
-        for (var start = 0; start < text.Length && starts < MaxStarts; start++)
-        {
-            if (!Same(text[start], term[0]))
-            {
-                continue;
-            }
-
-            starts++;
-            if (Score(term, text, start) is { } candidate && (best is null || candidate.Score > best.Score))
-            {
-                best = candidate;
-            }
-        }
-
-        return best;
-    }
-
-    private static FuzzyMatch? Score(string term, string text, int start)
-    {
-        var positions = new int[term.Length];
-        var score = 0;
-        var ti = 0;
-        var previous = -2;
-        for (var i = start; i < text.Length && ti < term.Length; i++)
-        {
-            if (!Same(text[i], term[ti]))
-            {
-                continue;
-            }
-
-            positions[ti] = i;
-            score += 16;
-            if (i == previous + 1)
-            {
-                score += 24;
-            }
-            else if (previous >= 0)
-            {
-                score -= Math.Min(12, i - previous);
-            }
-
-            if (IsWordStart(text, i))
-            {
-                score += i == 0 ? 20 : 14;
-            }
-
-            if (text[i] == term[ti])
-            {
-                score += 1;
-            }
-
-            previous = i;
-            ti++;
-        }
-
-        if (ti < term.Length)
-        {
-            return null;
-        }
-
-        // Prefer matches in the last path segment (file names over directories) and shorter texts.
-        var lastSeparator = text.LastIndexOfAny(['/', '\\']);
-        if (positions[0] > lastSeparator)
-        {
-            score += 10;
-        }
-
-        score -= Math.Min(30, text.Length / 8);
-        return new FuzzyMatch(score, positions);
-    }
-
-    private static bool Same(char a, char b) => a == b || char.ToLowerInvariant(a) == char.ToLowerInvariant(b);
-
-    private static bool IsWordStart(string text, int i)
-    {
-        if (i == 0)
-        {
-            return true;
-        }
-
-        var prev = text[i - 1];
-        return prev is '/' or '\\' or '_' or '-' or '.' or ' ' or ':'
-            || (char.IsLower(prev) && char.IsUpper(text[i]))
-            || (!char.IsLetterOrDigit(prev) && char.IsLetterOrDigit(text[i]));
     }
 }

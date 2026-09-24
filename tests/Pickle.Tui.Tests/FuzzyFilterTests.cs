@@ -1,3 +1,4 @@
+using Pickle.Abstractions;
 using Pickle.Tui.Widgets;
 
 namespace Pickle.Tui.Tests;

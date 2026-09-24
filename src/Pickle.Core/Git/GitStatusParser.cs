@@ -29,42 +29,42 @@ internal static class GitStatusParser
                     ParseHeader(record, ref oid, ref head, ref upstream, ref ahead, ref behind, ref stashes);
                     break;
                 case '1':
-                {
-                    // 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
-                    var parts = record.Split(' ', 9);
-                    if (parts.Length == 9 && parts[1].Length == 2)
                     {
-                        entries.Add(new GitStatusEntry(parts[8], null, Kind(parts[1][0]), Kind(parts[1][1])));
-                    }
+                        // 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+                        var parts = record.Split(' ', 9);
+                        if (parts.Length == 9 && parts[1].Length == 2)
+                        {
+                            entries.Add(new GitStatusEntry(parts[8], null, Kind(parts[1][0]), Kind(parts[1][1])));
+                        }
 
-                    break;
-                }
+                        break;
+                    }
 
                 case '2':
-                {
-                    // 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>\0<origPath>
-                    var parts = record.Split(' ', 10);
-                    var original = i + 1 < records.Length ? records[++i] : null;
-                    if (parts.Length == 10 && parts[1].Length == 2)
                     {
-                        entries.Add(new GitStatusEntry(parts[9], string.IsNullOrEmpty(original) ? null : original, Kind(parts[1][0]), Kind(parts[1][1])));
-                    }
+                        // 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path>\0<origPath>
+                        var parts = record.Split(' ', 10);
+                        var original = i + 1 < records.Length ? records[++i] : null;
+                        if (parts.Length == 10 && parts[1].Length == 2)
+                        {
+                            entries.Add(new GitStatusEntry(parts[9], string.IsNullOrEmpty(original) ? null : original, Kind(parts[1][0]), Kind(parts[1][1])));
+                        }
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 'u':
-                {
-                    // u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
-                    // Conflicts count as unstaged work (not staged): the index holds conflict stages, nothing committable.
-                    var parts = record.Split(' ', 11);
-                    if (parts.Length == 11)
                     {
-                        entries.Add(new GitStatusEntry(parts[10], null, GitChangeKind.None, GitChangeKind.Unmerged));
-                    }
+                        // u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+                        // Conflicts count as unstaged work (not staged): the index holds conflict stages, nothing committable.
+                        var parts = record.Split(' ', 11);
+                        if (parts.Length == 11)
+                        {
+                            entries.Add(new GitStatusEntry(parts[10], null, GitChangeKind.None, GitChangeKind.Unmerged));
+                        }
 
-                    break;
-                }
+                        break;
+                    }
 
                 case '?':
                     entries.Add(new GitStatusEntry(record[2..], null, GitChangeKind.Untracked, GitChangeKind.Untracked));

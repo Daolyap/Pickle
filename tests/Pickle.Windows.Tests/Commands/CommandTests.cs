@@ -359,11 +359,12 @@ public sealed class CommandTests : IDisposable
         var text = string.Join('\n', _t.Run($"pk winget list | Out-String -Width {width}"));
         var lines = text.Split('\n').Select(l => l.TrimEnd('\r')).Where(l => l.Trim().Length > 0).ToList();
 
-        Assert.True(System.Text.RegularExpressions.Regex.IsMatch(lines[0].TrimEnd(), @"^Name\s+Id\s+Version\s+Available$"), "TEXT:\n" + text);
+        Assert.Matches(@"^Id\s+Version\s+Available\s+Name$", lines[0].TrimEnd());
         Assert.Matches(@"^-+\s+-+\s+-+\s+-+$", lines[1].TrimEnd());
         Assert.Equal(5, lines.Count);
         Assert.All(lines, l => Assert.True(l.Length <= width, $"{l.Length} > {width}: {l}"));
-        Assert.Contains(lines, l => l.StartsWith("Git ", StringComparison.Ordinal) && l.Contains("2.46.0", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("Git.Git ", StringComparison.Ordinal) && l.Contains("2.46.0", StringComparison.Ordinal) && l.TrimEnd().EndsWith(" Git", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.StartsWith("Microsoft.VCRedist.2015+.x64 ", StringComparison.Ordinal) && l.Contains("14.42.34433.0", StringComparison.Ordinal));
         Assert.DoesNotContain("IsUpgradable", text, StringComparison.Ordinal);
     }
 

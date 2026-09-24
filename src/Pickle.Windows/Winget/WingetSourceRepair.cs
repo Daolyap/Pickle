@@ -103,7 +103,8 @@ internal static partial class WingetSourceRepair
             return new WingetOperationResult(
                 true,
                 "A newer winget source package is already installed; nothing to re-register. If winget still fails, run 'winget source reset --force' in an elevated shell.",
-                0) { Output = text };
+                0)
+            { Output = text };
         }
 
         var code = hresult is { } hr ? unchecked((int)hr) : exitCode;

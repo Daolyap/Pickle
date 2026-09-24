@@ -85,7 +85,7 @@ internal sealed class WingetCommand : WindowsCommandBase
                 output.Heading($"{found.Count} result(s) for '{query}'");
                 foreach (var package in found)
                 {
-                    output.Object(Display.Columns(package, "Name", "Id", DisplayColumn.Alias("Version", nameof(WingetPackage.AvailableVersion)), "Source"));
+                    output.Object(Display.Columns(package, "Id", DisplayColumn.Alias("Version", nameof(WingetPackage.AvailableVersion)), "Source", "Name"));
                 }
 
                 return 0;
@@ -166,12 +166,13 @@ internal sealed class WingetCommand : WindowsCommandBase
         _ => "unavailable — install App Installer from the Microsoft Store",
     };
 
+    // Name goes last: PowerShell truncates the last column to fit but drops whole columns after an over-wide one.
     internal static object InstalledRow(WingetPackage package) => Display.Columns(
         package,
-        "Name",
         "Id",
         DisplayColumn.Alias("Version", nameof(WingetPackage.InstalledVersion)),
-        DisplayColumn.Alias("Available", nameof(WingetPackage.AvailableVersion)));
+        DisplayColumn.Alias("Available", nameof(WingetPackage.AvailableVersion)),
+        "Name");
 
     internal static IProgress<WingetProgress> StageProgress(CommandOutput output)
     {

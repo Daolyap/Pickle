@@ -28,11 +28,13 @@ public sealed class WindowsPlugin : IPicklePlugin
         AddIfMissing<IWingetService>(services, () => new WingetService(context));
         AddIfMissing(services, () => CreateWindowsUpdateService(context));
         AddIfMissing(services, () => CreateTaskSchedulerService(context));
+        AddIfMissing(services, () => CreateToolInstaller(context));
 
         context.Commands.Register(new WingetCommand());
         context.Commands.Register(new UpgradeCommand());
         context.Commands.Register(new UpdateCommand());
         context.Commands.Register(new ScheduleCommand());
+        context.Commands.Register(new ToolCommand());
 
         Terminal.WindowsTerminalIntegration.Register(context);
     }
@@ -45,6 +47,21 @@ public sealed class WindowsPlugin : IPicklePlugin
         }
 
         return new UnsupportedWindowsUpdateService();
+    }
+
+    private static IToolInstaller CreateToolInstaller(IPickleContext context)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return new UnsupportedToolInstaller();
+        }
+
+        var temporaryRoot = Path.Combine(Path.GetTempPath(), "pickle-tools", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return new Tools.WingetToolInstaller(
+            () => context.Services.Get<IWingetService>(),
+            command => context.Wizards.FindForCommand(command)?.WingetId,
+            new Tools.RegistryPathStore(),
+            temporaryRoot);
     }
 
     private static ITaskSchedulerService CreateTaskSchedulerService(IPickleContext context)

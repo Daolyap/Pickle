@@ -903,29 +903,50 @@ internal sealed class WizardPanel : PanelWindow
     }
 
     private bool CanInstall() =>
-        _definition is { WingetId: { Length: > 0 } }
-        && Pickle.Services.Get<IWingetService>() is { IsSupported: true }
-        && !_toolExists(_definition.Command);
+        _definition is { } definition
+        && Package(definition) is not null
+        && !_toolExists(definition.Command);
+
+    /// <summary>Tests answer the install dialog through this instead of a modal.</summary>
+    internal Func<ToolPackage, ToolInstallOptions?>? AskInstallOptions { get; set; }
+
+    /// <summary>The package for the wizard's tool: the wizard's own winget id first, then the tool catalog.</summary>
+    private ToolPackage? Package(WizardDefinition definition)
+    {
+        if (Pickle.Services.Get<IToolInstaller>() is not { IsSupported: true } installer)
+        {
+            return null;
+        }
+
+        var known = installer.Find(definition.Command);
+        return definition.WingetId is { Length: > 0 } id && !string.Equals(known?.WingetId, id, StringComparison.OrdinalIgnoreCase)
+            ? new ToolPackage(definition.Command, id, definition.Title, known?.InstallDirs ?? [])
+            : known;
+    }
 
     internal void InstallTool()
     {
-        if (_definition?.WingetId is not { Length: > 0 } id || Pickle.Services.Get<IWingetService>() is not { } winget)
+        if (_definition is null || Package(_definition) is not { } package || Pickle.Services.Get<IToolInstaller>() is not { } installer)
         {
             return;
         }
 
-        if (App is not null && !Confirm("Install", $"Install {_definition.Title} with winget ({id})?"))
+        var addToPath = Pickle.Config.Current.Shell.AddInstalledToolsToPath;
+        var options = AskInstallOptions is not null ? AskInstallOptions(package)
+            : App is { } app ? ToolInstallDialog.Show(app, Schemes, package, addToPath)
+            : new ToolInstallOptions(ToolInstallScope.User, addToPath);
+        if (options is null)
         {
             return;
         }
 
         RunInBackground(
-            ct => winget.InstallAsync(id, new WingetInstallOptions(), null, ct),
+            ct => installer.InstallAsync(package, options, null, ct),
             result =>
             {
                 if (_messages is not null)
                 {
-                    _messages.Text = result.Success ? $"Installed {id}." : $"Install failed: {result.Message}";
+                    _messages.Text = result.Success ? result.Message : $"Install failed: {result.Message}";
                 }
 
                 if (result.Success && _install is not null)

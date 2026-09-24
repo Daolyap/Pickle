@@ -1,4 +1,5 @@
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 
 namespace Pickle.Core.Translation;
 
@@ -17,28 +18,6 @@ public sealed class CommandNotFound
             if ($CommandLookupEventArgs.CommandOrigin -eq 'Runspace') { Invoke-PickleCommandNotFound -Name $CommandName }
         }
         """;
-
-    public static IReadOnlyDictionary<string, string> KnownWingetIds { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-    {
-        ["ffmpeg"] = "Gyan.FFmpeg",
-        ["ffprobe"] = "Gyan.FFmpeg",
-        ["nmap"] = "Insecure.Nmap",
-        ["git"] = "Git.Git",
-        ["node"] = "OpenJS.NodeJS.LTS",
-        ["npm"] = "OpenJS.NodeJS.LTS",
-        ["python"] = "Python.Python.3.12",
-        ["python3"] = "Python.Python.3.12",
-        ["jq"] = "jqlang.jq",
-        ["7z"] = "7zip.7zip",
-        ["gh"] = "GitHub.cli",
-        ["kubectl"] = "Kubernetes.kubectl",
-        ["yt-dlp"] = "yt-dlp.yt-dlp",
-        ["rg"] = "BurntSushi.ripgrep.MSVC",
-        ["fzf"] = "junegunn.fzf",
-        ["code"] = "Microsoft.VisualStudioCode",
-        ["vim"] = "vim.vim",
-        ["docker"] = "Docker.DockerDesktop",
-    };
 
     private readonly PickleRuntime _runtime;
     private readonly object _gate = new();
@@ -59,7 +38,7 @@ public sealed class CommandNotFound
     {
         var hints = new List<string>();
         var tool = NormalizeToolName(name);
-        var wingetId = wizardWingetId ?? (KnownWingetIds.TryGetValue(tool, out var known) ? known : null);
+        var wingetId = wizardWingetId ?? ToolCatalog.Find(tool)?.WingetId;
         if (offerWinget && isWindows && wingetId is not null)
         {
             var install = hasPickleWinget ? $"pk winget install {wingetId}" : $"winget install --id {wingetId} -e";

@@ -82,6 +82,12 @@ public sealed class ShellSettings
 
     public bool CommandNotFoundSuggestions { get; set; } = true;
     public bool OfferWingetInstallForMissingTools { get; set; } = true;
+
+    /// <summary>Before running a line whose program is missing but installable (7z, nmap, …), ask to install it first.</summary>
+    public bool AskToInstallMissingTools { get; set; } = true;
+
+    /// <summary>Default of the "add to PATH" choice when installing a missing tool.</summary>
+    public bool AddInstalledToolsToPath { get; set; } = true;
     public bool ShowStartupBanner { get; set; } = true;
 
     /// <summary>"animated" (art with a short shine; any key skips it), "art" or "line".</summary>

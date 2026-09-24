@@ -48,7 +48,8 @@ public sealed record WingetInstallOptions(
     bool Silent = true,
     bool Force = false,
     bool AcceptAgreements = true,
-    bool IncludeUnknown = false);
+    bool IncludeUnknown = false,
+    string? Location = null);
 
 public enum WingetBackend
 {

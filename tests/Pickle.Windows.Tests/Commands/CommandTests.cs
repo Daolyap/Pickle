@@ -83,7 +83,7 @@ public sealed class CommandTests : IDisposable
     public void PluginRegistersCommandsAndServices()
     {
         using var t = TestPickle.Create(start: true, plugins: [new WindowsPlugin()]);
-        foreach (var name in new[] { "winget", "upgrade", "update", "schedule" })
+        foreach (var name in new[] { "winget", "tool", "upgrade", "update", "schedule" })
         {
             Assert.NotNull(t.Runtime.CommandRegistry.Get(name));
         }
@@ -92,9 +92,41 @@ public sealed class CommandTests : IDisposable
         Assert.NotNull(t.Runtime.Services.Get<IElevationBroker>());
         var wu = t.Runtime.Services.Require<IWindowsUpdateService>();
         var tasks = t.Runtime.Services.Require<ITaskSchedulerService>();
+        Assert.Equal(OperatingSystem.IsWindows(), t.Runtime.Services.Require<IToolInstaller>().IsSupported);
         Assert.Equal(OperatingSystem.IsWindows(), wu.IsSupported);
         Assert.Equal(OperatingSystem.IsWindows(), tasks.IsSupported);
         Assert.Equal(TaskTriggerKind.AtLogon, tasks.ParseSchedule("at logon").Kind);
+    }
+
+    [Fact]
+    public async Task ToolInstallPassesScopeAndPathChoices()
+    {
+        var installer = new FakeToolInstaller();
+        _t.Runtime.ServiceRegistry.Add<IToolInstaller>(installer);
+
+        Assert.Equal(0, await RunAsync("tool", "install", "7z", "--temp", "--no-path"));
+        Assert.Equal(0, await RunAsync("tool", "install", "nmap", "--machine"));
+        Assert.Equal(0, await RunAsync("tool", "install", "Some.Tool"));
+
+        Assert.Equal(
+            [
+                ("7zip.7zip", new ToolInstallOptions(ToolInstallScope.Temporary, false)),
+                ("Insecure.Nmap", new ToolInstallOptions(ToolInstallScope.Machine, true)),
+                ("Some.Tool", new ToolInstallOptions(ToolInstallScope.User, true)),
+            ],
+            installer.Installs.Select(i => (i.Package.WingetId, i.Options)));
+        Assert.Contains("Installed 7-Zip.", Host, StringComparison.Ordinal);
+
+        Assert.Equal(1, await RunAsync("tool", "install", "frobnicate"));
+        Assert.Contains(_errors, e => e.Contains("No known package provides 'frobnicate'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ToolListShowsTheCatalog()
+    {
+        Assert.Equal(0, await RunAsync("tool", "list", "zip"));
+        var row = Assert.Single(Objects<ToolCommand.ToolRow>());
+        Assert.Equal(("7z", "7zip.7zip"), (row.Command, row.WingetId));
     }
 
     [Fact]

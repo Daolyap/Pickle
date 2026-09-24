@@ -66,7 +66,18 @@ public sealed class FakeWingetService : IWingetService
         Task.FromResult<WingetPackageDetails?>(Catalog.Concat(Installed).FirstOrDefault(p => p.Id == id) is { } p
             ? new WingetPackageDetails(p.Id, p.Name, p.Publisher, $"{p.Name} description", null, "MIT", p.AvailableVersion ?? p.InstalledVersion, [p.AvailableVersion ?? p.InstalledVersion ?? "1.0"])
             : null);
-    public Task<WingetOperationResult> InstallAsync(string id, WingetInstallOptions options, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("install " + id, progress);
+    public List<WingetInstallOptions> InstallOptions { get; } = [];
+
+    public Task<WingetOperationResult> InstallAsync(string id, WingetInstallOptions options, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        lock (Calls)
+        {
+            InstallOptions.Add(options);
+        }
+
+        return Ok("install " + id, progress);
+    }
+
     public Task<WingetOperationResult> UpgradeAsync(string id, WingetInstallOptions options, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("upgrade " + id, progress);
     public Task<WingetOperationResult> UninstallAsync(string id, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("uninstall " + id, progress);
     public Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
@@ -245,4 +256,50 @@ public sealed class FakePanelHost : IPanelHost
     }
 
     public PanelResult? Show(PanelDescriptor panel, string? argument = null, string? currentInput = null) => Show(panel.Id, argument, currentInput);
+}
+
+/// <summary>
+/// Installer for the missing-tool prompt. Knows <see cref="TestTool"/> (a command no test machine has) plus the real
+/// catalog; <see cref="OnInstalled"/> can make the command resolvable (e.g. define a function).
+/// </summary>
+public sealed class FakeToolInstaller : IToolInstaller
+{
+    public static readonly ToolPackage TestTool = new("pickletool", "Pickle.TestTool", "Pickle test tool");
+
+    public bool IsSupported { get; set; } = true;
+    public List<(ToolPackage Package, ToolInstallOptions Options)> Installs { get; } = [];
+    public List<ToolPackage> Temporary { get; } = [];
+    public int RemoveTemporaryCalls { get; private set; }
+    public Func<ToolPackage, ToolInstallResult>? Result { get; set; }
+    public Action<ToolPackage>? OnInstalled { get; set; }
+
+    public IReadOnlyList<ToolPackage> TemporaryInstalls => Temporary;
+
+    public ToolPackage? Find(string command) =>
+        string.Equals(ToolCatalog.NormalizeCommand(command), TestTool.Command, StringComparison.OrdinalIgnoreCase) ? TestTool : ToolCatalog.Find(command);
+
+    public Task<ToolInstallResult> InstallAsync(ToolPackage package, ToolInstallOptions options, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    {
+        Installs.Add((package, options));
+        progress?.Report($"Installing {package.Name}…");
+        var result = Result?.Invoke(package) ?? new ToolInstallResult(true, $"Installed {package.Name}.");
+        if (result.Success)
+        {
+            if (options.Scope == ToolInstallScope.Temporary)
+            {
+                Temporary.Add(package);
+            }
+
+            OnInstalled?.Invoke(package);
+        }
+
+        return Task.FromResult(result);
+    }
+
+    public Task<ToolInstallResult> RemoveTemporaryAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    {
+        RemoveTemporaryCalls++;
+        Temporary.Clear();
+        return Task.FromResult(new ToolInstallResult(true, "Removed."));
+    }
 }

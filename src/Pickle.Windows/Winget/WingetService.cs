@@ -51,11 +51,12 @@ public sealed class WingetService : IWingetService
         """;
 
     private const string InstallScript = """
-        param($verb, $id, $version, $scope, $force, $includeUnknown)
+        param($verb, $id, $version, $scope, $force, $includeUnknown, $location)
         Import-Module Microsoft.WinGet.Client -ErrorAction Stop
         $p = @{ Id = $id; MatchOption = 'Equals'; Mode = 'Silent'; ErrorAction = 'Stop' }
         if ($version) { $p.Version = $version }
         if ($scope) { $p.Scope = $scope }
+        if ($location) { $p.Location = $location }
         if ($force) { $p.Force = $true }
         if ($includeUnknown) { $p.IncludeUnknown = $true }
         $result = switch ($verb) {
@@ -251,6 +252,11 @@ public sealed class WingetService : IWingetService
             WindowsIds.RequireWingetVersion(options.Version);
         }
 
+        if (options.Location is { } location && (!Path.IsPathFullyQualified(location) || location.IndexOfAny(['"', '\0', '\n', '\r']) >= 0))
+        {
+            throw new ArgumentException($"Install location must be a full path: '{location}'.", nameof(options));
+        }
+
         if (!IsSupported)
         {
             return Unsupported();
@@ -406,6 +412,11 @@ public sealed class WingetService : IWingetService
                 args.AddRange(["--scope", options.Scope == WingetScope.Machine ? "machine" : "user"]);
             }
 
+            if (verb == "install" && options.Location is { Length: > 0 } location)
+            {
+                args.AddRange(["--location", location]);
+            }
+
             if (options.Force)
             {
                 args.Add("--force");
@@ -503,6 +514,7 @@ public sealed class WingetService : IWingetService
                     ["scope"] = verb == "install" ? options.Scope switch { WingetScope.User => "User", WingetScope.Machine => "System", _ => null } : null,
                     ["force"] = options.Force,
                     ["includeUnknown"] = verb == "upgrade" && options.IncludeUnknown,
+                    ["location"] = verb == "install" ? options.Location : null,
                 };
                 var result = await _shell.InvokeAsync(InstallScript, parameters, ShellTarget.Background, cancellationToken).ConfigureAwait(false);
                 if (result.HadErrors)

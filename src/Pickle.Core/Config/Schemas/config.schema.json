@@ -175,6 +175,16 @@
           "default": true,
           "description": "Offer to install a missing tool with winget."
         },
+        "askToInstallMissingTools": {
+          "type": "boolean",
+          "default": true,
+          "description": "Before running a line whose program is missing but installable (7z, nmap, ...), ask to install it first: for you, all users or this session only."
+        },
+        "addInstalledToolsToPath": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default of the 'add to PATH' choice when installing a missing tool."
+        },
         "showStartupBanner": {
           "type": "boolean",
           "default": true,

@@ -76,11 +76,7 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
             Add(info);
             try
             {
-                using (Attribute(plugin.Id))
-                {
-                    plugin.Initialize(_runtime);
-                }
-
+                InitializeTracked(plugin);
                 info.Status = PluginStatus.Loaded;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -170,6 +166,30 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
             {
                 info.Contributions.Add(what);
             }
+        }
+    }
+
+    /// <summary>Initialize a .NET/built-in plugin and record what it registered (commands, segments, panels, wizards).</summary>
+    private void InitializeTracked(IPicklePlugin plugin)
+    {
+        HashSet<string> Snapshot() =>
+        [
+            .. _runtime.CommandRegistry.All.Select(c => "command: " + c.Name),
+            .. _runtime.PromptSegmentRegistry.All.Select(s => "segment: " + s.Type),
+            .. _runtime.PanelRegistry.All.Select(p => "panel: " + p.Id),
+            .. _runtime.PanelRegistry.ListPanels.Select(p => "panel: " + p.Id),
+            .. _runtime.WizardRegistry.All.Select(w => "wizard: " + w.Id),
+        ];
+
+        var before = Snapshot();
+        using (Attribute(plugin.Id))
+        {
+            plugin.Initialize(_runtime);
+        }
+
+        foreach (var added in Snapshot().Except(before).Order(StringComparer.Ordinal))
+        {
+            RecordContribution(plugin.Id, added);
         }
     }
 
@@ -526,11 +546,7 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
 
             try
             {
-                using (Attribute(plugin.Id))
-                {
-                    plugin.Initialize(_runtime);
-                }
-
+                InitializeTracked(plugin);
                 pluginInfo.Status = PluginStatus.Loaded;
                 _runtime.Log.Info("plugins", $"Loaded .NET plugin {plugin.Id} from {candidate.AssemblyPath}");
             }

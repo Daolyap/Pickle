@@ -117,7 +117,7 @@ public class PluginLoadingTests
 
         var untrusted = Manager(t).Find("SampleDotnetPlugin")!;
         Assert.Equal(PluginStatus.Untrusted, untrusted.Status);
-        Assert.Contains("Plugin SampleDotnetPlugin is not trusted. Run: pk plugin trust SampleDotnetPlugin", t.Terminal.GetScreenText(), StringComparison.Ordinal);
+        Assert.Contains("Plugin SampleDotnetPlugin is not trusted. Run: pk plugin trust SampleDotnetPlugin", t.Terminal.RawOutput, StringComparison.Ordinal);
         Assert.Null(t.Runtime.CommandRegistry.Get("dotnet-hello"));
 
         t.Run("pk plugin trust SampleDotnetPlugin");

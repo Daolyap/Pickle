@@ -17,8 +17,8 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/daolyap/milkshell" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/daolyap/milkshell/issues" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Daolyap/Pickle" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Daolyap/Pickle/issues" />
     <Property Id="ARPCOMMENTS" Value="A PowerShell 7 shell with superpowers" />
 
     <StandardDirectory Id="ProgramFiles6432Folder">

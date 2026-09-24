@@ -27,9 +27,11 @@ first-class Windows tooling on top.
 | Method | Command |
 |---|---|
 | winget | `winget install Daolyap.Pickle` *(after the first release is published)* |
-| Scoop | `scoop bucket add pickle https://github.com/daolyap/milkshell` then `scoop install pickle/pickle` |
-| MSI | Download `pickle-<version>-win-x64.msi` from [Releases](https://github.com/daolyap/milkshell/releases) — adds Pickle to PATH, the Start menu and Windows Terminal |
+| Scoop | `scoop bucket add pickle https://github.com/Daolyap/Pickle` then `scoop install pickle/pickle` |
+| MSI | Download `pickle-<version>-win-x64.msi` from [Releases](https://github.com/Daolyap/Pickle/releases) — adds Pickle to PATH, the Start menu and Windows Terminal |
 | Portable | Download `pickle-<version>-win-x64.exe` and run it; it offers to add itself to Windows Terminal |
+| Fedora / RHEL | Download `pickle-<version>-1.x86_64.rpm` from [Releases](https://github.com/Daolyap/Pickle/releases), then `sudo dnf install ./pickle-*.x86_64.rpm` |
+| Other Linux | Download `pickle-<version>-linux-x64.tar.gz`, extract `pickle` somewhere on your `PATH` (needs `libicu`) |
 
 PowerShell 7 does **not** need to be installed — Pickle ships the engine. If `pwsh` is installed, its modules are
 picked up too, and `pk config set shell.loadPwshProfile true` loads your existing profile.

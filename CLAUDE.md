@@ -4,7 +4,7 @@ Pickle is a Windows-first shell that hosts the **real PowerShell 7 engine** (Mic
 custom `PSHost`) and replaces the interactive experience: its own line editor (syntax highlighting, autosuggestions,
 completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, winget, Windows Update,
 Task Scheduler, settings, command wizards), a plugin system, Linux-syntax translation, aliases and sync.
-C# / .NET 10. Repo name is still `milkshell`; the product, binary (`pickle`) and namespaces are **Pickle**.
+C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product, binary (`pickle`) and namespaces are **Pickle**.
 
 ## Commands
 

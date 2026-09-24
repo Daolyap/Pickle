@@ -11,6 +11,8 @@ description: Cut a Pickle release — bump the version, tag, let the Release wor
 4. The **Release workflow** (`.github/workflows/release.yml`):
    - publishes single-file binaries for win-x64, win-arm64, linux-x64, osx-arm64 (`packaging/publish.ps1`)
    - builds MSIs with WiX 5.0.2 (`packaging/wix/build-msi.ps1`, MS-RL; WiX 6+ needs the OSMF EULA accepted — don't upgrade without the maintainer's decision)
+   - builds a Fedora/RHEL RPM from the linux-x64 binary in a `fedora:latest` container (`packaging/rpm/build-rpm.sh`;
+     the spec packages the prebuilt single file and must never strip it)
    - writes `SHA256SUMS.txt` and manifests (`packaging/make_manifests.py`): Scoop + winget (portable exe + MSI)
    - creates the GitHub Release with all assets
    - commits `bucket/pickle.json` to the default branch (this repo is a Scoop bucket)

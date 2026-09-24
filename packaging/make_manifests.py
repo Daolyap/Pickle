@@ -2,7 +2,7 @@
 """
 Generate package-manager manifests for a release from the built artifacts in dist/.
 
-    python3 packaging/make_manifests.py --version 0.2.0 --dist dist --repo daolyap/milkshell --out dist/manifests
+    python3 packaging/make_manifests.py --version 0.2.0 --dist dist --repo Daolyap/Pickle --out dist/manifests
 
 Outputs:
   scoop/pickle.json                                  Scoop manifest (also committed to bucket/pickle.json)

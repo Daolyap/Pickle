@@ -248,6 +248,30 @@ public sealed class WindowsTerminalTests : IDisposable
     }
 
     [Fact]
+    public void FirstRunOffersTheProfileWhenTerminalIsPresentAndPickleIsNotInIt()
+    {
+        using var t = TestPickle.Create();
+        var locations = WindowsTerminalLocations.FromLocalAppData(_root) with { MachineFragmentFile = Path.Combine(_root, "machine", "pickle.json") };
+        WindowsTerminalIntegration.Register(t.Runtime, locations, () => Exe);
+        var offer = Assert.Single(t.Runtime.Services.Require<IFirstRunOffers>().All, o => o.Id == "windows-terminal");
+        if (Environment.GetEnvironmentVariable("WT_SESSION") is null)
+        {
+            Assert.False(offer.IsRelevant());
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(locations.SettingsFiles[0])!);
+        Assert.True(offer.IsRelevant());
+        Assert.Contains("Added the 'Pickle' profile", offer.Accept(), StringComparison.Ordinal);
+        Assert.Equal(Exe, new WindowsTerminalManager(locations).InstalledExecutable);
+        Assert.False(offer.IsRelevant());
+
+        File.Delete(locations.FragmentFile);
+        Directory.CreateDirectory(Path.Combine(_root, "machine"));
+        File.WriteAllText(locations.MachineFragmentFile!, "{}");
+        Assert.False(offer.IsRelevant());
+    }
+
+    [Fact]
     public async Task PkTerminalReportsWindowsOnlyWithoutLocations()
     {
         using var t = TestPickle.Create();

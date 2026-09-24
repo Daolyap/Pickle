@@ -11,6 +11,14 @@ public sealed record WindowsTerminalLocations(string FragmentDirectory, IReadOnl
 
     public string FragmentFile => Path.Combine(FragmentDirectory, FragmentFileName);
 
+    /// <summary>The all-users fragment the MSI installs (under ProgramData), if any.</summary>
+    public string? MachineFragmentFile { get; init; }
+
+    /// <summary>Windows Terminal looks installed for this user (or we're running inside it).</summary>
+    public bool TerminalPresent =>
+        Environment.GetEnvironmentVariable("WT_SESSION") is { Length: > 0 }
+        || SettingsFiles.Any(f => Path.GetDirectoryName(f) is { } dir && Directory.Exists(dir));
+
     /// <summary>Per-user locations under %LOCALAPPDATA%: stable and Preview Store packages, then unpackaged installs.</summary>
     public static WindowsTerminalLocations FromLocalAppData(string localAppData) => new(
         Path.Combine(localAppData, "Microsoft", "Windows Terminal", "Fragments", WindowsTerminalFragment.AppName),
@@ -22,7 +30,13 @@ public sealed record WindowsTerminalLocations(string FragmentDirectory, IReadOnl
 
     /// <summary>The current user's locations, or null when not on Windows.</summary>
     public static WindowsTerminalLocations? ForCurrentUser() =>
-        OperatingSystem.IsWindows() ? FromLocalAppData(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)) : null;
+        OperatingSystem.IsWindows()
+            ? FromLocalAppData(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)) with
+            {
+                MachineFragmentFile = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Microsoft", "Windows Terminal", "Fragments", WindowsTerminalFragment.AppName, FragmentFileName),
+            }
+            : null;
 }
 
 public sealed record DefaultProfileResult(string SettingsFile, bool Changed, string? BackupFile, string? Error);

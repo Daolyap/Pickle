@@ -83,6 +83,10 @@ public sealed class ShellSettings
     public bool CommandNotFoundSuggestions { get; set; } = true;
     public bool OfferWingetInstallForMissingTools { get; set; } = true;
     public bool ShowStartupBanner { get; set; } = true;
+
+    /// <summary>"animated" (art with a short shine; any key skips it), "art" or "line".</summary>
+    public string BannerStyle { get; set; } = "animated";
+
     public bool FirstRunCompleted { get; set; } = false;
 }
 

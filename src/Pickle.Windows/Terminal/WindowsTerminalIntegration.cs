@@ -15,11 +15,24 @@ public static class WindowsTerminalIntegration
     public static void Register(IPickleContext context, WindowsTerminalLocations? locations, Func<string?>? executablePath = null)
     {
         var manager = locations is null ? null : new WindowsTerminalManager(locations);
-        context.Commands.Register(new TerminalCommand(manager, executablePath ?? (() => Environment.ProcessPath)));
+        executablePath ??= () => Environment.ProcessPath;
+        context.Commands.Register(new TerminalCommand(manager, executablePath));
         if (manager is null)
         {
             return;
         }
+
+        context.Services.Get<IFirstRunOffers>()?.Add(new FirstRunOffer(
+            "windows-terminal",
+            "Add a Pickle profile to Windows Terminal?",
+            () => manager.Locations.TerminalPresent && !manager.IsInstalled
+                && !(manager.Locations.MachineFragmentFile is { } machine && File.Exists(machine))
+                && !string.IsNullOrEmpty(executablePath()),
+            () =>
+            {
+                manager.Install(executablePath()!, context.Config.Current.Terminal, context.Themes.Current.Terminal);
+                return $"Added the '{WindowsTerminalFragment.ProfileName}' profile. Open a new Windows Terminal window and pick it from the ⌄ menu; 'pk terminal default' makes it the default.";
+            }));
 
         void Regenerate()
         {

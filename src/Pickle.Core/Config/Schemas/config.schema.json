@@ -180,6 +180,12 @@
           "default": true,
           "description": "Print the Pickle banner when the shell starts."
         },
+        "bannerStyle": {
+          "type": "string",
+          "default": "animated",
+          "enum": ["animated", "art", "line"],
+          "description": "Startup banner: ASCII art with a short shine animation (any key skips it), static art, or one line."
+        },
         "firstRunCompleted": {
           "type": "boolean",
           "default": false,

@@ -60,3 +60,18 @@ def test_w2_ctrl_r_finds_previous_command(p):
         time.sleep(0.3)
         s.press("enter")
         s.wait_for_count(marker, 4, timeout=10)
+
+
+def test_tab_keeps_completing_inside_a_quoted_directory(p):
+    with PickleSession(p) as s:
+        import os
+
+        os.makedirs(os.path.join(s.home, "My Folder", "Sub Dir"), exist_ok=True)
+        s.wait_for_prompt()
+        s.type(f"Get-ChildItem '{s.home}/My Fo")
+        _tab_until(s, "My Folder/'")
+        s.press("tab")
+        s.wait_for("My Folder/Sub Dir/'")
+        s.type("\r")
+        s.wait_for_prompt()
+        s.run("Write-Output 'quoted-ok'", "quoted-ok")

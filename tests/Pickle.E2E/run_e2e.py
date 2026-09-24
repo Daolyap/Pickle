@@ -83,6 +83,14 @@ def test_pk_command_opens_panel_after_pipeline(p):
         s.run("Write-Output 'after-pk-git'", "after-pk-git", timeout=15)
 
 
+def test_startup_banner_then_prompt(p):
+    with PickleSession(p, config={"shell": {"showStartupBanner": True, "firstRunCompleted": True}}, args=["--log-level", "warning"]) as s:
+        s.wait_for("╚═╝     ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝", timeout=30)
+        s.wait_for("F1 commands")
+        s.wait_for_prompt()
+        s.run("Write-Output 'after-banner'", "after-banner")
+
+
 def test_exit(p):
     with PickleSession(p) as s:
         s.wait_for_prompt()

@@ -8,7 +8,10 @@ after installing a build.
 
 - [ ] **MSI**: `pickle-<ver>-win-x64.msi` installs without errors; `pickle --version` works in a *new* terminal
       (PATH updated); Start menu has "Pickle".
-- [ ] **Portable**: `pickle.exe` runs from any folder; first run offers to add the Windows Terminal profile.
+- [ ] **Portable**: `pickle.exe` runs from any folder; the first interactive start asks "Add a Pickle profile to Windows
+      Terminal? [Y/n]" (only if Terminal is installed and the MSI's profile isn't); Y adds it, and it isn't asked again.
+- [ ] Startup banner: pickle art with a short shine; pressing a key during it skips the animation and the key is typed.
+      `pk config set shell.bannerStyle line` (or `art`) changes it.
 - [ ] **winget / Scoop** (after publishing): `winget install Daolyap.Pickle`, `scoop install pickle/pickle`.
 - [ ] Uninstall (Apps & features) removes the exe, PATH entry, Start menu item and the Terminal fragment.
 
@@ -21,14 +24,19 @@ after installing a build.
 
 ## Editing experience
 
-- [ ] Typing shows syntax highlighting; an unknown command is red.
+- [ ] Typing shows syntax highlighting; an unknown command is red, but `apt install jq` / `sudo …` / `export X=1` are not.
+- [ ] Tab on a quoted path (`cd 'C:\Program Fi` Tab) completes to `'C:\Program Files\'` with the cursor *inside* the
+      quotes; Tab again completes the next folder.
+- [ ] Output is aligned, never a "staircase": `pk help`, `pk winget upgrades`, `pk schedule list`, `git log --oneline -5`.
 - [ ] Autosuggestions from history appear dimmed; → accepts, Ctrl+→ accepts a word.
 - [ ] Tab opens the completion menu (commands, parameters, paths) with descriptions; typing filters it.
 - [ ] Ctrl+R fuzzy history search; Ctrl+R again switches scope (all / directory / session).
 - [ ] Multi-line input (`if ($true) {` Enter) shows the continuation prompt.
 - [ ] Shift+arrows select, Ctrl+C copies selection, Ctrl+V pastes (Windows clipboard), Ctrl+Z / Ctrl+Y undo/redo.
 - [ ] Ctrl+C during `Start-Sleep 30` interrupts it; Ctrl+C on an empty line doesn't exit.
-- [ ] `vim`/`notepad`/`ssh` (interactive native programs) work and the prompt returns cleanly.
+- [ ] `vim`/`notepad` (interactive native programs) work and the prompt returns cleanly.
+- [ ] `ssh user@host` shows the host-key question / password prompt, gives a working remote shell, and `exit` returns
+      to a clean Pickle prompt.
 
 ## Panels (each opens, works, and Esc returns to a clean prompt)
 
@@ -37,6 +45,8 @@ after installing a build.
 - [ ] Alt+G git panel: stage/unstage file and hunk, commit, branches, log, stash.
 - [ ] Alt+J jobs: `Start-ThreadJob { Start-Sleep 5 }` appears, output preview, stop/remove.
 - [ ] Alt+, settings: toggling autosuggestions takes effect immediately and persists.
+- [ ] In settings, → enters the selected category's fields and ← returns to the category list (text fields: ← first
+      moves the cursor, then leaves at the start).
 
 ## winget
 
@@ -70,8 +80,10 @@ after installing a build.
 
 ## Wizards, aliases, plugins, sync
 
-- [ ] Type `curl ` then F2: the curl wizard opens; presets fill fields; preview updates; Run executes.
-- [ ] `pk wizard ffmpeg`, `pk wizard nmap`, `pk wizard robocopy` open and build valid commands.
+- [ ] Type `curl ` then F2: the curl wizard opens; text fields show │ … │ outlines; presets fill fields; preview
+      updates; Run executes.
+- [ ] `pk wizard ffmpeg`, `pk wizard nmap`, `pk wizard robocopy` open and build valid commands (nmap: host discovery,
+      timing, evasion and output sections; 18 presets).
 - [ ] `pk alias add gco 'git checkout {branch}' --kind param` then `gco main` works; persists after restart.
 - [ ] `pk plugin new hello` → install it → `pk hello` works; `pk plugin disable` removes it next start.
 - [ ] `pk sync init <OneDrive folder>`; `pk sync push` on one PC, `pk sync pull` on another brings aliases/theme.

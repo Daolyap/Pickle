@@ -183,6 +183,7 @@ public sealed class PluginListPanel : PanelWindow
                 var lines = result.Output.Where(o => o is not null).SelectMany(o => (o.ToString() ?? string.Empty).Split('\n')).Select(l => new PreviewLine(l.TrimEnd('\r')))
                     .Concat(result.Errors.Select(e => new PreviewLine(e.ToString(), Schemes.ErrorText.Foreground)))
                     .ToList();
+                _previewVersion++;
                 _preview.Show($"{label}: {item.Display}", lines.Count > 0 ? lines : [new PreviewLine("(done, no output)", Muted: true)]);
                 Refresh();
             },
@@ -222,5 +223,10 @@ public sealed class PluginListPanel : PanelWindow
         public int Index { get; } = index;
 
         public override string ToString() => Display;
+
+        // Refreshing re-creates items; equal rows keep the selection (and the action output in the preview).
+        public override bool Equals(object? obj) => obj is ListItem other && other.Index == Index && other.Display == Display;
+
+        public override int GetHashCode() => HashCode.Combine(Index, Display);
     }
 }

@@ -86,7 +86,7 @@ public class TranslationPipelineTests
     public void PkTranslateStatusListAndToggle()
     {
         using var t = TestPickle.Create(start: true);
-        Assert.Equal(["True", "False"], t.Run("$s = pk translate status; $s.Enabled; $s.ShimsLoaded"));
+        Assert.Equal(["True", OperatingSystem.IsWindows().ToString()], t.Run("$s = pk translate status; $s.Enabled; $s.ShimsLoaded"));
         var list = t.Run("pk translate list | ForEach-Object { \"$($_.Kind):$($_.Name)\" }");
         Assert.Contains("rewriter:export", list);
         Assert.Contains("shim:grep", list);

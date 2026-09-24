@@ -1,7 +1,9 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Pickle.Abstractions;
 using Pickle.Testing;
 using Terminal.Gui.App;
+using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Testing;
 using Terminal.Gui.Time;
@@ -105,7 +107,37 @@ internal sealed class UiScript
 /// <summary>Helpers to run Pickle panels headlessly (virtual time, ANSI driver, no real console).</summary>
 internal static class TuiHarness
 {
-    public static IApplication CreateApp() => Application.Create(new VirtualTimeProvider());
+    // Same driver and size on every OS: the platform default on Windows is the console driver, which reads the CI
+    // runner's (sizeless) console and lays panels out at negative widths.
+    public const string Driver = DriverRegistry.Names.ANSI;
+
+    public static readonly (int Width, int Height) ScreenSize = (80, 25);
+
+    /// <summary>An application that sizes itself to <see cref="ScreenSize"/> once initialized (callers pass <see cref="Driver"/> to Init).</summary>
+    // Keeps Terminal.Gui off the real console (and CONIN$/CONOUT$ on Windows) for every app in this test process.
+    [ModuleInitializer]
+    internal static void DisableRealDriverIO() => Environment.SetEnvironmentVariable("DisableRealDriverIO", "1");
+
+    public static IApplication CreateApp()
+    {
+        var app = Application.Create(new VirtualTimeProvider());
+        app.InitializedChanged += (_, e) =>
+        {
+            if (e.Value)
+            {
+                app.Driver?.SetScreenSize(ScreenSize.Width, ScreenSize.Height);
+            }
+        };
+        return app;
+    }
+
+    /// <summary>A created and initialized application (headless ANSI driver, fixed size).</summary>
+    public static IApplication InitApp()
+    {
+        var app = CreateApp();
+        app.Init(Driver);
+        return app;
+    }
 
     /// <summary>A started runtime with the Tui plugin loaded and its panel host wired to <paramref name="script"/>.</summary>
     public static (TestPickle Pickle, PanelHost Host) Start(UiScript? script = null, Action<PickleConfig>? configure = null)
@@ -113,6 +145,7 @@ internal static class TuiHarness
         var t = TestPickle.Create(start: true, configure: configure, plugins: [new TuiPlugin()]);
         var host = (PanelHost)t.Runtime.Services.Require<IPanelHost>();
         host.RawOutput = null;
+        host.DriverName = Driver;
         if (script is not null)
         {
             Use(host, script);
@@ -121,19 +154,21 @@ internal static class TuiHarness
         return (t, host);
     }
 
-    public static void Use(PanelHost host, UiScript script, TimeSpan? timeout = null) =>
+    public static void Use(PanelHost host, UiScript script, TimeSpan? timeout = null)
+    {
+        host.DriverName = Driver;
         host.ApplicationFactory = () =>
         {
             var app = CreateApp();
             script.Attach(app, timeout);
             return app;
         };
+    }
 
     /// <summary>Run a view directly (no PanelHost) with a script.</summary>
     public static void Run(Terminal.Gui.Views.Runnable view, UiScript script, TimeSpan? timeout = null)
     {
-        using var app = CreateApp();
-        app.Init();
+        using var app = InitApp();
         script.Attach(app, timeout);
         app.Run(view);
     }

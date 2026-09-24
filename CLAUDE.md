@@ -92,8 +92,8 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   `GetStyledScreen()` shows colors as `«fg=#B5E36B,bold»text«»`).
 - Snapshots: `Snapshot.Match(t.Terminal.GetScreenText())` → `__snapshots__/<Class>.<Method>.txt` next to the test.
   First run writes it (commit it!); `PICKLE_UPDATE_SNAPSHOTS=1` re-records. CI fails on missing snapshots.
-- Terminal.Gui: `Application.Create(new VirtualTimeProvider())`, `app.Init()`, input injection
-  (`app.InjectKey(...)`), `StopAfterFirstIteration = true`.
+- Terminal.Gui: `TuiHarness.InitApp()` (virtual time + headless ANSI driver on every OS — never a bare `app.Init()`,
+  which gets the console driver on Windows CI), input injection (`app.InjectKey(...)`), `StopAfterFirstIteration = true`.
 - E2E: add `test_*` functions to `tests/Pickle.E2E/run_e2e.py` (real pty; covers native programs and panels).
 
 ## Gotchas

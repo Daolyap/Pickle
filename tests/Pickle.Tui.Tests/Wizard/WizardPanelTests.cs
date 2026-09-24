@@ -4,7 +4,6 @@ using Pickle.Testing.Fakes;
 using Pickle.Tui.Panels.Wizard;
 using Pickle.Wizards;
 using Terminal.Gui.App;
-using Terminal.Gui.Time;
 using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Tests.Wizard;
@@ -17,8 +16,7 @@ public sealed class WizardPanelTests : IDisposable
     public WizardPanelTests()
     {
         new WizardsPlugin().Initialize(_pickle.Runtime);
-        _app = Application.Create(new VirtualTimeProvider());
-        _app.Init();
+        _app = TuiHarness.InitApp();
         _app.StopAfterFirstIteration = true;
     }
 

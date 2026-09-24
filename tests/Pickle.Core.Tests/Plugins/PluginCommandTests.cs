@@ -62,6 +62,7 @@ public class PluginCommandTests
     [InlineData("https://github.com/me/pickle-weather.git", true, "pickle-weather")]
     [InlineData("git@github.com:me/pickle-weather.git", true, "pickle-weather")]
     [InlineData("file:///tmp/repos/thing", true, "thing")]
+    [InlineData(@"file://C:\Users\me\repos\thing\", true, "thing")]
     [InlineData("PSWeather", false, "PSWeather")]
     public void GitUrlsAreRecognized(string text, bool isGit, string name)
     {
@@ -88,7 +89,7 @@ public class PluginCommandTests
             Assert.Equal(0, p.ExitCode);
         }
 
-        t.Run($"pk plugin install 'file://{repo}'");
+        t.Run($"pk plugin install '{new Uri(repo).AbsoluteUri}'");
         Assert.True(File.Exists(Path.Combine(t.Paths.PluginsDir, "SamplePsPlugin", "SamplePsPlugin.psm1")));
         Assert.Equal(["Hello, git!"], t.Run("pk sample-hello git"));
     }

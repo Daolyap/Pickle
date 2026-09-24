@@ -1,5 +1,4 @@
 using Terminal.Gui.App;
-using Terminal.Gui.Time;
 using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Tests.Windows;
@@ -12,8 +11,7 @@ internal static class PanelRunner
 {
     public static string Run(Window panel, params (Func<bool> Until, Action Then)[] steps)
     {
-        using var app = Application.Create(new VirtualTimeProvider());
-        app.Init();
+        using var app = TuiHarness.InitApp();
         var deadline = DateTime.UtcNow.AddSeconds(20);
         var index = 0;
         Exception? failure = null;

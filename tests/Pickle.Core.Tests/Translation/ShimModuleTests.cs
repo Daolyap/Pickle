@@ -38,6 +38,9 @@ public sealed class ShimModuleTests : IDisposable
 
     private ShellResult RunWithErrors(string script) => _t.Runtime.Shell.InvokeAsync(script).GetAwaiter().GetResult();
 
+    // Shims print paths with the platform separator (.\a.txt on Windows).
+    private static string[] Native(params string[] paths) => [.. paths.Select(p => p.Replace('/', Path.DirectorySeparatorChar))];
+
     [Fact]
     public void ModuleExportsExactlyTheCatalog()
     {
@@ -107,10 +110,10 @@ public sealed class ShimModuleTests : IDisposable
     [Fact]
     public void Find()
     {
-        Assert.Equal(["./a.txt", "./sub/c.txt"], Run("find . -name '*.txt'"));
-        Assert.Equal(["./sub", "./sub/deep"], Run("find . -type d -mindepth 1"));
-        Assert.Equal(["./a.txt", "./b.log"], Run("find . -maxdepth 1 -type f"));
-        Assert.Equal(["./a.txt"], Run("find . -iname 'A.TXT'"));
+        Assert.Equal(Native("./a.txt", "./sub/c.txt"), Run("find . -name '*.txt'"));
+        Assert.Equal(Native("./sub", "./sub/deep"), Run("find . -type d -mindepth 1"));
+        Assert.Equal(Native("./a.txt", "./b.log"), Run("find . -maxdepth 1 -type f"));
+        Assert.Equal(Native("./a.txt"), Run("find . -iname 'A.TXT'"));
         Assert.Single(RunWithErrors("find . -bogus").Errors);
     }
 
@@ -168,8 +171,8 @@ public sealed class ShimModuleTests : IDisposable
         Assert.Equal(["."], Run("(du -s .).Path"));
         var bytes = long.Parse(Run("(du -s .).Bytes")[0], System.Globalization.CultureInfo.InvariantCulture);
         Assert.Equal(new[] { "a.txt", "b.log", "sub/c.txt", "sub/deep/d.md" }.Sum(f => new FileInfo(Path.Combine(_dir, f)).Length), bytes);
-        Assert.Equal(["./sub/deep", "./sub", "."], Run("(du .).Path"));
-        Assert.Equal(["./sub", "."], Run("(du -d 1 .).Path"));
+        Assert.Equal(Native("./sub/deep", "./sub", "."), Run("(du .).Path"));
+        Assert.Equal(Native("./sub", "."), Run("(du -d 1 .).Path"));
         Assert.Equal(["19"], Run("(du -sh sub).Size"));
         Assert.NotEmpty(Run("(df -h .).MountedOn"));
     }
@@ -179,7 +182,7 @@ public sealed class ShimModuleTests : IDisposable
     {
         Assert.Equal(["Get-ChildItem: cmdlet (Microsoft.PowerShell.Management)"], Run("which Get-ChildItem"));
         Assert.Equal(["grep is a function (Pickle.Translate)"], Run("type grep"));
-        Assert.Equal(["Linux"], Run("uname"));
+        Assert.Equal([OperatingSystem.IsWindows() ? "Windows_NT" : OperatingSystem.IsMacOS() ? "Darwin" : "Linux"], Run("uname"));
         Assert.Equal(3, Run("uname -snm")[0].Split(' ').Length);
         Assert.Equal(["PICKLE_SHIM_T=1"], Run("env PICKLE_SHIM_T=1 | Where-Object { $_ -like 'PICKLE_SHIM_T=*' }"));
         Assert.Equal(["yes", ""], Run("env PICKLE_SHIM_U=yes pwsh-less-check 2>$null; $x = & { $env:PICKLE_SHIM_U = 'yes'; $env:PICKLE_SHIM_U }; $x; unset PICKLE_SHIM_U; [string]$env:PICKLE_SHIM_U"));
@@ -199,9 +202,11 @@ public sealed class ShimModuleTests : IDisposable
     [Fact]
     public void RemovesConflictingAliasesAndRestoresThemOnUnload()
     {
-        using var t = TestPickle.Create(start: true);
+        // Disabled at startup so the alias exists before the module loads (shims load by default on Windows).
+        using var t = TestPickle.Create(start: true, configure: c => c.Translation.Enabled = false);
         t.Run("Set-Alias -Name cat -Value Get-Content -Option AllScope -Scope Global -Force");
         var pipeline = (TranslationPipeline)t.Runtime.Translation;
+        t.Runtime.Config.Update(c => c.Translation.Enabled = true);
         pipeline.LoadShims(force: true);
         Assert.Equal(["Function"], t.Run("(Get-Command cat).CommandType.ToString()"));
 
@@ -233,10 +238,10 @@ public sealed class ShimModuleTests : IDisposable
     }
 
     [Fact]
-    public void ShimsAreNotLoadedOnLinuxByDefault()
+    public void ShimsLoadByDefaultOnlyOnWindows()
     {
         using var t = TestPickle.Create(start: true);
-        Assert.False(((TranslationPipeline)t.Runtime.Translation).ShimsLoaded);
-        Assert.Equal(["False"], t.Run("[bool](Get-Module Pickle.Translate)"));
+        Assert.Equal(OperatingSystem.IsWindows(), ((TranslationPipeline)t.Runtime.Translation).ShimsLoaded);
+        Assert.Equal([OperatingSystem.IsWindows().ToString()], t.Run("[bool](Get-Module Pickle.Translate)"));
     }
 }

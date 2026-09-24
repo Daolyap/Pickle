@@ -9,4 +9,5 @@ Terminal.Gui v2 (2.5.x) full-screen panels. Depends only on Abstractions (+ Wiza
 - Data comes from services (`context.Pickle.Services.Get<IGitService>()` etc.) — never call git/winget directly
   from a view. Long work: `Task.Run` + `App.Invoke(...)` to update the UI thread.
 - Colors: `PanelStyle.For(pickle)` / `PanelWindow.Schemes` (from `Theme.Ui`); fuzzy filtering via `Widgets/FilterableList` (shared `FuzzyMatcher`). Recipe: `.claude/skills/add-panel`.
-- Tests: `Application.Create(new VirtualTimeProvider())`, `app.Init()`, inject keys, fake services from Pickle.Testing.
+- Tests: `TuiHarness.InitApp()` (virtual time, headless ANSI driver at 80×25 on every OS; a bare `app.Init()` picks the
+  Windows console driver on Windows CI), `TuiHarness.Use(host, script)` for `PanelHost`, inject keys, fake services.

@@ -269,8 +269,8 @@ public sealed partial class PluginCommand(PickleRuntime runtime, PluginManager m
 
     internal static string? RepositoryName(string url)
     {
-        var trimmed = url.TrimEnd('/');
-        var slash = Math.Max(trimmed.LastIndexOf('/'), trimmed.LastIndexOf(':'));
+        var trimmed = url.TrimEnd('/', '\\');
+        var slash = trimmed.LastIndexOfAny(['/', ':', '\\']);
         var last = slash >= 0 ? trimmed[(slash + 1)..] : trimmed;
         if (last.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
         {

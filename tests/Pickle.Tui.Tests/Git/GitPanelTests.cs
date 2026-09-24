@@ -6,7 +6,6 @@ using Pickle.Tui.Panels.Git;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Testing;
-using Terminal.Gui.Time;
 using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Tests.Git;
@@ -430,8 +429,7 @@ public class GitPanelTests
         {
             var pickle = TestPickle.Create();
             pickle.Runtime.ServiceRegistry.Add<IGitService>(git);
-            var app = Application.Create(new VirtualTimeProvider());
-            app.Init();
+            var app = TuiHarness.InitApp();
             var panel = new GitPanel(new PanelContext { Pickle = pickle.Runtime, Argument = "/repo" });
             var prompts = new FakePrompts();
             if (!realPrompts)

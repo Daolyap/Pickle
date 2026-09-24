@@ -19,6 +19,8 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <Import Project="BundledModules.targets" />
+
   <ItemGroup>
     <ProjectReference Include="..\Pickle.Core\Pickle.Core.csproj" />
     <ProjectReference Include="..\Pickle.Tui\Pickle.Tui.csproj" />

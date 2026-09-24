@@ -1,0 +1,219 @@
+{
+  "id": "docker",
+  "title": "Docker",
+  "description": "Run, build and inspect containers; docker compose up/down.",
+  "command": "docker",
+  "aliases": ["docker.exe"],
+  "wingetId": "Docker.DockerDesktop",
+  "homepage": "https://docs.docker.com/reference/cli/docker/",
+  "sections": [
+    {
+      "title": "Global",
+      "options": [
+        { "id": "context", "label": "Context", "type": "text", "flag": "--context", "placeholder": "default" }
+      ]
+    }
+  ],
+  "modes": [
+    {
+      "id": "run",
+      "title": "run",
+      "description": "Create and start a container from an image.",
+      "subcommand": ["run"],
+      "sections": [
+        {
+          "title": "Container",
+          "options": [
+            { "id": "detach", "label": "Detached (background)", "type": "flag", "flag": "-d", "flagAliases": ["--detach"] },
+            { "id": "interactive", "label": "Interactive (keep stdin open)", "type": "flag", "flag": "-i", "flagAliases": ["--interactive"] },
+            { "id": "tty", "label": "Allocate a TTY", "type": "flag", "flag": "-t", "flagAliases": ["--tty"] },
+            { "id": "rm", "label": "Remove when it exits", "type": "flag", "flag": "--rm" },
+            { "id": "name", "label": "Name", "type": "text", "flag": "--name" },
+            {
+              "id": "restart", "label": "Restart policy", "type": "choice", "flag": "--restart", "default": "no",
+              "choices": [ { "value": "no" }, { "value": "on-failure" }, { "value": "always" }, { "value": "unless-stopped" } ]
+            },
+            {
+              "id": "pull", "label": "Pull image", "type": "choice", "flag": "--pull", "default": "missing",
+              "choices": [ { "value": "missing" }, { "value": "always" }, { "value": "never" } ]
+            },
+            { "id": "platform", "label": "Platform", "type": "text", "flag": "--platform", "placeholder": "linux/amd64" }
+          ]
+        },
+        {
+          "title": "Network and storage",
+          "options": [
+            { "id": "publish", "label": "Publish ports", "type": "list", "flag": "-p", "flagAliases": ["--publish"], "placeholder": "8080:80", "description": "host:container, one per line." },
+            { "id": "network", "label": "Network", "type": "text", "flag": "--network" },
+            { "id": "volume", "label": "Volumes / bind mounts", "type": "list", "flag": "-v", "flagAliases": ["--volume"], "placeholder": "C:\\data:/data or myvolume:/data" },
+            { "id": "workdir", "label": "Working directory", "type": "text", "flag": "-w", "flagAliases": ["--workdir"] }
+          ]
+        },
+        {
+          "title": "Environment and resources",
+          "options": [
+            { "id": "env", "label": "Environment variables", "type": "keyValueList", "flag": "-e", "flagAliases": ["--env"], "keyValueSeparator": "=", "placeholder": "APP_ENV=dev" },
+            { "id": "envFile", "label": "Env file", "type": "path", "flag": "--env-file" },
+            { "id": "label", "label": "Labels", "type": "keyValueList", "flag": "-l", "flagAliases": ["--label"], "keyValueSeparator": "=" },
+            { "id": "user", "label": "User", "type": "text", "flag": "-u", "flagAliases": ["--user"], "placeholder": "1000:1000" },
+            { "id": "entrypoint", "label": "Entrypoint", "type": "text", "flag": "--entrypoint" },
+            { "id": "memory", "label": "Memory limit", "type": "text", "flag": "-m", "flagAliases": ["--memory"], "placeholder": "512m" },
+            { "id": "cpus", "label": "CPUs", "type": "number", "flag": "--cpus" },
+            { "id": "gpus", "label": "GPUs", "type": "text", "flag": "--gpus", "placeholder": "all" },
+            { "id": "privileged", "label": "Privileged", "type": "flag", "flag": "--privileged", "warning": "Gives the container full access to the host's devices and kernel features." }
+          ]
+        },
+        {
+          "title": "Image",
+          "options": [
+            { "id": "image", "label": "Image", "type": "positional", "position": 1, "required": true, "placeholder": "nginx:alpine" },
+            { "id": "command", "label": "Command", "type": "positional", "position": 2, "raw": true, "placeholder": "sh -c 'echo hello'", "description": "Command and arguments for the container, in PowerShell syntax." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "title": "build",
+      "description": "Build an image from a Dockerfile.",
+      "subcommand": ["build"],
+      "sections": [
+        {
+          "title": "Build",
+          "options": [
+            { "id": "tag", "label": "Tags", "type": "list", "flag": "-t", "flagAliases": ["--tag"], "placeholder": "myapp:latest" },
+            { "id": "file", "label": "Dockerfile", "type": "path", "flag": "-f", "flagAliases": ["--file"] },
+            { "id": "buildArg", "label": "Build arguments", "type": "keyValueList", "flag": "--build-arg", "keyValueSeparator": "=" },
+            { "id": "target", "label": "Target stage", "type": "text", "flag": "--target" },
+            { "id": "platform", "label": "Platform", "type": "text", "flag": "--platform", "placeholder": "linux/amd64,linux/arm64" },
+            { "id": "noCache", "label": "No cache", "type": "flag", "flag": "--no-cache" },
+            { "id": "pull", "label": "Always pull base images", "type": "flag", "flag": "--pull" },
+            {
+              "id": "progress", "label": "Progress output", "type": "choice", "flag": "--progress", "default": "auto",
+              "choices": [ { "value": "auto" }, { "value": "plain" }, { "value": "tty" } ]
+            },
+            { "id": "contextPath", "label": "Build context", "type": "path", "position": 1, "required": true, "placeholder": "." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compose-up",
+      "title": "compose up",
+      "description": "Create and start the services in compose.yaml (run from the project folder).",
+      "subcommand": ["compose", "up"],
+      "sections": [
+        {
+          "title": "Compose up",
+          "options": [
+            { "id": "detach", "label": "Detached", "type": "flag", "flag": "-d", "flagAliases": ["--detach"] },
+            { "id": "build", "label": "Build images first", "type": "flag", "flag": "--build" },
+            { "id": "forceRecreate", "label": "Recreate containers", "type": "flag", "flag": "--force-recreate" },
+            { "id": "removeOrphans", "label": "Remove orphan containers", "type": "flag", "flag": "--remove-orphans" },
+            { "id": "wait", "label": "Wait until healthy", "type": "flag", "flag": "--wait", "dependsOn": "detach" },
+            {
+              "id": "pull", "label": "Pull images", "type": "choice", "flag": "--pull",
+              "choices": [ { "value": "always" }, { "value": "missing" }, { "value": "never" } ]
+            },
+            { "id": "scale", "label": "Scale", "type": "keyValueList", "flag": "--scale", "keyValueSeparator": "=", "placeholder": "worker=3" },
+            { "id": "services", "label": "Services", "type": "list", "position": 1, "description": "Empty = all services." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "compose-down",
+      "title": "compose down",
+      "description": "Stop and remove the project's containers and networks.",
+      "subcommand": ["compose", "down"],
+      "sections": [
+        {
+          "title": "Compose down",
+          "options": [
+            { "id": "volumes", "label": "Remove volumes", "type": "flag", "flag": "-v", "flagAliases": ["--volumes"], "warning": "Deletes the named volumes of the project (their data is lost)." },
+            {
+              "id": "rmi", "label": "Remove images", "type": "choice", "flag": "--rmi",
+              "choices": [ { "value": "local", "label": "Images without a custom tag" }, { "value": "all", "label": "All images used by services" } ]
+            },
+            { "id": "removeOrphans", "label": "Remove orphan containers", "type": "flag", "flag": "--remove-orphans" },
+            { "id": "timeout", "label": "Shutdown timeout (s)", "type": "number", "flag": "-t", "flagAliases": ["--timeout"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ps",
+      "title": "ps",
+      "description": "List containers.",
+      "subcommand": ["ps"],
+      "sections": [
+        {
+          "title": "List",
+          "options": [
+            { "id": "all", "label": "Include stopped", "type": "flag", "flag": "-a", "flagAliases": ["--all"] },
+            { "id": "quiet", "label": "IDs only", "type": "flag", "flag": "-q", "flagAliases": ["--quiet"] },
+            { "id": "size", "label": "Show sizes", "type": "flag", "flag": "-s", "flagAliases": ["--size"] },
+            { "id": "noTrunc", "label": "Don't truncate", "type": "flag", "flag": "--no-trunc" },
+            { "id": "last", "label": "Last N containers", "type": "number", "flag": "-n", "flagAliases": ["--last"] },
+            { "id": "filter", "label": "Filters", "type": "keyValueList", "flag": "-f", "flagAliases": ["--filter"], "keyValueSeparator": "=", "placeholder": "status=exited" },
+            { "id": "format", "label": "Format", "type": "text", "flag": "--format", "placeholder": "table {{.Names}}\\t{{.Status}}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "logs",
+      "description": "Show a container's logs.",
+      "subcommand": ["logs"],
+      "sections": [
+        {
+          "title": "Logs",
+          "options": [
+            { "id": "follow", "label": "Follow", "type": "flag", "flag": "-f", "flagAliases": ["--follow"] },
+            { "id": "tail", "label": "Last N lines", "type": "text", "flag": "-n", "flagAliases": ["--tail"], "placeholder": "100 or all" },
+            { "id": "since", "label": "Since", "type": "text", "flag": "--since", "placeholder": "10m or 2024-01-01T00:00:00" },
+            { "id": "until", "label": "Until", "type": "text", "flag": "--until" },
+            { "id": "timestamps", "label": "Timestamps", "type": "flag", "flag": "-t", "flagAliases": ["--timestamps"] },
+            { "id": "container", "label": "Container", "type": "positional", "position": 1, "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exec",
+      "title": "exec",
+      "description": "Run a command in a running container.",
+      "subcommand": ["exec"],
+      "sections": [
+        {
+          "title": "Exec",
+          "options": [
+            { "id": "interactive", "label": "Interactive", "type": "flag", "flag": "-i", "flagAliases": ["--interactive"] },
+            { "id": "tty", "label": "Allocate a TTY", "type": "flag", "flag": "-t", "flagAliases": ["--tty"] },
+            { "id": "detach", "label": "Detached", "type": "flag", "flag": "-d", "flagAliases": ["--detach"] },
+            { "id": "user", "label": "User", "type": "text", "flag": "-u", "flagAliases": ["--user"] },
+            { "id": "workdir", "label": "Working directory", "type": "text", "flag": "-w", "flagAliases": ["--workdir"] },
+            { "id": "env", "label": "Environment variables", "type": "keyValueList", "flag": "-e", "flagAliases": ["--env"], "keyValueSeparator": "=" },
+            { "id": "privileged", "label": "Privileged", "type": "flag", "flag": "--privileged", "warning": "Runs the command with extended privileges." },
+            { "id": "container", "label": "Container", "type": "positional", "position": 1, "required": true },
+            { "id": "command", "label": "Command", "type": "positional", "position": 2, "raw": true, "required": true, "placeholder": "sh" }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Run nginx on port 8080", "description": "Detached web server, removed when stopped.", "mode": "run", "values": { "detach": "true", "rm": "true", "name": "web", "publish": "8080:80", "image": "nginx:alpine" } },
+    { "name": "Throwaway Ubuntu shell", "description": "", "mode": "run", "values": { "interactive": "true", "tty": "true", "rm": "true", "image": "ubuntu:24.04", "command": "bash" } },
+    { "name": "Postgres with a volume", "description": "", "mode": "run", "values": { "detach": "true", "name": "db", "restart": "unless-stopped", "publish": "5432:5432", "env": "POSTGRES_PASSWORD=change-me", "volume": "pgdata:/var/lib/postgresql/data", "image": "postgres:16" } },
+    { "name": "One-off command", "description": "", "mode": "run", "values": { "rm": "true", "image": "alpine", "command": "sh -c 'uname -a; date'" } },
+    { "name": "Build and tag", "description": "", "mode": "build", "values": { "tag": "myapp:latest", "contextPath": "." } },
+    { "name": "Multi-platform build", "description": "", "mode": "build", "values": { "tag": "myapp:1.0", "platform": "linux/amd64,linux/arm64", "file": "docker/Dockerfile", "contextPath": "." } },
+    { "name": "Compose up (rebuild, detached)", "description": "", "mode": "compose-up", "values": { "detach": "true", "build": "true" } },
+    { "name": "Compose down and delete volumes", "description": "", "mode": "compose-down", "values": { "volumes": "true", "removeOrphans": "true" } },
+    { "name": "All containers", "description": "", "mode": "ps", "values": { "all": "true" } },
+    { "name": "Follow logs", "description": "", "mode": "logs", "values": { "follow": "true", "tail": "100", "container": "web" } },
+    { "name": "Shell into container", "description": "", "mode": "exec", "values": { "interactive": "true", "tty": "true", "container": "web", "command": "sh" } }
+  ]
+}

@@ -2,7 +2,7 @@ using Pickle.Abstractions;
 
 namespace Pickle.Tui.Panels.Windows;
 
-/// <summary>FOUNDATION PLACEHOLDER — workstream W8 implements the Winget (Alt+W), Updates (Alt+U) and Scheduler (Alt+S) panels.</summary>
+/// <summary>Registers the winget (Alt+W), Windows Update (Alt+U) and Task Scheduler (Alt+S) panels (Windows only).</summary>
 public sealed class WindowsPanelsPlugin : IPicklePlugin
 {
     public string Id => "pickle.windows.panels";
@@ -13,5 +13,32 @@ public sealed class WindowsPanelsPlugin : IPicklePlugin
 
     public void Initialize(IPickleContext context)
     {
+        context.Panels.Register(new PanelDescriptor
+        {
+            Id = "winget",
+            Title = "winget",
+            Description = "Installed packages, upgrades, search, sources and Windows updates",
+            DefaultKey = "Alt+W",
+            WindowsOnly = true,
+            CreateView = ctx => new WingetPanel(ctx),
+        });
+        context.Panels.Register(new PanelDescriptor
+        {
+            Id = "updates",
+            Title = "Windows Update",
+            Description = "Check for, install and review Windows updates",
+            DefaultKey = "Alt+U",
+            WindowsOnly = true,
+            CreateView = ctx => new UpdatesPanel(ctx),
+        });
+        context.Panels.Register(new PanelDescriptor
+        {
+            Id = "scheduler",
+            Title = "Task Scheduler",
+            Description = "Scheduled tasks: run, enable/disable, delete, history and new tasks",
+            DefaultKey = "Alt+S",
+            WindowsOnly = true,
+            CreateView = ctx => new SchedulerPanel(ctx),
+        });
     }
 }

@@ -13,6 +13,7 @@ public sealed class ConsoleTerminal : ITerminal
     private readonly TextWriter _out;
     private readonly bool _stripAnsi;
     private string _title = "Pickle";
+    private int _outputColumn;
 
     public ConsoleTerminal()
     {
@@ -123,7 +124,63 @@ public sealed class ConsoleTerminal : ITerminal
         return default;
     }
 
-    public void Write(string text) => _out.Write(_stripAnsi ? Abstractions.TextWidth.StripAnsi(text) : text);
+    public bool WaitForInput(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        var deadline = Environment.TickCount64 + (long)timeout.TotalMilliseconds;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (KeyAvailable)
+            {
+                return true;
+            }
+
+            if (Environment.TickCount64 >= deadline)
+            {
+                return false;
+            }
+
+            Thread.Sleep(10);
+        }
+    }
+
+    public int OutputColumn
+    {
+        get
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    return Console.CursorLeft;
+                }
+                catch (IOException)
+                {
+                }
+                catch (PlatformNotSupportedException)
+                {
+                }
+            }
+
+            // On Unix asking the terminal means a DSR round trip that hangs on terminals that never answer.
+            return _outputColumn;
+        }
+    }
+
+    public void Write(string text)
+    {
+        TrackColumn(text);
+        _out.Write(_stripAnsi ? Abstractions.TextWidth.StripAnsi(text) : text);
+    }
+
+    private void TrackColumn(string text)
+    {
+        var lineStart = text.AsSpan().LastIndexOfAny('\n', '\r');
+        var column = lineStart < 0 ? _outputColumn : 0;
+        column += Abstractions.TextWidth.VisibleWidth(lineStart < 0 ? text : text[(lineStart + 1)..]);
+        var width = Math.Max(1, Width);
+        _outputColumn = column % width;
+    }
 
     public void Flush() => _out.Flush();
 

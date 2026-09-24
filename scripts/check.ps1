@@ -36,7 +36,7 @@ elseif (-not $Quick) {
 
 Step 'tests'
 if ($Filter) {
-    Invoke-Checked { dotnet test --solution Pickle.slnx --no-build -- --filter-method "*$Filter*" }
+    Invoke-Checked { dotnet test --solution Pickle.slnx --no-build -- --filter-method "*$Filter*" --ignore-exit-code 8 }
 }
 else {
     Invoke-Checked { dotnet test --solution Pickle.slnx --no-build }

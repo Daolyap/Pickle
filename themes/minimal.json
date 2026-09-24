@@ -1,0 +1,81 @@
+{
+  "name": "minimal",
+  "description": "Just the essentials: a short path, the branch and a quiet prompt character. No special fonts needed.",
+  "terminal": {
+    "background": "#1D1F21",
+    "foreground": "#C5C8C6",
+    "cursorColor": "#C5C8C6",
+    "selectionBackground": "#373B41",
+    "black": "#1D1F21",
+    "red": "#CC6666",
+    "green": "#B5BD68",
+    "yellow": "#F0C674",
+    "blue": "#81A2BE",
+    "purple": "#B294BB",
+    "cyan": "#8ABEB7",
+    "white": "#C5C8C6",
+    "brightBlack": "#707880",
+    "brightRed": "#D54E53",
+    "brightGreen": "#B9CA4A",
+    "brightYellow": "#E7C547",
+    "brightBlue": "#7AA6DA",
+    "brightPurple": "#C397D8",
+    "brightCyan": "#70C0B1",
+    "brightWhite": "#EAEAEA"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#B5BD68",
+    "unknownCommand": "#CC6666",
+    "parameter": "#969896",
+    "string": "#F0C674",
+    "number": "#DE935F",
+    "variable": "#8ABEB7",
+    "operator": "#969896",
+    "keyword": "#B294BB",
+    "comment": "#707880",
+    "type": "#81A2BE",
+    "member": "#C5C8C6",
+    "error": "#D54E53",
+    "suggestion": "#707880",
+    "selectionBackground": "#373B41",
+    "translated": "#707880"
+  },
+  "ui": {
+    "accent": "#81A2BE",
+    "muted": "#707880",
+    "success": "#B5BD68",
+    "warning": "#F0C674",
+    "error": "#CC6666",
+    "info": "#81A2BE",
+    "panelBackground": "#1D1F21",
+    "panelForeground": "#C5C8C6",
+    "panelBorder": "#373B41",
+    "highlightBackground": "#373B41",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#282A2E",
+    "menuForeground": "#C5C8C6",
+    "menuSelectedBackground": "#81A2BE",
+    "menuSelectedForeground": "#1D1F21",
+    "menuDescription": "#969896",
+    "matchHighlight": "#F0C674"
+  },
+  "prompt": {
+    "separator": "plain",
+    "newlineBeforeInput": false,
+    "promptChar": "›",
+    "promptCharColor": "#B294BB",
+    "promptCharErrorColor": "#CC6666",
+    "continuationPrompt": "· ",
+    "transientTemplate": "{promptChar} ",
+    "left": [
+      { "type": "admin", "foreground": "#CC6666", "options": { "symbol": "#" } },
+      { "type": "cwd", "foreground": "#81A2BE", "options": { "maxDepth": "2", "boldRepoRoot": "false" } },
+      { "type": "git", "foreground": "#707880", "options": { "counts": "false" } }
+    ],
+    "right": [
+      { "type": "status", "foreground": "#CC6666" },
+      { "type": "duration", "foreground": "#F0C674" }
+    ]
+  }
+}

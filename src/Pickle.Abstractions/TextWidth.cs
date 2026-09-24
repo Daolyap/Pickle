@@ -89,7 +89,10 @@ public static class TextWidth
         }
 
         var rune = Rune.GetRuneAt(element, 0);
-        return RuneWidth(rune);
+        var width = RuneWidth(rune);
+
+        // VS16 requests emoji presentation, which terminals draw two columns wide (e.g. "⚙️").
+        return width == 1 && element.Contains('\uFE0F', StringComparison.Ordinal) ? 2 : width;
     }
 
     public static int RuneWidth(Rune rune)
@@ -132,10 +135,37 @@ public static class TextWidth
         (cp >= 0xFE30 && cp <= 0xFE4F) ||
         (cp >= 0xFF00 && cp <= 0xFF60) ||
         (cp >= 0xFFE0 && cp <= 0xFFE6) ||
+        cp == 0x1F004 || cp == 0x1F0CF || cp == 0x1F18E ||
+        (cp >= 0x1F191 && cp <= 0x1F19A) ||
+        (cp >= 0x1F200 && cp <= 0x1F2FF) ||
         (cp >= 0x1F300 && cp <= 0x1F64F) ||
+        (cp >= 0x1F680 && cp <= 0x1F6FF) ||
+        (cp >= 0x1F7E0 && cp <= 0x1F7EB) ||
         (cp >= 0x1F900 && cp <= 0x1F9FF) ||
         (cp >= 0x1FA70 && cp <= 0x1FAFF) ||
-        (cp >= 0x20000 && cp <= 0x3FFFD);
+        (cp >= 0x20000 && cp <= 0x3FFFD) ||
+        (cp < 0x10000 && IsBmpEmojiPresentation(cp));
+
+    // BMP characters with Emoji_Presentation=Yes (East Asian Width W since Unicode 9), e.g. ⌚ ⚡ ✅ ⭐.
+    private static bool IsBmpEmojiPresentation(int cp) => cp switch
+    {
+        0x231A or 0x231B or 0x23F0 or 0x23F3 or 0x267F or 0x2693 or 0x26A1 or 0x26CE or 0x26D4 or 0x26EA
+            or 0x26F5 or 0x26FA or 0x26FD or 0x2705 or 0x2728 or 0x274C or 0x274E or 0x2757 or 0x27B0 or 0x27BF
+            or 0x2B50 or 0x2B55 => true,
+        >= 0x23E9 and <= 0x23EC => true,
+        >= 0x25FD and <= 0x25FE => true,
+        >= 0x2614 and <= 0x2615 => true,
+        >= 0x2648 and <= 0x2653 => true,
+        >= 0x26AA and <= 0x26AB => true,
+        >= 0x26BD and <= 0x26BE => true,
+        >= 0x26C4 and <= 0x26C5 => true,
+        >= 0x26F2 and <= 0x26F3 => true,
+        >= 0x270A and <= 0x270B => true,
+        >= 0x2753 and <= 0x2755 => true,
+        >= 0x2795 and <= 0x2797 => true,
+        >= 0x2B1B and <= 0x2B1C => true,
+        _ => false,
+    };
 
     /// <summary>Truncate plain text to at most <paramref name="maxWidth"/> columns, appending an ellipsis if cut.</summary>
     public static string Truncate(string plain, int maxWidth, string ellipsis = "…")

@@ -20,6 +20,7 @@ public sealed record EditorRequest(bool Replace, string Text);
 public sealed class ShellEngine : IPickleShell, IDisposable
 {
     private readonly PickleRuntime _runtime;
+    private static readonly object OpenGate = new();
     private readonly SemaphoreSlim _mainLock = new(1, 1);
     private readonly object _currentGate = new();
     private InitialSessionState? _sessionState;
@@ -44,6 +45,11 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     public ConcurrentQueue<EditorRequest> EditorRequests { get; } = new();
 
     public ConcurrentQueue<string> SubmittedCommands { get; } = new();
+
+    /// <summary>Panels requested while a pipeline was running; the line editor opens them when the prompt is back.</summary>
+    public ConcurrentQueue<(PanelDescriptor Panel, string? Argument, string? CurrentInput)> PendingPanels { get; } = new();
+
+    public bool IsBusy => IsExecuting || IsOnPipelineThread || RunningMainPkInvocation() is not null;
 
     public ExecutionResult? LastResult { get; private set; }
 
@@ -82,12 +88,19 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         _sessionState = iss;
         MainRunspace = RunspaceFactory.CreateRunspace(Host, iss);
         MainRunspace.Name = "Pickle";
-        MainRunspace.Open();
+
+        // PowerShell's first-time provider initialization isn't thread-safe: runspaces opened concurrently in one
+        // process (tests) could come up without the FileSystem provider.
+        lock (OpenGate)
+        {
+            MainRunspace.Open();
+        }
+
         Runspace.DefaultRunspace = MainRunspace;
         MainRunspace.Debugger.DebuggerStop += (_, e) => _runtime.Repl.OnDebuggerStop(e);
 
         // Import the core Pickle module (aliases pk/pickle, helper functions).
-        InvokeSilently($"Import-Module -Name '{Path.Combine(modulesDir, "Pickle", "Pickle.psd1").Replace("'", "''", StringComparison.Ordinal)}' -Global");
+        InvokeSilently("param($path) Import-Module -Name $path -Global", new Dictionary<string, object?> { ["path"] = Path.Combine(modulesDir, "Pickle", "Pickle.psd1") });
         RefreshCwd();
     }
 
@@ -159,6 +172,14 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         LastResult = new ExecutionResult(success && !interrupted, exitCode, sw.Elapsed, interrupted);
         return LastResult;
     }
+
+    /// <summary>
+    /// Take exclusive use of the main runspace without running a pipeline through the engine (e.g. tab completion).
+    /// Returns false if it is busy. Always pair with <see cref="ExitMain"/>.
+    /// </summary>
+    internal bool TryEnterMain(TimeSpan timeout) => _mainLock.Wait(timeout);
+
+    internal void ExitMain() => _mainLock.Release();
 
     /// <summary>Stop the running interactive pipeline (Ctrl+C).</summary>
     public bool StopCurrent()
@@ -260,18 +281,37 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             return InvokeBackgroundAsync(script, parameters, cancellationToken);
         }
 
-        // Called from inside a running pipeline (same thread): run nested.
-        if (IsExecuting && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace)
+        // Called from inside a running pipeline in the main runspace (same thread): run nested.
+        if (IsOnPipelineThread)
         {
             return Task.FromResult(InvokeNested(script, parameters));
+        }
+
+        // Another thread during a `pk` command (typed, or run by a key handler/hook): the command's pipeline holds the
+        // runspace, so hand the work to its pump instead of waiting for the lock it holds.
+        if (RunningMainPkInvocation() is { } invocation && invocation.TryRun(() => InvokeNested(script, parameters)) is { } marshalled)
+        {
+            return marshalled;
         }
 
         return Task.Run(() => InvokeMain(script, parameters, cancellationToken), cancellationToken);
     }
 
+    /// <summary>
+    /// The calling thread is running a pipeline in the main runspace (interactive or InvokeAsync). Work from here must
+    /// nest: waiting for the runspace lock would wait on ourselves.
+    /// </summary>
+    private Commands.PkInvocation? RunningMainPkInvocation() =>
+        Commands.PkInvocation.Current is { IsCompleted: false } invocation && MainRunspace is not null && ReferenceEquals(invocation.Runspace, MainRunspace)
+            ? invocation
+            : null;
+
+    private bool IsOnPipelineThread =>
+        MainRunspace is not null && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace;
+
     private ShellResult InvokeMain(string script, IReadOnlyDictionary<string, object?>? parameters, CancellationToken cancellationToken = default)
     {
-        if (IsExecuting && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace)
+        if (IsOnPipelineThread)
         {
             return InvokeNested(script, parameters);
         }
@@ -358,7 +398,8 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             if (_pool is null)
             {
                 var iss = _sessionState ?? InitialSessionState.CreateDefault2();
-                var pool = RunspaceFactory.CreateRunspacePool(1, 4, iss, host: null);
+                var pool = RunspaceFactory.CreateRunspacePool(iss);
+                pool.SetMaxRunspaces(4);
                 pool.Open();
                 _pool = pool;
             }
@@ -385,6 +426,9 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     }
 
     public void WriteLine(string text) => _runtime.Terminal.Write(text + "\n");
+
+    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null, string? currentInput = null) =>
+        PendingPanels.Enqueue((panel, argument, currentInput));
 
     // ───────────── Helpers ─────────────
 
@@ -418,10 +462,13 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         // The SDK's built-in modules (Utility, Management, Security...) live under runtimes/<os>/lib/<tfm>/Modules.
         // PowerShell finds them next to System.Management.Automation.dll, but not in a single-file bundle where
         // the assembly has no location, so add the directory explicitly.
-        var bundled = FindBundledModulesDirectory();
-        if (bundled is not null && !parts.Contains(bundled, StringComparer.OrdinalIgnoreCase))
+        var insertAt = 1;
+        foreach (var bundled in FindBundledModulesDirectories())
         {
-            parts.Insert(1, bundled);
+            if (!parts.Contains(bundled, StringComparer.OrdinalIgnoreCase))
+            {
+                parts.Insert(insertAt++, bundled);
+            }
         }
 
         // If pwsh 7 is installed, make its bundled modules (PSResourceGet, ThreadJob, Archive...) discoverable too.
@@ -434,22 +481,15 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         Environment.SetEnvironmentVariable("PSModulePath", string.Join(Path.PathSeparator, parts));
     }
 
-    private static string? FindBundledModulesDirectory()
+    /// <summary>SDK built-ins (runtimes/&lt;os&gt;/…/Modules) and modules bundled by BundledModules.targets (Modules/).</summary>
+    private static IEnumerable<string> FindBundledModulesDirectories()
     {
         var os = OperatingSystem.IsWindows() ? "win" : "unix";
-        foreach (var candidate in new[]
+        return new[]
         {
             Path.Combine(AppContext.BaseDirectory, "runtimes", os, "lib", "net10.0", "Modules"),
             Path.Combine(AppContext.BaseDirectory, "Modules"),
-        })
-        {
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
+        }.Where(Directory.Exists);
     }
 
     private static string? FindPwshModulesDirectory()

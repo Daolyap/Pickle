@@ -1,0 +1,111 @@
+{
+  "id": "curl",
+  "title": "curl",
+  "description": "Transfer data with URLs: HTTP requests, APIs, downloads and uploads.",
+  "command": "curl",
+  "aliases": ["curl.exe"],
+  "wingetId": "cURL.cURL",
+  "homepage": "https://curl.se/docs/manpage.html",
+  "sections": [
+    {
+      "title": "Request",
+      "options": [
+        { "id": "url", "label": "URL", "type": "positional", "position": 1, "required": true, "placeholder": "https://example.com/api" },
+        {
+          "id": "method", "label": "Method", "type": "choice", "flag": "-X", "flagAliases": ["--request"], "default": "GET",
+          "description": "HTTP method. Sending data (-d, --json, -F) already implies POST.",
+          "choices": [
+            { "value": "GET" }, { "value": "POST" }, { "value": "PUT" }, { "value": "PATCH" }, { "value": "DELETE" }, { "value": "OPTIONS" }
+          ]
+        },
+        { "id": "headers", "label": "Headers", "type": "keyValueList", "flag": "-H", "flagAliases": ["--header"], "keyValueSeparator": ": ", "placeholder": "Accept: application/json", "description": "One header per line, 'Name: value'." },
+        { "id": "json", "label": "JSON body", "type": "text", "flag": "--json", "placeholder": "{\"name\":\"value\"}", "description": "Sends JSON with Content-Type and Accept set to application/json (curl 7.82+). @file reads a file." },
+        { "id": "data", "label": "Data", "type": "list", "flag": "-d", "flagAliases": ["--data"], "placeholder": "key=value", "description": "Request body (one item per line, joined with &). @file reads a file." },
+        { "id": "dataUrlencode", "label": "URL-encoded data", "type": "list", "flag": "--data-urlencode", "placeholder": "q=hello world" },
+        { "id": "form", "label": "Form fields (multipart)", "type": "keyValueList", "flag": "-F", "flagAliases": ["--form"], "keyValueSeparator": "=", "placeholder": "file=@photo.jpg", "description": "multipart/form-data fields; name=@path uploads a file." },
+        { "id": "get", "label": "Put data in the query string", "type": "flag", "flag": "-G", "flagAliases": ["--get"], "description": "Append -d data to the URL as a GET query." },
+        { "id": "head", "label": "Headers only (HEAD)", "type": "flag", "flag": "-I", "flagAliases": ["--head"] }
+      ]
+    },
+    {
+      "title": "Output",
+      "options": [
+        { "id": "output", "label": "Save to file", "type": "path", "flag": "-o", "flagAliases": ["--output"] },
+        { "id": "remoteName", "label": "Save with remote file name", "type": "flag", "flag": "-O", "flagAliases": ["--remote-name"] },
+        { "id": "createDirs", "label": "Create missing directories", "type": "flag", "flag": "--create-dirs", "dependsOn": "output" },
+        { "id": "include", "label": "Include response headers", "type": "flag", "flag": "-i", "flagAliases": ["--include"] },
+        { "id": "silent", "label": "Silent (no progress)", "type": "flag", "flag": "-s", "flagAliases": ["--silent"] },
+        { "id": "showError", "label": "Show errors even when silent", "type": "flag", "flag": "-S", "flagAliases": ["--show-error"] },
+        { "id": "fail", "label": "Fail on HTTP errors", "type": "flag", "flag": "-f", "flagAliases": ["--fail"], "description": "Exit with code 22 on HTTP 4xx/5xx instead of printing the error page." },
+        { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v", "flagAliases": ["--verbose"] },
+        { "id": "writeOut", "label": "Write-out format", "type": "text", "flag": "-w", "flagAliases": ["--write-out"], "placeholder": "%{http_code} %{time_total}s\\n" }
+      ]
+    },
+    {
+      "title": "Connection",
+      "options": [
+        { "id": "location", "label": "Follow redirects", "type": "flag", "flag": "-L", "flagAliases": ["--location"] },
+        { "id": "maxRedirs", "label": "Max redirects", "type": "number", "flag": "--max-redirs", "dependsOn": "location", "validation": "^\\d+$" },
+        { "id": "user", "label": "User (basic auth)", "type": "text", "flag": "-u", "flagAliases": ["--user"], "placeholder": "user:password" },
+        { "id": "bearer", "label": "Bearer token", "type": "text", "flag": "--oauth2-bearer" },
+        { "id": "userAgent", "label": "User agent", "type": "text", "flag": "-A", "flagAliases": ["--user-agent"] },
+        { "id": "referer", "label": "Referer", "type": "text", "flag": "-e", "flagAliases": ["--referer"] },
+        { "id": "cookie", "label": "Cookies", "type": "text", "flag": "-b", "flagAliases": ["--cookie"], "placeholder": "name=value or cookies.txt" },
+        { "id": "cookieJar", "label": "Save cookies to", "type": "path", "flag": "-c", "flagAliases": ["--cookie-jar"] },
+        { "id": "proxy", "label": "Proxy", "type": "text", "flag": "-x", "flagAliases": ["--proxy"], "placeholder": "http://proxy:8080" },
+        { "id": "insecure", "label": "Skip TLS verification", "type": "flag", "flag": "-k", "flagAliases": ["--insecure"], "warning": "Disables certificate verification; anyone on the network can intercept the connection. Use only for testing." },
+        {
+          "id": "httpVersion", "label": "HTTP version", "type": "choice",
+          "choices": [
+            { "value": "--http1.1", "label": "HTTP/1.1" },
+            { "value": "--http2", "label": "HTTP/2" }
+          ]
+        },
+        { "id": "compressed", "label": "Request compressed response", "type": "flag", "flag": "--compressed" },
+        { "id": "connectTimeout", "label": "Connect timeout (s)", "type": "number", "flag": "--connect-timeout" },
+        { "id": "maxTime", "label": "Max total time (s)", "type": "number", "flag": "-m", "flagAliases": ["--max-time"] },
+        { "id": "retry", "label": "Retries", "type": "number", "flag": "--retry", "validation": "^\\d+$" },
+        { "id": "retryDelay", "label": "Retry delay (s)", "type": "number", "flag": "--retry-delay", "dependsOn": "retry" },
+        { "id": "limitRate", "label": "Limit rate", "type": "text", "flag": "--limit-rate", "placeholder": "1M" },
+        { "id": "continueAt", "label": "Resume at", "type": "text", "flag": "-C", "flagAliases": ["--continue-at"], "description": "Byte offset, or - to resume automatically." }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "GET JSON",
+      "description": "Fetch a JSON API quietly, failing on HTTP errors.",
+      "values": { "url": "https://api.github.com/repos/PowerShell/PowerShell", "headers": "Accept: application/json", "silent": "true", "showError": "true", "fail": "true" }
+    },
+    {
+      "name": "POST JSON",
+      "description": "Send a JSON body.",
+      "values": { "url": "https://httpbin.org/post", "json": "{\"name\":\"pickle\",\"crunchy\":true}" }
+    },
+    {
+      "name": "Download file",
+      "description": "Follow redirects and save to a file.",
+      "values": { "url": "https://github.com/PowerShell/PowerShell/archive/refs/heads/master.zip", "location": "true", "fail": "true", "output": "powershell-master.zip" }
+    },
+    {
+      "name": "Headers only",
+      "description": "Show the response headers of a HEAD request.",
+      "values": { "url": "https://example.com", "head": "true", "location": "true" }
+    },
+    {
+      "name": "Upload a file (form)",
+      "description": "multipart/form-data upload.",
+      "values": { "url": "https://httpbin.org/post", "form": "file=@report.pdf\ncomment=Quarterly report" }
+    },
+    {
+      "name": "Retry a flaky endpoint",
+      "description": "Retry up to 5 times, 2 s apart.",
+      "values": { "url": "https://example.com/health", "retry": "5", "retryDelay": "2", "fail": "true", "silent": "true", "showError": "true" }
+    },
+    {
+      "name": "Status code and timing",
+      "description": "Print only the status code and total time.",
+      "values": { "url": "https://example.com", "silent": "true", "output": "response.html", "writeOut": "%{http_code} %{time_total}s\\n" }
+    }
+  ]
+}

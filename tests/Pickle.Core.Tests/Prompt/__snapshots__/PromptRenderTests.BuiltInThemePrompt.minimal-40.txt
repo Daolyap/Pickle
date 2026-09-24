@@ -1,0 +1,5 @@
+after a failed command:
+«fg=#CC6666»#«» «fg=#81A2BE»~/src/…/Prompt«» «fg=#707880»main«» «fg=#CC6666»›«» █      «fg=#CC6666»✘ 1«» «fg=#F0C674»3.2s«»
+
+after a successful command:
+«fg=#CC6666»#«» «fg=#81A2BE»~/src/…/Prompt«» «fg=#707880»main«» «fg=#B294BB»›«» █          «fg=#F0C674»3.2s«»

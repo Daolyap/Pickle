@@ -1,0 +1,1 @@
+«fg=#B5E36B»Write-Output«» «fg=#E5C07B»'single quoted'«»

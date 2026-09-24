@@ -24,6 +24,8 @@ Tests use xunit.v3 on Microsoft.Testing.Platform: `dotnet test --solution Pickle
 
 ## Layout
 
+Diagrams (projects, data flow, trust boundaries, feature → folder): `docs/architecture.md`.
+
 ```
 src/Pickle.Abstractions  Contracts only (plugins, registries, services, theme/config models, KeyChord, Ansi, TextWidth).
                          Plugins reference just this. Changing it affects everyone — add, don't break.
@@ -76,7 +78,11 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   `VirtualTerminal` tests see everything.
 - **No shell-string injection**: pass user values to PowerShell as parameters
   (`InvokeAsync("param($p) ...", new Dictionary<string, object?>{["p"]=value})`) and to processes via
-  `ProcessStartInfo.ArgumentList`.
+  `ProcessStartInfo.ArgumentList`. When generated script text must embed a value, use `PowerShellText.SingleQuote`
+  (PowerShell also treats ‘ ’ ‚ ‛ as quotes — never hand-roll `Replace("'", "''")`).
+- **Never start a program by bare name**: resolve it with `Commands.ExecutableLocator.Find` (absolute PATH entries only;
+  Windows and .NET's Unix resolver would otherwise run a copy planted in the current directory). Automatic git calls
+  go through `GitService`, which also disables repo-configured fsmonitor/filters/textconv.
 - Package versions live only in `Directory.Packages.props`. Don't add packages without need.
 - New config setting: add a property with a default in `Abstractions/Config.cs` (and the JSON schema).
 - New `pk` subcommand: implement `IPickleCommand`, register it in your plugin's/component's `Initialize`.
@@ -92,16 +98,20 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   `GetStyledScreen()` shows colors as `«fg=#B5E36B,bold»text«»`).
 - Snapshots: `Snapshot.Match(t.Terminal.GetScreenText())` → `__snapshots__/<Class>.<Method>.txt` next to the test.
   First run writes it (commit it!); `PICKLE_UPDATE_SNAPSHOTS=1` re-records. CI fails on missing snapshots.
-- Terminal.Gui: `Application.Create(new VirtualTimeProvider())`, `app.Init()`, input injection
-  (`app.InjectKey(...)`), `StopAfterFirstIteration = true`.
+- Terminal.Gui: `TuiHarness.InitApp()` (virtual time + headless ANSI driver on every OS — never a bare `app.Init()`,
+  which gets the console driver on Windows CI), input injection (`app.InjectKey(...)`), `StopAfterFirstIteration = true`.
 - E2E: add `test_*` functions to `tests/Pickle.E2E/run_e2e.py` (real pty; covers native programs and panels).
 
 ## Gotchas
 
 - Single-file publish: PowerShell's built-in modules live under `runtimes/<os>/lib/net10.0/Modules` and are added to
-  `PSModulePath` explicitly (`ShellEngine.FindBundledModulesDirectory`). NativeAOT is not possible (PowerShell uses
+  `PSModulePath` explicitly (`ShellEngine.FindBundledModulesDirectories`). PSResourceGet, ThreadJob and Archive are
+  not in the SDK: `src/Pickle/BundledModules.targets` downloads them (pinned SHA-256) into `<output>/Modules/`;
+  cache in `artifacts/module-cache`, `-p:PickleBundleModules=false` for offline builds. NativeAOT is not possible (PowerShell uses
   reflection/dynamic code).
 - Terminal.Gui v2 must use the **instance** model (`Application.Create()`); never touch the static
   `Application.Init/Run` (it throws once the instance model was used in-process).
 - The Verify snapshot library is intentionally not used (its build-time license check); use `Pickle.Testing.Snapshot`.
+- `$PSStyle` is one static instance per process, shared by every runspace. Tests asserting on it (or other
+  process-wide PowerShell state) must use `[Collection(ProcessWideStateCollection.Name)]` (non-parallel).
 - `PSReadLine` is not used; a shim module maps common `Set-PSReadLineOption` calls to Pickle config.

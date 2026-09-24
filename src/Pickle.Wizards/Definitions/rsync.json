@@ -1,0 +1,60 @@
+{
+  "id": "rsync",
+  "title": "rsync",
+  "description": "Fast incremental file sync, locally or over SSH (on Windows via WSL, MSYS2 or cwRsync). A trailing / on the source copies its contents.",
+  "command": "rsync",
+  "aliases": ["rsync.exe"],
+  "homepage": "https://download.samba.org/pub/rsync/rsync.1",
+  "sections": [
+    {
+      "title": "Paths",
+      "options": [
+        { "id": "sources", "label": "Source(s)", "type": "list", "position": 1, "required": true, "placeholder": "./site/" },
+        { "id": "destination", "label": "Destination", "type": "positional", "position": 2, "required": true, "placeholder": "user@host:/var/www/site/" }
+      ]
+    },
+    {
+      "title": "Transfer",
+      "options": [
+        { "id": "archive", "label": "Archive (recursive, keep times/perms/links)", "type": "flag", "flag": "-a", "flagAliases": ["--archive"] },
+        { "id": "recursive", "label": "Recursive", "type": "flag", "flag": "-r", "flagAliases": ["--recursive"] },
+        { "id": "compress", "label": "Compress", "type": "flag", "flag": "-z", "flagAliases": ["--compress"] },
+        { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v", "flagAliases": ["--verbose"] },
+        { "id": "human", "label": "Human-readable sizes", "type": "flag", "flag": "-h", "flagAliases": ["--human-readable"] },
+        { "id": "progress", "label": "Progress", "type": "flag", "flag": "--progress" },
+        { "id": "partial", "label": "Keep partial files + progress", "type": "flag", "flag": "-P" },
+        { "id": "update", "label": "Skip newer destination files", "type": "flag", "flag": "-u", "flagAliases": ["--update"] },
+        { "id": "checksum", "label": "Compare by checksum", "type": "flag", "flag": "-c", "flagAliases": ["--checksum"] },
+        { "id": "dryRun", "label": "Dry run", "type": "flag", "flag": "-n", "flagAliases": ["--dry-run"] },
+        { "id": "itemize", "label": "Itemize changes", "type": "flag", "flag": "-i", "flagAliases": ["--itemize-changes"] },
+        { "id": "stats", "label": "Statistics", "type": "flag", "flag": "--stats" },
+        { "id": "delete", "label": "Delete extraneous files", "type": "flag", "flag": "--delete", "warning": "Deletes files in the destination that don't exist in the source. Try a dry run (-n) first." },
+        { "id": "backup", "label": "Back up replaced files", "type": "flag", "flag": "-b", "flagAliases": ["--backup"] },
+        { "id": "backupDir", "label": "Backup folder", "type": "path", "flag": "--backup-dir", "valueStyle": "equals", "dependsOn": "backup" }
+      ]
+    },
+    {
+      "title": "Filters",
+      "options": [
+        { "id": "exclude", "label": "Exclude", "type": "list", "flag": "--exclude", "valueStyle": "equals", "placeholder": "node_modules" },
+        { "id": "include", "label": "Include", "type": "list", "flag": "--include", "valueStyle": "equals" },
+        { "id": "excludeFrom", "label": "Exclude patterns from file", "type": "path", "flag": "--exclude-from", "valueStyle": "equals" }
+      ]
+    },
+    {
+      "title": "Connection",
+      "options": [
+        { "id": "rsh", "label": "Remote shell", "type": "text", "flag": "-e", "flagAliases": ["--rsh"], "placeholder": "ssh -p 2222" },
+        { "id": "bwlimit", "label": "Bandwidth limit", "type": "text", "flag": "--bwlimit", "valueStyle": "equals", "placeholder": "5M" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Deploy a folder over SSH", "description": "", "values": { "archive": "true", "verbose": "true", "compress": "true", "sources": "./site/", "destination": "user@example.com:/var/www/site/" } },
+    { "name": "Mirror (delete extras)", "description": "", "values": { "archive": "true", "delete": "true", "sources": "src/", "destination": "backup/" } },
+    { "name": "Dry run of a mirror", "description": "", "values": { "archive": "true", "verbose": "true", "dryRun": "true", "delete": "true", "sources": "src/", "destination": "backup/" } },
+    { "name": "SSH on a custom port", "description": "", "values": { "archive": "true", "rsh": "ssh -p 2222", "sources": "data/", "destination": "user@example.com:data/" } },
+    { "name": "Resumable large copy", "description": "", "values": { "archive": "true", "partial": "true", "sources": "videos/", "destination": "/mnt/nas/videos/" } },
+    { "name": "Skip build output", "description": "", "values": { "archive": "true", "exclude": "node_modules\n.git\n*.log", "sources": "project/", "destination": "user@example.com:project/" } }
+  ]
+}

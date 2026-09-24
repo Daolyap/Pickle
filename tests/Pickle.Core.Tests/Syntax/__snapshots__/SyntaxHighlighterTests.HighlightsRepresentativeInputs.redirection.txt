@@ -1,0 +1,1 @@
+«fg=#7D8C75»&«» «fg=#7FD4DE»$cmd«» «fg=#7D8C75»-Verbose«» «fg=#7D8C75»2>&1«» «fg=#7D8C75»>«» out.txt

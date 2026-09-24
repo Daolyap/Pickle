@@ -1,0 +1,105 @@
+{
+  "id": "get-winevent",
+  "title": "Get-WinEvent",
+  "description": "Query Windows event logs (Security needs an elevated shell).",
+  "command": "Get-WinEvent",
+  "homepage": "https://learn.microsoft.com/powershell/module/microsoft.powershell.diagnostics/get-winevent",
+  "windowsOnly": true,
+  "modes": [
+    {
+      "id": "filter",
+      "title": "Filter events",
+      "description": "Fast server-side filtering with -FilterHashtable.",
+      "subcommand": [],
+      "sections": [
+        {
+          "title": "Filter",
+          "options": [
+            {
+              "id": "filter", "label": "Filter", "type": "text", "flag": "-FilterHashtable", "raw": true, "required": true,
+              "template": "@{LogName={logName}[; ProviderName={providerName}][; Id={id}][; Level={level}][; StartTime=(Get-Date).AddHours(-{hours})]}",
+              "description": "Log name (System, Application, Security, ...); Id accepts 4624,4625; Level 1=Critical 2=Error 3=Warning 4=Information; Hours = only the last N hours."
+            },
+            { "id": "maxEvents", "label": "Max events", "type": "number", "flag": "-MaxEvents", "validation": "^\\d+$" },
+            { "id": "oldest", "label": "Oldest first", "type": "flag", "flag": "-Oldest" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "log",
+      "title": "Read a log",
+      "subcommand": [],
+      "sections": [
+        {
+          "title": "Log",
+          "options": [
+            {
+              "id": "logName", "label": "Log", "type": "choice", "flag": "-LogName", "required": true,
+              "choices": [
+                { "value": "System" }, { "value": "Application" }, { "value": "Security" }, { "value": "Setup" },
+                { "value": "Microsoft-Windows-PowerShell/Operational" }, { "value": "Windows PowerShell" },
+                { "value": "Microsoft-Windows-TaskScheduler/Operational" }
+              ]
+            },
+            { "id": "maxEvents", "label": "Max events", "type": "number", "flag": "-MaxEvents", "validation": "^\\d+$" },
+            { "id": "filterXPath", "label": "XPath filter", "type": "text", "flag": "-FilterXPath", "placeholder": "*[System[(Level=1 or Level=2)]]" },
+            { "id": "oldest", "label": "Oldest first", "type": "flag", "flag": "-Oldest" },
+            { "id": "computerName", "label": "Computer", "type": "text", "flag": "-ComputerName" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list-logs",
+      "title": "List logs",
+      "subcommand": [],
+      "sections": [
+        {
+          "title": "Logs",
+          "options": [
+            { "id": "listLog", "label": "Log name pattern", "type": "text", "flag": "-ListLog", "required": true, "placeholder": "*" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list-providers",
+      "title": "List providers",
+      "subcommand": [],
+      "sections": [
+        {
+          "title": "Providers",
+          "options": [
+            { "id": "listProvider", "label": "Provider name pattern", "type": "text", "flag": "-ListProvider", "required": true, "placeholder": "*Kernel*" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "file",
+      "title": "Read an .evtx file",
+      "subcommand": [],
+      "sections": [
+        {
+          "title": "File",
+          "options": [
+            { "id": "path", "label": "File", "type": "path", "flag": "-Path", "required": true, "placeholder": "C:\\Logs\\saved.evtx" },
+            { "id": "maxEvents", "label": "Max events", "type": "number", "flag": "-MaxEvents", "validation": "^\\d+$" },
+            { "id": "oldest", "label": "Oldest first", "type": "flag", "flag": "-Oldest" }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "System errors, last 24 h", "description": "", "mode": "filter", "values": { "filter.logName": "System", "filter.level": "2", "filter.hours": "24", "maxEvents": "50" } },
+    { "name": "Failed logons", "description": "Event 4625 (run elevated).", "mode": "filter", "values": { "filter.logName": "Security", "filter.id": "4625", "maxEvents": "20" } },
+    { "name": "Unexpected shutdowns", "description": "Kernel-Power 41 and EventLog 6008.", "mode": "filter", "values": { "filter.logName": "System", "filter.id": "41,6008" } },
+    { "name": "Windows Update client", "description": "", "mode": "filter", "values": { "filter.logName": "System", "filter.providerName": "Microsoft-Windows-WindowsUpdateClient", "maxEvents": "20" } },
+    { "name": "Latest Application events", "description": "", "mode": "log", "values": { "logName": "Application", "maxEvents": "20" } },
+    { "name": "PowerShell operational log", "description": "", "mode": "log", "values": { "logName": "Microsoft-Windows-PowerShell/Operational", "maxEvents": "50" } },
+    { "name": "Logs with events", "description": "", "mode": "list-logs", "values": { "listLog": "*" } },
+    { "name": "Read a saved log", "description": "", "mode": "file", "values": { "path": "C:\\Logs\\saved.evtx", "maxEvents": "100" } }
+  ]
+}

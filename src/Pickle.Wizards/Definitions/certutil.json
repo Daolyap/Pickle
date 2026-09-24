@@ -1,0 +1,121 @@
+{
+  "id": "certutil",
+  "title": "certutil",
+  "description": "Windows certificate utility: file hashes, Base64 encode/decode, certificate dumps and stores.",
+  "command": "certutil",
+  "aliases": ["certutil.exe"],
+  "homepage": "https://learn.microsoft.com/windows-server/administration/windows-commands/certutil",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Global",
+      "options": [
+        { "id": "force", "label": "Overwrite existing output", "type": "flag", "flag": "-f" },
+        { "id": "user", "label": "Current-user store", "type": "flag", "flag": "-user" }
+      ]
+    }
+  ],
+  "modes": [
+    {
+      "id": "hashfile",
+      "title": "Hash a file",
+      "subcommand": ["-hashfile"],
+      "sections": [
+        {
+          "title": "Hash",
+          "options": [
+            { "id": "file", "label": "File", "type": "path", "position": 1, "required": true },
+            {
+              "id": "algorithm", "label": "Algorithm", "type": "choice", "position": 2, "default": "SHA1",
+              "choices": [ { "value": "SHA256" }, { "value": "SHA384" }, { "value": "SHA512" }, { "value": "SHA1" }, { "value": "MD5" } ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encode",
+      "title": "Base64 encode",
+      "subcommand": ["-encode"],
+      "sections": [
+        {
+          "title": "Files",
+          "options": [
+            { "id": "in", "label": "Input file", "type": "path", "position": 1, "required": true },
+            { "id": "out", "label": "Output file", "type": "path", "position": 2, "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "decode",
+      "title": "Base64 decode",
+      "subcommand": ["-decode"],
+      "sections": [
+        {
+          "title": "Files",
+          "options": [
+            { "id": "in", "label": "Input file", "type": "path", "position": 1, "required": true },
+            { "id": "out", "label": "Output file", "type": "path", "position": 2, "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dump",
+      "title": "Dump a certificate/file",
+      "subcommand": ["-dump"],
+      "sections": [
+        {
+          "title": "File",
+          "options": [
+            { "id": "file", "label": "File", "type": "path", "position": 1, "required": true, "placeholder": "cert.cer" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "store",
+      "title": "List a certificate store",
+      "subcommand": ["-store"],
+      "sections": [
+        {
+          "title": "Store",
+          "options": [
+            {
+              "id": "storeName", "label": "Store", "type": "choice", "position": 1,
+              "choices": [
+                { "value": "My", "label": "Personal" }, { "value": "Root", "label": "Trusted roots" }, { "value": "CA", "label": "Intermediate CAs" },
+                { "value": "TrustedPublisher" }, { "value": "Disallowed" }
+              ]
+            },
+            { "id": "certId", "label": "Certificate (serial, thumbprint or name)", "type": "positional", "position": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "urlcache",
+      "title": "Download a URL",
+      "description": "certutil -urlcache -split -f. Security tools often flag this pattern (malware uses it); Invoke-WebRequest is usually the better choice.",
+      "subcommand": ["-urlcache", "-split", "-f"],
+      "sections": [
+        {
+          "title": "Download",
+          "options": [
+            { "id": "url", "label": "URL", "type": "positional", "position": 1, "required": true, "validation": "^https?://" },
+            { "id": "outFile", "label": "Save as", "type": "path", "position": 2 }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "SHA-256 of a file", "description": "", "mode": "hashfile", "values": { "file": "C:\\Downloads\\setup.exe", "algorithm": "SHA256" } },
+    { "name": "Base64-encode a file", "description": "", "mode": "encode", "values": { "in": "file.bin", "out": "file.b64" } },
+    { "name": "Base64-decode a file", "description": "", "mode": "decode", "values": { "force": "true", "in": "file.b64", "out": "file.bin" } },
+    { "name": "Dump a certificate", "description": "", "mode": "dump", "values": { "file": "cert.cer" } },
+    { "name": "My personal certificates", "description": "", "mode": "store", "values": { "user": "true", "storeName": "My" } },
+    { "name": "Download a file", "description": "", "mode": "urlcache", "values": { "url": "https://example.com/file.zip", "outFile": "file.zip" } }
+  ]
+}

@@ -1,0 +1,5 @@
+classic   PS «fg=#CCCCCC»/home/pickle/src/pickle/src/Pickle.Core/Prompt«»> Get-Date
+minimal   «fg=#B294BB»›«» Get-Date
+mono      «fg=#E0E0E0»>«» Get-Date
+pickle    «fg=#8FC34A»❯«» Get-Date
+powerline «fg=#5C6370»14:05:09«» «fg=#98C379»❯«» Get-Date

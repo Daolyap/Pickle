@@ -1,5 +1,4 @@
 using Terminal.Gui.App;
-using Terminal.Gui.Time;
 using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Tests;
@@ -12,8 +11,7 @@ public class PanelLifecycleTests
     {
         for (var i = 0; i < 10; i++)
         {
-            using var app = Application.Create(new VirtualTimeProvider());
-            app.Init();
+            using var app = TuiHarness.InitApp();
             app.StopAfterFirstIteration = true;
             using var window = new Window { Title = $"panel {i}" };
             window.Add(new Label { Text = "hello" });

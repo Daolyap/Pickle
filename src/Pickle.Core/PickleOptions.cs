@@ -36,6 +36,12 @@ public sealed class PickleOptions
 
     public bool UninstallTerminalProfile { get; set; }
 
+    /// <summary>Write a Windows Terminal fragment JSON to this path and exit (used by the MSI build).</summary>
+    public string? WriteTerminalFragment { get; set; }
+
+    /// <summary>Profile commandline for <see cref="WriteTerminalFragment"/> (default: this executable's path).</summary>
+    public string? FragmentCommandLine { get; set; }
+
     public List<string> Errors { get; } = [];
 
     public static PickleOptions Parse(IReadOnlyList<string> args)
@@ -107,6 +113,12 @@ public sealed class PickleOptions
                     break;
                 case "--uninstall-terminal-profile":
                     o.UninstallTerminalProfile = true;
+                    break;
+                case "--write-terminal-fragment":
+                    o.WriteTerminalFragment = Next();
+                    break;
+                case "--fragment-commandline":
+                    o.FragmentCommandLine = Next();
                     break;
                 default:
                     if (!a.StartsWith('-') && o.File is null && a.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase))

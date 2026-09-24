@@ -1,0 +1,1 @@
+«fg=#C678DD»foreach«» («fg=#7FD4DE»$i«» «fg=#C678DD»in«» «fg=#DA9BEF»1«fg=#7D8C75»..«fg=#DA9BEF»3«») {

@@ -1,0 +1,4 @@
+«fg=#DDE5D6,bg=#232922» «fg=#8FC34A,bg=#232922»-«fg=#DDE5D6,bg=#232922» Force          «fg=#7D8C75,bg=#232922»[switch]«fg=#DDE5D6,bg=#232922» «»
+«fg=#1B1F1A,bg=#8FC34A» - «fg=#1B1F1A,bg=#8FC34A,bold»F«fg=#1B1F1A,bg=#8FC34A»ollowSyml«fg=#1B1F1A,bg=#8FC34A,bold»i«fg=#1B1F1A,bg=#8FC34A»nk  [switch] «»
+«fg=#DDE5D6,bg=#232922» «fg=#8FC34A,bg=#232922»-«fg=#DDE5D6,bg=#232922» «fg=#E5C07B,bg=#232922,bold»Fi«fg=#DDE5D6,bg=#232922»lter         «fg=#7D8C75,bg=#232922»[string]«fg=#DDE5D6,bg=#232922» «»
+«fg=#DDE5D6,bg=#232922» «fg=#8FC34A,bg=#232922»-«fg=#DDE5D6,bg=#232922» «fg=#E5C07B,bg=#232922,bold»Fi«fg=#DDE5D6,bg=#232922»le           «fg=#7D8C75,bg=#232922»[switch]«fg=#DDE5D6,bg=#232922» «»

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Test fixture: a third-party .NET plugin (loaded by Pickle.Core.Tests from a plugins folder after trust).</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Private=false: the host's Pickle.Abstractions is shared at runtime, like a real plugin. -->
+    <ProjectReference Include="..\..\..\src\Pickle.Abstractions\Pickle.Abstractions.csproj" Private="false" />
+  </ItemGroup>
+</Project>

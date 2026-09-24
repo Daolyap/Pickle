@@ -1,0 +1,1 @@
+«fg=#C678DD»if«» («fg=#7FD4DE»$a«» «fg=#7D8C75»-eq«» «fg=#DA9BEF»1«») { «fg=#E5C07B»'one'«» } «fg=#C678DD»else«» { «fg=#E5C07B»'other'«» }

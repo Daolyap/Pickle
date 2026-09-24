@@ -1,0 +1,84 @@
+{
+  "id": "robocopy",
+  "title": "Robocopy",
+  "description": "Robust file and folder copy/mirror for Windows, with retries, filters and logging.",
+  "command": "robocopy",
+  "aliases": ["robocopy.exe"],
+  "homepage": "https://learn.microsoft.com/windows-server/administration/windows-commands/robocopy",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Source and destination",
+      "options": [
+        { "id": "source", "label": "Source folder", "type": "path", "position": -2, "required": true, "placeholder": "C:\\Source" },
+        { "id": "destination", "label": "Destination folder", "type": "path", "position": -1, "required": true, "placeholder": "D:\\Backup\\Source" },
+        { "id": "files", "label": "File filters", "type": "list", "position": 0, "placeholder": "*.docx", "description": "One pattern per line; empty copies all files (*.*)." }
+      ]
+    },
+    {
+      "title": "Copy",
+      "options": [
+        { "id": "subdirs", "label": "Subfolders (skip empty)", "type": "flag", "flag": "/S" },
+        { "id": "emptyDirs", "label": "Subfolders (including empty)", "type": "flag", "flag": "/E" },
+        { "id": "mirror", "label": "Mirror", "type": "flag", "flag": "/MIR", "description": "Same as /E /PURGE.", "warning": "Deletes files and folders in the destination that don't exist in the source." },
+        { "id": "purge", "label": "Purge extra destination files", "type": "flag", "flag": "/PURGE", "warning": "Deletes destination files and folders that no longer exist in the source." },
+        { "id": "move", "label": "Move files", "type": "flag", "flag": "/MOV", "warning": "Deletes the source files after they are copied." },
+        { "id": "moveAll", "label": "Move files and folders", "type": "flag", "flag": "/MOVE", "warning": "Deletes the source files and folders after they are copied." },
+        {
+          "id": "copy", "label": "File properties to copy", "type": "choice", "flag": "/COPY:", "valueStyle": "none", "default": "DAT",
+          "choices": [
+            { "value": "DAT", "label": "Data, attributes, timestamps" },
+            { "value": "DATS", "label": "+ security (ACLs)" },
+            { "value": "DATSOU", "label": "+ security, owner, auditing" },
+            { "value": "D", "label": "Data only" }
+          ]
+        },
+        {
+          "id": "dcopy", "label": "Folder properties to copy", "type": "choice", "flag": "/DCOPY:", "valueStyle": "none", "default": "DA",
+          "choices": [ { "value": "DA", "label": "Data, attributes" }, { "value": "DAT", "label": "Data, attributes, timestamps" } ]
+        },
+        { "id": "restartable", "label": "Restartable mode", "type": "flag", "flag": "/Z" },
+        { "id": "backupMode", "label": "Backup mode (admin)", "type": "flag", "flag": "/B" },
+        { "id": "threads", "label": "Threads", "type": "number", "flag": "/MT:", "valueStyle": "none", "validation": "^([1-9]|[1-9]\\d|1[01]\\d|12[0-8])$", "description": "1–128 (robocopy's /MT default is 8)." },
+        { "id": "listOnly", "label": "List only (dry run)", "type": "flag", "flag": "/L" }
+      ]
+    },
+    {
+      "title": "Filters",
+      "options": [
+        { "id": "excludeFiles", "label": "Exclude files", "type": "list", "flag": "/XF", "placeholder": "*.tmp" },
+        { "id": "excludeDirs", "label": "Exclude folders", "type": "list", "flag": "/XD", "placeholder": "node_modules" },
+        { "id": "excludeOlder", "label": "Skip older source files", "type": "flag", "flag": "/XO" },
+        { "id": "excludeJunctions", "label": "Skip junctions", "type": "flag", "flag": "/XJ" },
+        { "id": "maxAge", "label": "Max age (days or YYYYMMDD)", "type": "text", "flag": "/MAXAGE:", "valueStyle": "none" },
+        { "id": "minAge", "label": "Min age (days or YYYYMMDD)", "type": "text", "flag": "/MINAGE:", "valueStyle": "none" },
+        { "id": "maxSize", "label": "Max size (bytes)", "type": "number", "flag": "/MAX:", "valueStyle": "none" },
+        { "id": "minSize", "label": "Min size (bytes)", "type": "number", "flag": "/MIN:", "valueStyle": "none" }
+      ]
+    },
+    {
+      "title": "Retries and logging",
+      "options": [
+        { "id": "retries", "label": "Retries", "type": "number", "flag": "/R:", "valueStyle": "none", "validation": "^\\d+$", "description": "Robocopy's default is 1,000,000 — set something small." },
+        { "id": "wait", "label": "Wait between retries (s)", "type": "number", "flag": "/W:", "valueStyle": "none", "validation": "^\\d+$", "description": "Default 30." },
+        { "id": "log", "label": "Log file (overwrite)", "type": "path", "flag": "/LOG:", "valueStyle": "none" },
+        { "id": "logAppend", "label": "Log file (append)", "type": "path", "flag": "/LOG+:", "valueStyle": "none" },
+        { "id": "tee", "label": "Also show output in the console", "type": "flag", "flag": "/TEE" },
+        { "id": "noProgress", "label": "No percentage progress", "type": "flag", "flag": "/NP" },
+        { "id": "noFileList", "label": "Don't list files", "type": "flag", "flag": "/NFL" },
+        { "id": "noDirList", "label": "Don't list folders", "type": "flag", "flag": "/NDL" },
+        { "id": "eta", "label": "Show ETA", "type": "flag", "flag": "/ETA" },
+        { "id": "verbose", "label": "Verbose (show skipped)", "type": "flag", "flag": "/V" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Mirror a folder", "description": "Make the destination an exact copy (deletes extras!).", "values": { "source": "C:\\Source", "destination": "D:\\Backup\\Source", "mirror": "true", "threads": "16", "retries": "2", "wait": "5" } },
+    { "name": "Mirror dry run", "description": "Show what a mirror would copy and delete.", "values": { "source": "C:\\Source", "destination": "D:\\Backup\\Source", "mirror": "true", "listOnly": "true" } },
+    { "name": "Copy everything", "description": "All files and folders, including empty ones.", "values": { "source": "C:\\Source", "destination": "D:\\Copy", "emptyDirs": "true", "restartable": "true", "retries": "3", "wait": "5" } },
+    { "name": "Copy only documents", "description": "", "values": { "source": "C:\\Users\\me\\Documents", "destination": "E:\\Docs", "files": "*.docx\n*.xlsx\n*.pdf", "subdirs": "true", "excludeOlder": "true" } },
+    { "name": "Backup with a log", "description": "", "values": { "source": "C:\\Data", "destination": "\\\\nas\\backup\\data", "emptyDirs": "true", "restartable": "true", "log": "C:\\Logs\\backup.log", "tee": "true", "noProgress": "true" } },
+    { "name": "Skip build folders", "description": "", "values": { "source": "C:\\src\\app", "destination": "D:\\app-copy", "emptyDirs": "true", "excludeDirs": "node_modules\n.git\nbin\nobj", "excludeFiles": "*.tmp" } },
+    { "name": "Move old logs", "description": "Move logs older than 30 days to an archive.", "values": { "source": "C:\\App\\logs", "destination": "D:\\Archive\\logs", "files": "*.log", "move": "true", "minAge": "30" } }
+  ]
+}

@@ -62,8 +62,30 @@ public sealed class ThemeProvider : IThemeProvider
         }
     }
 
+    /// <summary>Theme names are file names; anything else (paths, "..") is rejected.</summary>
+    public static bool IsValidName(string? name) =>
+        !string.IsNullOrWhiteSpace(name) && name.Length <= 64 && name != "." && name != ".."
+        && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.');
+
+    /// <summary>Path of the user's override for <paramref name="name"/>, or null when the theme is built-in only.</summary>
+    public string? UserThemeFile(string name)
+    {
+        if (!IsValidName(name))
+        {
+            return null;
+        }
+
+        var file = Path.Combine(_paths.ThemesDir, name + ".json");
+        return File.Exists(file) ? file : null;
+    }
+
     public Theme? Load(string name)
     {
+        if (!IsValidName(name))
+        {
+            return null;
+        }
+
         try
         {
             var userFile = Path.Combine(_paths.ThemesDir, name + ".json");
@@ -80,6 +102,11 @@ public sealed class ThemeProvider : IThemeProvider
             _log.Error("theme", $"Theme '{name}' is invalid: {ex.Message}", ex);
             return null;
         }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Error("theme", $"Theme '{name}' could not be read: {ex.Message}", ex);
+            return null;
+        }
     }
 
     public void Apply(string name)
@@ -90,9 +117,10 @@ public sealed class ThemeProvider : IThemeProvider
         ThemeChanged?.Invoke(this, theme);
     }
 
+    // The file name is the theme's identity: Apply persists Name to config and Load finds it by file name again.
     private static Theme? Normalize(Theme? theme, string name)
     {
-        if (theme is not null && string.IsNullOrWhiteSpace(theme.Name))
+        if (theme is not null)
         {
             theme.Name = name;
         }

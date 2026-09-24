@@ -38,8 +38,13 @@ public static class DefaultKeyBindings
         ["Shift+Home"] = EditorActionNames.SelectToStart,
         ["Shift+End"] = EditorActionNames.SelectToEnd,
         ["Ctrl+A"] = EditorActionNames.SelectAll,
+        ["Ctrl+Insert"] = EditorActionNames.Copy,
         ["Ctrl+X"] = EditorActionNames.Cut,
+        ["Shift+Delete"] = EditorActionNames.Cut,
         ["Ctrl+V"] = EditorActionNames.Paste,
+        ["Shift+Insert"] = EditorActionNames.Paste,
+        ["Ctrl+E"] = EditorActionNames.AcceptSuggestion,
+        ["Alt+RightArrow"] = EditorActionNames.AcceptSuggestionWord,
         ["UpArrow"] = EditorActionNames.HistoryPrevious,
         ["DownArrow"] = EditorActionNames.HistoryNext,
         ["Ctrl+L"] = EditorActionNames.ClearScreen,
@@ -60,7 +65,7 @@ public static class DefaultKeyBindings
         ["Alt+,"] = EditorActionNames.PanelSettings,
     };
 
-    /// <summary>Bind defaults, basic editing actions (overridden by the full editor), and user overrides.</summary>
+    /// <summary>Bind defaults, then user overrides, and give every registered panel an action (and its default chord).</summary>
     public static void Apply(PickleRuntime runtime)
     {
         var registry = runtime.KeyBindingRegistry;

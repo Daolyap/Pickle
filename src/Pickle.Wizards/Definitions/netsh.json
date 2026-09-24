@@ -1,0 +1,139 @@
+{
+  "id": "netsh",
+  "title": "netsh",
+  "description": "Windows networking: port proxies, firewall rules, Wi-Fi profiles and IP configuration. Changes need an elevated shell.",
+  "command": "netsh",
+  "aliases": ["netsh.exe"],
+  "homepage": "https://learn.microsoft.com/windows-server/networking/technologies/netsh/netsh",
+  "windowsOnly": true,
+  "modes": [
+    {
+      "id": "portproxy-add",
+      "title": "portproxy add",
+      "description": "Forward a local IPv4 port to another address (e.g. into WSL or a VM).",
+      "subcommand": ["interface", "portproxy", "add", "v4tov4"],
+      "sections": [
+        {
+          "title": "Port proxy",
+          "options": [
+            { "id": "listenport", "label": "Listen port", "type": "number", "flag": "listenport", "valueStyle": "equals", "required": true, "validation": "^\\d{1,5}$" },
+            { "id": "listenaddress", "label": "Listen address", "type": "text", "flag": "listenaddress", "valueStyle": "equals", "placeholder": "0.0.0.0" },
+            { "id": "connectport", "label": "Connect port", "type": "number", "flag": "connectport", "valueStyle": "equals", "required": true, "validation": "^\\d{1,5}$" },
+            { "id": "connectaddress", "label": "Connect address", "type": "text", "flag": "connectaddress", "valueStyle": "equals", "required": true, "placeholder": "192.168.1.10" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "portproxy-show",
+      "title": "portproxy show",
+      "subcommand": ["interface", "portproxy", "show", "all"],
+      "sections": []
+    },
+    {
+      "id": "portproxy-delete",
+      "title": "portproxy delete",
+      "subcommand": ["interface", "portproxy", "delete", "v4tov4"],
+      "sections": [
+        {
+          "title": "Port proxy",
+          "options": [
+            { "id": "listenport", "label": "Listen port", "type": "number", "flag": "listenport", "valueStyle": "equals", "required": true, "validation": "^\\d{1,5}$" },
+            { "id": "listenaddress", "label": "Listen address", "type": "text", "flag": "listenaddress", "valueStyle": "equals" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "firewall-add",
+      "title": "firewall add rule",
+      "subcommand": ["advfirewall", "firewall", "add", "rule"],
+      "sections": [
+        {
+          "title": "Rule",
+          "options": [
+            { "id": "name", "label": "Name", "type": "text", "flag": "name", "valueStyle": "equals", "required": true },
+            { "id": "dir", "label": "Direction", "type": "choice", "flag": "dir", "valueStyle": "equals", "required": true, "choices": [ { "value": "in", "label": "Inbound" }, { "value": "out", "label": "Outbound" } ] },
+            { "id": "action", "label": "Action", "type": "choice", "flag": "action", "valueStyle": "equals", "required": true, "choices": [ { "value": "allow" }, { "value": "block" } ] },
+            { "id": "protocol", "label": "Protocol", "type": "choice", "flag": "protocol", "valueStyle": "equals", "choices": [ { "value": "tcp" }, { "value": "udp" }, { "value": "icmpv4" }, { "value": "icmpv6" }, { "value": "any" } ] },
+            { "id": "localport", "label": "Local port(s)", "type": "text", "flag": "localport", "valueStyle": "equals", "placeholder": "8080 or 5000-5010", "description": "Needs protocol tcp or udp." },
+            { "id": "remoteport", "label": "Remote port(s)", "type": "text", "flag": "remoteport", "valueStyle": "equals" },
+            { "id": "remoteip", "label": "Remote IPs", "type": "text", "flag": "remoteip", "valueStyle": "equals", "placeholder": "LocalSubnet or 10.0.0.0/8" },
+            { "id": "program", "label": "Program", "type": "path", "flag": "program", "valueStyle": "equals" },
+            { "id": "profile", "label": "Profile", "type": "choice", "flag": "profile", "valueStyle": "equals", "choices": [ { "value": "any" }, { "value": "private" }, { "value": "public" }, { "value": "domain" } ] },
+            { "id": "enable", "label": "Enabled", "type": "choice", "flag": "enable", "valueStyle": "equals", "default": "yes", "choices": [ { "value": "yes" }, { "value": "no" } ] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "firewall-show",
+      "title": "firewall show rule",
+      "subcommand": ["advfirewall", "firewall", "show", "rule"],
+      "sections": [
+        {
+          "title": "Rule",
+          "options": [
+            { "id": "name", "label": "Name", "type": "text", "flag": "name", "valueStyle": "equals", "required": true, "placeholder": "all" },
+            { "id": "dir", "label": "Direction", "type": "choice", "flag": "dir", "valueStyle": "equals", "choices": [ { "value": "in" }, { "value": "out" } ] },
+            { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "verbose" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "firewall-delete",
+      "title": "firewall delete rule",
+      "subcommand": ["advfirewall", "firewall", "delete", "rule"],
+      "sections": [
+        {
+          "title": "Rule",
+          "options": [
+            { "id": "name", "label": "Name", "type": "text", "flag": "name", "valueStyle": "equals", "required": true, "warning": "Deletes every rule with this name." },
+            { "id": "dir", "label": "Direction", "type": "choice", "flag": "dir", "valueStyle": "equals", "choices": [ { "value": "in" }, { "value": "out" } ] },
+            { "id": "protocol", "label": "Protocol", "type": "choice", "flag": "protocol", "valueStyle": "equals", "choices": [ { "value": "tcp" }, { "value": "udp" }, { "value": "any" } ] },
+            { "id": "localport", "label": "Local port(s)", "type": "text", "flag": "localport", "valueStyle": "equals" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wlan-profiles",
+      "title": "wlan show profiles",
+      "subcommand": ["wlan", "show", "profiles"],
+      "sections": [
+        {
+          "title": "Wi-Fi",
+          "options": [
+            { "id": "name", "label": "Profile", "type": "text", "flag": "name", "valueStyle": "equals" },
+            { "id": "key", "label": "Show the password", "type": "choice", "flag": "key", "valueStyle": "equals", "dependsOn": "name", "choices": [ { "value": "clear", "label": "In clear text (elevated)" } ] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interface-ip",
+      "title": "interface ip show config",
+      "subcommand": ["interface", "ip", "show", "config"],
+      "sections": [
+        {
+          "title": "Interface",
+          "options": [
+            { "id": "name", "label": "Interface name", "type": "text", "flag": "name", "valueStyle": "equals", "placeholder": "Ethernet" }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Forward port 8080", "description": "0.0.0.0:8080 → 192.168.1.10:80", "mode": "portproxy-add", "values": { "listenport": "8080", "listenaddress": "0.0.0.0", "connectport": "80", "connectaddress": "192.168.1.10" } },
+    { "name": "Show port proxies", "description": "", "mode": "portproxy-show", "values": {} },
+    { "name": "Remove port proxy", "description": "", "mode": "portproxy-delete", "values": { "listenport": "8080", "listenaddress": "0.0.0.0" } },
+    { "name": "Allow inbound TCP 8080", "description": "", "mode": "firewall-add", "values": { "name": "Dev server 8080", "dir": "in", "action": "allow", "protocol": "tcp", "localport": "8080", "profile": "private" } },
+    { "name": "Show a firewall rule", "description": "", "mode": "firewall-show", "values": { "name": "Dev server 8080", "verbose": "true" } },
+    { "name": "Delete a firewall rule", "description": "", "mode": "firewall-delete", "values": { "name": "Dev server 8080" } },
+    { "name": "Saved Wi-Fi networks", "description": "", "mode": "wlan-profiles", "values": {} },
+    { "name": "Wi-Fi password", "description": "", "mode": "wlan-profiles", "values": { "name": "HomeWiFi", "key": "clear" } },
+    { "name": "IP configuration", "description": "", "mode": "interface-ip", "values": {} }
+  ]
+}

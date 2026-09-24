@@ -4,11 +4,14 @@ Pickle end-to-end tests in a real pseudo-terminal.
 
     python3 tests/Pickle.E2E/run_e2e.py [--pickle PATH] [-k NAME]
 
-Default binary: src/Pickle/bin/Debug/net10.0/pickle (build first). Each test is a function named test_*; add new
-ones at the bottom. Tests print the screen on failure.
+Default binary: src/Pickle/bin/Debug/net10.0/pickle (build first). Tests are functions named test_*(pickle_path)
+in this file and in any sibling module named e2e_*.py (one module per feature area). Tests print the screen on
+failure. Use unique temp file names — other runs may execute concurrently.
 """
 
 import argparse
+import glob
+import importlib.util
 import os
 import sys
 import time
@@ -46,12 +49,13 @@ def test_vim_round_trip(p):
     """Spike (b): a full-screen native program gets the console and gives it back."""
     with PickleSession(p) as s:
         s.wait_for_prompt()
-        s.type("vim -u NONE -N /tmp/pickle-e2e-vim.txt\r")
-        s.wait_for("pickle-e2e-vim.txt", timeout=15)
+        path = os.path.join(s.home, "vim-test.txt")
+        s.type(f"vim -u NONE -N {path}\r")
+        s.wait_for("vim-test.txt", timeout=15)
         s.type("ihello from vim")
         s.press("esc")
         s.type(":wq\r")
-        s.run("Get-Content /tmp/pickle-e2e-vim.txt", "hello from vim")
+        s.run(f"Get-Content {path}", "hello from vim")
         s.run("Write-Output 'after-vim-ok'", "after-vim-ok")
 
 
@@ -65,6 +69,18 @@ def test_panel_open_close_repeatedly(p):
             s.press("esc")
             time.sleep(0.4)
             s.run(f"Write-Output 'back-{i}'", f"back-{i}", timeout=15)
+
+
+def test_pk_command_opens_panel_after_pipeline(p):
+    """`pk git` runs inside a pipeline; the panel must open once the prompt is back, load, and close cleanly."""
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        s.type("pk git\r")
+        s.wait_for("Esc to close", timeout=20)
+        time.sleep(0.5)
+        s.press("esc")
+        time.sleep(0.4)
+        s.run("Write-Output 'after-pk-git'", "after-pk-git", timeout=15)
 
 
 def test_exit(p):
@@ -85,6 +101,12 @@ def main():
         return 2
 
     tests = [(n, f) for n, f in sorted(globals().items()) if n.startswith("test_") and callable(f)]
+    for path in sorted(glob.glob(os.path.join(os.path.dirname(__file__), "e2e_*.py"))):
+        name = os.path.splitext(os.path.basename(path))[0]
+        spec = importlib.util.spec_from_file_location(name, path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        tests += [(f"{name}.{n}", f) for n, f in sorted(vars(module).items()) if n.startswith("test_") and callable(f)]
     if args.k:
         tests = [(n, f) for n, f in tests if args.k in n]
     failed = 0

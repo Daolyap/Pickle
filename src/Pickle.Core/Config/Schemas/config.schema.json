@@ -1,0 +1,334 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/daolyap/milkshell/config.schema.json",
+  "title": "Pickle configuration",
+  "description": "Pickle settings (config.json, synced) and machine-only overrides (config.local.json, never synced). Every setting is optional; missing values use the defaults shown here.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path or URL of this schema (lets editors offer completion and validation)."
+    },
+    "theme": {
+      "type": "string",
+      "default": "pickle",
+      "description": "Theme name: a built-in theme or a file in the themes folder (without .json)."
+    },
+    "editor": {
+      "type": "object",
+      "description": "Line editor behaviour.",
+      "additionalProperties": false,
+      "properties": {
+        "syntaxHighlighting": {
+          "type": "boolean",
+          "default": true,
+          "description": "Color the command line as you type."
+        },
+        "autosuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a dimmed history suggestion after the cursor (accept with Right arrow)."
+        },
+        "completionMenu": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the completion menu below the input on Tab."
+        },
+        "completionMenuMaxRows": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum rows the completion menu may use."
+        },
+        "showTranslatedCommand": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print the PowerShell command a Linux-style line was translated to."
+        },
+        "bellStyle": {
+          "type": "string",
+          "default": "none",
+          "enum": ["none", "audible", "visual"],
+          "description": "What happens when the editor rings the bell."
+        },
+        "highlightDebounceThreshold": {
+          "type": "integer",
+          "default": 4000,
+          "minimum": 0,
+          "description": "Inputs longer than this many characters are highlighted with a debounce instead of on every key."
+        }
+      }
+    },
+    "history": {
+      "type": "object",
+      "description": "Command history (history.jsonl).",
+      "additionalProperties": false,
+      "properties": {
+        "maxEntries": {
+          "type": "integer",
+          "default": 50000,
+          "minimum": 0,
+          "description": "Maximum number of history entries kept on disk."
+        },
+        "ignoreLeadingSpace": {
+          "type": "boolean",
+          "default": true,
+          "description": "Don't record commands that start with a space."
+        },
+        "filterSecrets": {
+          "type": "boolean",
+          "default": true,
+          "description": "Don't record commands that look like they contain passwords or tokens."
+        },
+        "ignoreDuplicates": {
+          "type": "boolean",
+          "default": true,
+          "description": "Don't record a command identical to the previous one."
+        }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "description": "Prompt rendering.",
+      "additionalProperties": false,
+      "properties": {
+        "transientPrompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "Replace the full prompt with a short one in scrollback once a command is accepted."
+        },
+        "newlineBeforePrompt": {
+          "type": "boolean",
+          "default": false,
+          "description": "Print an empty line before every prompt."
+        },
+        "durationThresholdMs": {
+          "type": "integer",
+          "default": 2000,
+          "minimum": 0,
+          "description": "Show the duration segment only when the last command took at least this many milliseconds."
+        },
+        "gitTimeoutMs": {
+          "type": "integer",
+          "default": 400,
+          "minimum": 0,
+          "description": "How long the prompt waits for git status before rendering without it."
+        }
+      }
+    },
+    "keyBindings": {
+      "type": "object",
+      "default": {},
+      "description": "Key chord (e.g. \"Ctrl+R\", \"Alt+G\", \"F1\") to action name. Merged over the built-in defaults.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "translation": {
+      "type": "object",
+      "description": "Linux-syntax translation.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Rewrite Linux-style syntax (VAR=1 cmd, 2>/dev/null, !!, ...) and provide POSIX command shims."
+        },
+        "preferNativeBinaries": {
+          "type": "boolean",
+          "default": false,
+          "description": "If a real executable with a shim's name is on PATH (e.g. from Git for Windows), use it instead of the shim."
+        },
+        "disabled": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Shim names to disable, e.g. [\"ls\", \"cat\"]."
+        }
+      }
+    },
+    "shell": {
+      "type": "object",
+      "description": "Shell behaviour.",
+      "additionalProperties": false,
+      "properties": {
+        "loadPwshProfile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Also load the regular PowerShell profile ($PROFILE of pwsh)."
+        },
+        "hostCompatibility": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report $Host.Name as \"ConsoleHost\" for modules that check it."
+        },
+        "commandNotFoundSuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Suggest similar commands when a command is not found."
+        },
+        "offerWingetInstallForMissingTools": {
+          "type": "boolean",
+          "default": true,
+          "description": "Offer to install a missing tool with winget."
+        },
+        "showStartupBanner": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print the Pickle banner when the shell starts."
+        },
+        "firstRunCompleted": {
+          "type": "boolean",
+          "default": false,
+          "description": "Set once the first-run experience has been shown."
+        }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "description": "Plugins (PowerShell modules and .NET assemblies).",
+      "additionalProperties": false,
+      "properties": {
+        "autoLoad": {
+          "type": "boolean",
+          "default": true,
+          "description": "Load third-party plugins at startup."
+        },
+        "disabled": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of plugins that must not be loaded."
+        },
+        "trustedAssemblies": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "pattern": "^(sha256:)?[0-9A-Fa-f]{64}$"
+          },
+          "description": "SHA-256 hashes of .NET plugin assemblies you trust (added by `pk plugin trust`)."
+        }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "description": "Settings sync between machines (`pk sync`).",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "type": "string",
+          "default": "none",
+          "enum": ["none", "folder", "git"],
+          "description": "Where settings are synced: a folder (e.g. in OneDrive) or a git repository."
+        },
+        "target": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Folder path (folder backend) or remote URL (git backend)."
+        },
+        "autoSyncOnStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sync in the background when Pickle starts."
+        },
+        "autoSyncOnExit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Push changes when Pickle exits."
+        },
+        "syncHistory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include command history in sync."
+        }
+      }
+    },
+    "terminal": {
+      "type": "object",
+      "description": "Windows Terminal profile appearance.",
+      "additionalProperties": false,
+      "properties": {
+        "fontFace": {
+          "type": ["string", "null"],
+          "default": "Cascadia Code NF",
+          "description": "Font face."
+        },
+        "fontSize": {
+          "type": ["number", "null"],
+          "default": 12,
+          "minimum": 1,
+          "maximum": 128,
+          "description": "Font size in points."
+        },
+        "opacity": {
+          "type": ["integer", "null"],
+          "default": 95,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Background opacity (0-100)."
+        },
+        "useAcrylic": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use the acrylic (blurred) background."
+        },
+        "cursorShape": {
+          "type": "string",
+          "default": "bar",
+          "enum": ["bar", "vintage", "underscore", "filledBox", "emptyBox", "doubleUnderscore"],
+          "description": "Cursor shape."
+        },
+        "backgroundImage": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Path of a background image."
+        },
+        "backgroundImageOpacity": {
+          "type": ["number", "null"],
+          "default": null,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Background image opacity (0-1)."
+        },
+        "padding": {
+          "type": ["string", "null"],
+          "default": "8",
+          "description": "Padding in pixels: \"8\", \"8, 4\" or \"8, 4, 8, 4\"."
+        }
+      }
+    },
+    "winget": {
+      "type": "object",
+      "description": "winget integration.",
+      "additionalProperties": false,
+      "properties": {
+        "autoInstallClientModule": {
+          "type": "boolean",
+          "default": false,
+          "description": "Install the Microsoft.WinGet.Client module automatically when needed."
+        },
+        "includeWindowsUpdatesInUpgrade": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include Windows Update in the upgrade-everything flow."
+        },
+        "includeUnknownVersions": {
+          "type": "boolean",
+          "default": false,
+          "description": "List upgrades for packages whose installed version is unknown."
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "default": {},
+      "description": "Free-form settings owned by plugins, keyed by plugin id."
+    }
+  }
+}

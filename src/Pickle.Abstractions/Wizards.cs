@@ -112,6 +112,12 @@ public sealed class WizardOption
 
     /// <summary>For KeyValueList: separator between key and value ("=" or ": ").</summary>
     public string KeyValueSeparator { get; set; } = "=";
+
+    /// <summary>The value is a PowerShell expression emitted unquoted (e.g. a filter hashtable), validated as one expression.</summary>
+    public bool Raw { get; set; }
+
+    /// <summary>Shown when the option is set (destructive or surprising flags such as robocopy /MIR).</summary>
+    public string? Warning { get; set; }
 }
 
 public sealed class WizardChoice
@@ -119,6 +125,9 @@ public sealed class WizardChoice
     public string Value { get; set; } = string.Empty;
     public string? Label { get; set; }
     public string? Description { get; set; }
+
+    /// <summary>Shown when this choice is selected (e.g. git reset --hard).</summary>
+    public string? Warning { get; set; }
 }
 
 public sealed class WizardPreset

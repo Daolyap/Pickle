@@ -1,0 +1,125 @@
+{
+  "id": "7z",
+  "title": "7-Zip",
+  "description": "Create, extract, list and test .7z/.zip and other archives.",
+  "command": "7z",
+  "aliases": ["7z.exe", "7za", "7zz"],
+  "wingetId": "7zip.7zip",
+  "homepage": "https://7-zip.opensource.jp/chm/cmdline/",
+  "modes": [
+    {
+      "id": "add",
+      "title": "Add (create archive)",
+      "subcommand": ["a"],
+      "sections": [
+        {
+          "title": "Archive",
+          "options": [
+            { "id": "archive", "label": "Archive", "type": "path", "position": 1, "required": true, "placeholder": "archive.7z" },
+            { "id": "files", "label": "Files / folders", "type": "list", "position": 2, "placeholder": "folder" },
+            {
+              "id": "type", "label": "Format", "type": "choice", "flag": "-t", "valueStyle": "none",
+              "description": "Default: from the archive extension.",
+              "choices": [ { "value": "7z" }, { "value": "zip" }, { "value": "tar" }, { "value": "gzip" }, { "value": "xz" }, { "value": "wim" } ]
+            },
+            {
+              "id": "level", "label": "Compression level", "type": "choice", "flag": "-mx", "valueStyle": "equals",
+              "choices": [
+                { "value": "0", "label": "0 store" }, { "value": "1", "label": "1 fastest" }, { "value": "3", "label": "3 fast" },
+                { "value": "5", "label": "5 normal" }, { "value": "7", "label": "7 maximum" }, { "value": "9", "label": "9 ultra" }
+              ]
+            },
+            { "id": "password", "label": "Password", "type": "text", "flag": "-p", "valueStyle": "none", "description": "Visible in history; leave empty and type -p alone to be prompted." },
+            {
+              "id": "encryptHeaders", "label": "Encrypt file names (7z)", "type": "choice", "flag": "-mhe", "valueStyle": "equals", "dependsOn": "password",
+              "choices": [ { "value": "on" }, { "value": "off" } ]
+            },
+            { "id": "volumes", "label": "Split into volumes", "type": "text", "flag": "-v", "valueStyle": "none", "placeholder": "100m" },
+            { "id": "exclude", "label": "Exclude (recursive)", "type": "list", "flag": "-xr!", "valueStyle": "none", "placeholder": "*.tmp" },
+            { "id": "recurse", "label": "Recurse wildcards", "type": "flag", "flag": "-r" },
+            { "id": "deleteAfter", "label": "Delete files after compressing", "type": "flag", "flag": "-sdel", "warning": "Deletes the source files once they are in the archive." },
+            { "id": "yes", "label": "Assume yes", "type": "flag", "flag": "-y" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extract",
+      "title": "Extract (with paths)",
+      "subcommand": ["x"],
+      "sections": [
+        {
+          "title": "Extract",
+          "options": [
+            { "id": "archive", "label": "Archive", "type": "path", "position": 1, "required": true },
+            { "id": "files", "label": "Only these files", "type": "list", "position": 2 },
+            { "id": "output", "label": "Output folder", "type": "path", "flag": "-o", "valueStyle": "none" },
+            {
+              "id": "overwrite", "label": "Existing files", "type": "choice",
+              "choices": [
+                { "value": "-aoa", "label": "Overwrite all" }, { "value": "-aos", "label": "Skip" },
+                { "value": "-aou", "label": "Rename extracted" }, { "value": "-aot", "label": "Rename existing" }
+              ]
+            },
+            { "id": "password", "label": "Password", "type": "text", "flag": "-p", "valueStyle": "none" },
+            { "id": "yes", "label": "Assume yes", "type": "flag", "flag": "-y" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extract-flat",
+      "title": "Extract (flat, no paths)",
+      "subcommand": ["e"],
+      "sections": [
+        {
+          "title": "Extract",
+          "options": [
+            { "id": "archive", "label": "Archive", "type": "path", "position": 1, "required": true },
+            { "id": "files", "label": "Only these files", "type": "list", "position": 2 },
+            { "id": "output", "label": "Output folder", "type": "path", "flag": "-o", "valueStyle": "none" },
+            { "id": "yes", "label": "Assume yes", "type": "flag", "flag": "-y" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "list",
+      "title": "List contents",
+      "subcommand": ["l"],
+      "sections": [
+        {
+          "title": "List",
+          "options": [
+            { "id": "archive", "label": "Archive", "type": "path", "position": 1, "required": true },
+            { "id": "technical", "label": "Technical details", "type": "flag", "flag": "-slt" },
+            { "id": "password", "label": "Password", "type": "text", "flag": "-p", "valueStyle": "none" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "test",
+      "title": "Test integrity",
+      "subcommand": ["t"],
+      "sections": [
+        {
+          "title": "Test",
+          "options": [
+            { "id": "archive", "label": "Archive", "type": "path", "position": 1, "required": true },
+            { "id": "password", "label": "Password", "type": "text", "flag": "-p", "valueStyle": "none" }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Zip a folder", "description": "", "mode": "add", "values": { "type": "zip", "archive": "backup.zip", "files": "folder" } },
+    { "name": "Ultra-compressed 7z", "description": "", "mode": "add", "values": { "level": "9", "archive": "archive.7z", "files": "folder" } },
+    { "name": "Split into 100 MB parts", "description": "", "mode": "add", "values": { "volumes": "100m", "archive": "big.7z", "files": "videos" } },
+    { "name": "Zip without temp files", "description": "", "mode": "add", "values": { "type": "zip", "exclude": "*.tmp\n*.log", "archive": "project.zip", "files": "project" } },
+    { "name": "Extract to a folder", "description": "", "mode": "extract", "values": { "output": "out", "overwrite": "-aoa", "archive": "archive.7z" } },
+    { "name": "List contents", "description": "", "mode": "list", "values": { "archive": "archive.7z" } },
+    { "name": "Test archive", "description": "", "mode": "test", "values": { "archive": "archive.zip" } }
+  ]
+}

@@ -1,0 +1,5 @@
+after a failed command:
+«fg=#E74856»[ADMIN] «fg=#CCCCCC»PS /home/pickle/src/pickle/src/Pickle.Core/Prompt>«» █
+
+after a successful command:
+«fg=#E74856»[ADMIN] «fg=#CCCCCC»PS /home/pickle/src/pickle/src/Pickle.Core/Prompt>«» █

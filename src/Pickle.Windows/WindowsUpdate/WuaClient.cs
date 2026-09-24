@@ -36,16 +36,20 @@ internal static class WuaClient
         return tcs.Task.WaitAsync(timeout, cancellationToken);
     }
 
-    public static IReadOnlyList<WuaRawUpdate> Search(string criteria)
+    /// <param name="progress">Called on the agent's STA thread.</param>
+    public static IReadOnlyList<WuaRawUpdate> Search(string criteria, Action<WindowsUpdateProgress>? progress = null)
     {
+        progress?.Invoke(new WindowsUpdateProgress("Connecting", "to the Windows Update service", null));
         dynamic session = CreateSession();
         dynamic searcher = session.CreateUpdateSearcher();
+        progress?.Invoke(new WindowsUpdateProgress("Searching", "online (the first search after a restart can take minutes)", null));
         dynamic result = searcher.Search(criteria);
         dynamic updates = result.Updates;
         int count = updates.Count;
         var list = new List<WuaRawUpdate>(count);
         for (var i = 0; i < count; i++)
         {
+            progress?.Invoke(new WindowsUpdateProgress("Reading", $"update {i + 1} of {count}", Math.Round(100.0 * i / count, 1)));
             list.Add(Read(updates.Item(i)));
         }
 

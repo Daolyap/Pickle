@@ -52,6 +52,14 @@ public interface IWindowsUpdateService
     /// <summary>Search for applicable, not-installed updates. Does not require elevation.</summary>
     Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// <see cref="SearchAsync(WindowsUpdateQuery, CancellationToken)"/> with stage reports. Progress may be reported from
+    /// any thread (the Windows Update Agent runs on its own STA thread); cancelling stops waiting even when the agent
+    /// can't abort its search.
+    /// </summary>
+    Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, IProgress<WindowsUpdateProgress>? progress, CancellationToken cancellationToken = default) =>
+        SearchAsync(query, cancellationToken);
+
     /// <summary>Download and install the given update ids. Requires elevation (goes through the broker when not elevated).</summary>
     Task<WindowsUpdateInstallResult> InstallAsync(IReadOnlyList<string> updateIds, IProgress<WindowsUpdateProgress>? progress = null, CancellationToken cancellationToken = default);
 

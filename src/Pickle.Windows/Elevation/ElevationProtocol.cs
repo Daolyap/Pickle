@@ -179,4 +179,27 @@ internal static partial class ElevationProtocol
     }
 
     public static string Truncate(string text) => text.Length <= MaxProgressText ? text : text[..MaxProgressText] + "…";
+
+    /// <summary>
+    /// A response that fits in one frame: the message is truncated and the output keeps its tail (the end of a
+    /// failing program's output is the useful part), shortened until the encoded message is within the limit.
+    /// </summary>
+    public static ElevatedResponse Fit(int id, ElevatedResponse response)
+    {
+        const int MaxOutputChars = 48 * 1024;
+        var fitted = response with
+        {
+            Message = Truncate(response.Message),
+            Output = response.Output is { Length: > MaxOutputChars } big ? Tail(big, MaxOutputChars) : response.Output,
+        };
+        while (fitted.Output is { } output
+            && JsonSerializer.SerializeToUtf8Bytes(new ElevationMessage { Type = ElevationMessageType.Response, Id = id, Response = fitted }, Options).Length > MaxMessageBytes)
+        {
+            fitted = fitted with { Output = output.Length < 256 ? null : Tail(output, output.Length / 2) };
+        }
+
+        return fitted;
+    }
+
+    private static string Tail(string text, int max) => "…(earlier output truncated)\n" + text[^max..];
 }

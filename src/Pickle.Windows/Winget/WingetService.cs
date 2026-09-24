@@ -13,9 +13,6 @@ public sealed class WingetService : IWingetService
 {
     public const string SourceMsixUrl = "https://cdn.winget.microsoft.com/cache/source.msix";
 
-    /// <summary>The only command the source repair ever runs (in-process, via powershell.exe, or in the elevated helper).</summary>
-    public const string RepairSourceCommand = "Add-AppxPackage -Path '" + SourceMsixUrl + "'";
-
     internal static readonly string[] CommonFlags = ["--accept-source-agreements", "--disable-interactivity"];
 
     private static readonly TimeSpan QueryTimeout = TimeSpan.FromMinutes(3);
@@ -92,13 +89,18 @@ public sealed class WingetService : IWingetService
         'Install-Module'
         """;
 
-    private const string RepairSourceScript = "Import-Module Appx -ErrorAction Stop\n" + RepairSourceCommand + " -ErrorAction Stop";
+    // Only when Windows PowerShell is missing: PowerShell 7 can load Appx natively on current Windows builds.
+    private const string InProcessRepairScript = """
+        Import-Module Appx -ErrorAction Stop
+        Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix' -ForceApplicationShutdown -ErrorAction Stop
+        """;
 
     private readonly IPickleShell _shell;
     private readonly Func<IElevationBroker?> _broker;
     private readonly IPickleLogger _log;
     private readonly IProcessRunner _runner;
     private readonly Func<string?> _locateExe;
+    private readonly Func<string?> _locateWindowsPowerShell;
     private readonly object _gate = new();
     private Task<WingetBackend>? _backend;
 
@@ -107,13 +109,21 @@ public sealed class WingetService : IWingetService
     {
     }
 
-    internal WingetService(IPickleShell shell, Func<IElevationBroker?> broker, IPickleLogger log, IProcessRunner runner, Func<string?> locateExe, bool isSupported)
+    internal WingetService(
+        IPickleShell shell,
+        Func<IElevationBroker?> broker,
+        IPickleLogger log,
+        IProcessRunner runner,
+        Func<string?> locateExe,
+        bool isSupported,
+        Func<string?>? locateWindowsPowerShell = null)
     {
         _shell = shell;
         _broker = broker;
         _log = log;
         _runner = runner;
         _locateExe = locateExe;
+        _locateWindowsPowerShell = locateWindowsPowerShell ?? (() => File.Exists(WindowsPowerShellPath) ? WindowsPowerShellPath : null);
         IsSupported = isSupported;
     }
 
@@ -271,6 +281,28 @@ public sealed class WingetService : IWingetService
         return IsSupported ? ChangeAsync("uninstall", id, new WingetInstallOptions(), progress, cancellationToken) : Task.FromResult(Unsupported());
     }
 
+    public async Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        var valid = ids.Select(WindowsIds.RequireWingetId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (valid.Count == 0)
+        {
+            return new WingetOperationResult(true, "Nothing to uninstall.", 0);
+        }
+
+        if (!IsSupported)
+        {
+            return Unsupported();
+        }
+
+        if (_broker() is not { IsSupported: true } broker)
+        {
+            return new WingetOperationResult(false, "Elevation is not available in this session.", 1);
+        }
+
+        return await ViaBrokerAsync(broker, ElevatedOperationKind.WingetUninstall, valid, "uninstall", null, progress, cancellationToken).ConfigureAwait(false);
+    }
+
     public Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default) =>
         QueryAsync(
             async ct =>
@@ -299,26 +331,33 @@ public sealed class WingetService : IWingetService
                 return new WingetOperationResult(false, "Elevation is not available in this session.", 1);
             }
 
-            return await ViaBrokerAsync(broker, ElevatedOperationKind.WingetRepairSource, [], "repair-source", "winget", null, cancellationToken).ConfigureAwait(false);
+            return await ViaBrokerAsync(broker, ElevatedOperationKind.WingetRepairSource, [], "repair-source", null, null, cancellationToken).ConfigureAwait(false);
         }
 
         _log.Info("winget", "repairing the winget source (current user)");
-        var inProcess = await _shell.InvokeAsync(RepairSourceScript, null, ShellTarget.Background, cancellationToken).ConfigureAwait(false);
+        if (_locateWindowsPowerShell() is { } powershell)
+        {
+            var result = await _runner.RunAsync(
+                powershell,
+                WingetSourceRepair.Arguments(),
+                null,
+                QueryTimeout,
+                cancellationToken,
+                WingetSourceRepair.Environment()).ConfigureAwait(false);
+            var outcome = WingetSourceRepair.Interpret(result.ExitCode, result.Output, result.TimedOut, "for the current user");
+            _log.Info("winget", $"source repair: success={outcome.Success} code={outcome.ExitCode}: {outcome.Message}");
+            return outcome;
+        }
+
+        _log.Warn("winget", "Windows PowerShell not found; repairing the source in-process");
+        var inProcess = await _shell.InvokeAsync(InProcessRepairScript, null, ShellTarget.Background, cancellationToken).ConfigureAwait(false);
         if (!inProcess.HadErrors)
         {
             return new WingetOperationResult(true, "The winget source package was re-registered for the current user.", 0);
         }
 
-        _log.Warn("winget", "Add-AppxPackage failed in-process, falling back to Windows PowerShell: " + string.Join("; ", inProcess.Errors));
-        var result = await _runner.RunAsync(
-            WindowsPowerShellPath,
-            ["-NoProfile", "-NonInteractive", "-Command", RepairSourceCommand],
-            null,
-            QueryTimeout,
-            cancellationToken).ConfigureAwait(false);
-        return result.ExitCode == 0
-            ? new WingetOperationResult(true, "The winget source package was re-registered for the current user.", 0)
-            : new WingetOperationResult(false, "Repairing the winget source failed: " + (WingetCliParser.LastMessage(result.Output) ?? "unknown error"), result.ExitCode);
+        var errors = string.Join(Environment.NewLine, inProcess.Errors.Select(e => e.ToString()));
+        return WingetSourceRepair.Interpret(1, errors, false, "for the current user");
     }
 
     internal static string WindowsPowerShellPath => Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
@@ -470,7 +509,10 @@ public sealed class WingetService : IWingetService
                 {
                     var error = string.Join("; ", result.Errors.Select(e => e.ToString()));
                     progress?.Report(new WingetProgress("Failed", null, error));
-                    return new WingetOperationResult(false, $"{verb} {id}: {error}", 1);
+                    return new WingetOperationResult(false, $"{verb} {id}: {error}", 1)
+                    {
+                        Output = string.Join(Environment.NewLine, result.Errors.Select(e => e.ToString())),
+                    };
                 }
 
                 var status = result.Output.LastOrDefault();
@@ -488,10 +530,10 @@ public sealed class WingetService : IWingetService
                 var run = await RunCliAsync(BuildChangeArguments(verb, id, options), tracker.Feed, InstallTimeout, cancellationToken).ConfigureAwait(false);
                 if (run.TimedOut)
                 {
-                    return new WingetOperationResult(false, $"{verb} {id}: timed out.", -1);
+                    return new WingetOperationResult(false, $"{verb} {id}: timed out.", -1) { Output = WingetCliParser.Transcript(run.Output) };
                 }
 
-                var outcome = WingetErrors.FromExitCode(run.ExitCode, run.Output, verb, id);
+                var outcome = WingetErrors.FromExitCode(run.ExitCode, run.Output, verb, id) with { Output = WingetCliParser.Transcript(run.Output) };
                 progress?.Report(new WingetProgress(outcome.Success ? "Done" : "Failed", outcome.Success ? 100 : null, outcome.Message));
                 return outcome;
 
@@ -500,16 +542,18 @@ public sealed class WingetService : IWingetService
         }
     }
 
+    /// <param name="id">Prefix for the message ("install 7zip.7zip: …"); null when the helper's message already names the packages.</param>
     private async Task<WingetOperationResult> ViaBrokerAsync(
         IElevationBroker broker,
         ElevatedOperationKind kind,
         IReadOnlyList<string> arguments,
         string verb,
-        string id,
+        string? id,
         IProgress<WingetProgress>? progress,
         CancellationToken cancellationToken)
     {
-        _log.Info("winget", $"{verb} {id} via the elevation broker");
+        var what = id ?? (arguments.Count == 0 ? "winget" : string.Join(", ", arguments));
+        _log.Info("winget", $"{verb} {what} via the elevation broker");
         progress?.Report(new WingetProgress("Elevating", null, "Waiting for the administrator (UAC) prompt…"));
         try
         {
@@ -519,11 +563,14 @@ public sealed class WingetService : IWingetService
                 cancellationToken).ConfigureAwait(false);
             var response = responses.FirstOrDefault() ?? new ElevatedResponse(false, "The elevated helper returned no result.", 1);
             progress?.Report(new WingetProgress(response.Success ? "Done" : "Failed", response.Success ? 100 : null, response.Message));
-            return new WingetOperationResult(response.Success, $"{verb} {id}: {response.Message}", response.ExitCode);
+            return new WingetOperationResult(response.Success, id is null ? response.Message : $"{verb} {id}: {response.Message}", response.ExitCode)
+            {
+                Output = response.Output,
+            };
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return new WingetOperationResult(false, $"{verb} {id}: the administrator (UAC) prompt was declined.", 1223);
+            return new WingetOperationResult(false, $"{verb} {what}: the administrator (UAC) prompt was declined.", 1223);
         }
     }
 

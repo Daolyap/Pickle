@@ -48,6 +48,10 @@ internal abstract class WindowsCommandBase : IPickleCommand
 /// <summary>Theme-colored host output helpers.</summary>
 internal sealed class CommandOutput(PickleCommandContext context)
 {
+    private readonly object _gate = new();
+    private bool _statusVisible;
+    private int? _width;
+
     public PickleCommandContext Context { get; } = context;
 
     public IPickleContext Pickle => Context.Pickle;
@@ -56,23 +60,75 @@ internal sealed class CommandOutput(PickleCommandContext context)
 
     public void Object(object? value) => Context.WriteObject(value);
 
-    public void Line(string text = "") => Context.WriteHost(text);
+    public void Line(string text = "") => Host(text);
 
-    public void Heading(string text) => Context.WriteHost(Ansi.Colorize(text, Ui.Accent, bold: true));
+    public void Heading(string text) => Host(Ansi.Colorize(text, Ui.Accent, bold: true));
 
-    public void Muted(string text) => Context.WriteHost(Ansi.Colorize(text, Ui.Muted));
+    public void Muted(string text) => Host(Ansi.Colorize(text, Ui.Muted));
 
-    public void Success(string text) => Context.WriteHost(Ansi.Colorize("✓ ", Ui.Success) + text);
+    public void Success(string text) => Host(Ansi.Colorize("✓ ", Ui.Success) + text);
 
-    public void Failure(string text) => Context.WriteHost(Ansi.Colorize("✗ ", Ui.Error) + text);
+    public void Failure(string text) => Host(Ansi.Colorize("✗ ", Ui.Error) + text);
 
-    public void Warning(string text) => Context.WriteHost(Ansi.Colorize("! ", Ui.Warning) + text);
+    public void Warning(string text) => Host(Ansi.Colorize("! ", Ui.Warning) + text);
+
+    /// <summary>Writes (or rewrites in place) the single status line of a running operation; the next line replaces it.</summary>
+    public void Status(string text)
+    {
+        lock (_gate)
+        {
+            Context.WriteHost(TakeStatusLine() + "\r" + text + Ansi.ClearToEndOfLine);
+            _statusVisible = true;
+        }
+    }
+
+    /// <summary>Multi-line program output (winget, PowerShell), indented and dimmed.</summary>
+    public void Transcript(string? text, int maxLines = 60)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        var lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        if (lines.Length > maxLines)
+        {
+            Muted($"  … ({lines.Length - maxLines} earlier line(s) omitted)");
+            lines = lines[^maxLines..];
+        }
+
+        foreach (var line in lines)
+        {
+            Muted("  │ " + line.TrimEnd());
+        }
+    }
 
     public string Accent(string text) => Ansi.Colorize(text, Ui.Accent);
 
     public string Dim(string text) => Ansi.Colorize(text, Ui.Muted);
 
     public string Warn(string text) => Ansi.Colorize(text, Ui.Warning);
+
+    /// <summary>The terminal width (from the PowerShell host), for host-side tables; 100 when unknown.</summary>
+    public async Task<int> WidthAsync()
+    {
+        if (_width is { } known)
+        {
+            return known;
+        }
+
+        try
+        {
+            var result = await Pickle.Shell.InvokeAsync("$Host.UI.RawUI.WindowSize.Width").ConfigureAwait(false);
+            _width = result.Output.FirstOrDefault()?.BaseObject is int width && width >= 40 ? width : 100;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Management.Automation.RuntimeException)
+        {
+            _width = 100;
+        }
+
+        return _width.Value;
+    }
 
     /// <summary><c>--yes</c> skips the question; otherwise asks (non-interactive sessions get <paramref name="defaultYes"/>).</summary>
     public bool Confirm(CommandArgs args, string question, bool defaultYes) => args.Yes || Context.Confirm(question, defaultYes);
@@ -87,4 +143,27 @@ internal sealed class CommandOutput(PickleCommandContext context)
 
     public static string When(DateTimeOffset? value) =>
         value is { } v ? v.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) : "never";
+
+    public static string Elapsed(TimeSpan value) =>
+        value.TotalHours >= 1 ? value.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : value.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+
+    // Every host line goes through here: a visible status line is replaced by the next line instead of left behind.
+    private void Host(string text)
+    {
+        lock (_gate)
+        {
+            Context.WriteHost(TakeStatusLine() + text);
+        }
+    }
+
+    private string TakeStatusLine()
+    {
+        if (!_statusVisible)
+        {
+            return string.Empty;
+        }
+
+        _statusVisible = false;
+        return Ansi.CursorUp(1) + "\r" + Ansi.ClearToEndOfLine;
+    }
 }

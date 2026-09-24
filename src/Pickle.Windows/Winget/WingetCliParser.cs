@@ -341,6 +341,41 @@ internal static partial class WingetCliParser
         return null;
     }
 
+    /// <summary>winget's output as readable text: progress bars and spinners removed, at most the last <paramref name="maxLines"/> lines.</summary>
+    public static string? Transcript(string raw, int maxLines = 200)
+    {
+        var lines = new List<string>();
+        foreach (var line in CleanLines(raw))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Contains('█') || trimmed.Contains('▒') || trimmed is "-" or "\\" or "|" or "/")
+            {
+                continue;
+            }
+
+            if (trimmed.Length == 0 && (lines.Count == 0 || lines[^1].Length == 0))
+            {
+                continue;
+            }
+
+            lines.Add(line);
+        }
+
+        while (lines.Count > 0 && lines[^1].Length == 0)
+        {
+            lines.RemoveAt(lines.Count - 1);
+        }
+
+        if (lines.Count == 0)
+        {
+            return null;
+        }
+
+        return lines.Count <= maxLines
+            ? string.Join('\n', lines)
+            : "…\n" + string.Join('\n', lines.Skip(lines.Count - maxLines));
+    }
+
     private static bool IsHeader(IReadOnlyList<string> lines, int index) =>
         index + 1 < lines.Count && lines[index].Trim().Length > 0 && IsDashes(lines[index + 1]) && !IsDashes(lines[index]);
 

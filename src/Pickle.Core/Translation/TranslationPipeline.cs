@@ -32,7 +32,10 @@ public sealed class TranslationPipeline : ITranslationPipeline, IRuntimeComponen
     private readonly object _gate = new();
     private volatile bool _dirty;
     private bool _forceShims;
-    private string? _appliedKey;
+    private const string NotApplied = "\0";
+
+    // Starts as NotApplied so the first Reconcile always publishes $PickleTranslateOptions (autoload honors it).
+    private string? _appliedKey = NotApplied;
 
     public TranslationPipeline(PickleRuntime runtime)
     {
@@ -42,7 +45,7 @@ public sealed class TranslationPipeline : ITranslationPipeline, IRuntimeComponen
 
     public CommandNotFound CommandNotFound { get; }
 
-    public bool ShimsLoaded => _appliedKey is not null;
+    public bool ShimsLoaded => _appliedKey is not null and not NotApplied;
 
     public void Initialize()
     {

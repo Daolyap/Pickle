@@ -1,0 +1,6 @@
+history ❯ git▏  [all] 5
+❯ git log --oneline                             pickle  now
+  git status                                     other  30m
+  git stash pop                                   other  3h
+  git clone https://example.com/repo.git           src  1mo
+  Get-ChildItem -Recurse -Filter *.cs           pickle  10m

@@ -1,0 +1,4 @@
+ - Force          [switch]
+ - FollowSymlink  [switch]
+ - Filter         [string]
+ - File           [switch]

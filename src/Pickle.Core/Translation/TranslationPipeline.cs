@@ -27,6 +27,21 @@ public sealed class TranslationPipeline : ITranslationPipeline, IRuntimeComponen
         ["sudo"] = "sudo cmd → Windows sudo.exe or an elevated Pickle window (Windows)",
     };
 
+    // Restores the aliases/functions the module displaced. Done here rather than in the module's OnRemove because
+    // anything created from module code is owned by the module and removed along with it.
+    private const string UnloadScript = """
+        param($path, $options)
+        $global:PickleTranslateOptions = $options
+        $loaded = Get-Module -Name Pickle.Translate
+        if ($loaded) {
+            $savedAliases = & $loaded { $script:SavedAliases }
+            $savedFunctions = & $loaded { $script:SavedFunctions }
+            Remove-Module -ModuleInfo $loaded -Force
+            foreach ($a in $savedAliases) { Set-Alias -Name $a.Name -Value $a.Definition -Option $a.Options -Scope Global -Force -ErrorAction Ignore }
+            foreach ($name in $savedFunctions.Keys) { Set-Item -LiteralPath "Function:\global:$name" -Value $savedFunctions[$name] -Force }
+        }
+        """;
+
     private readonly PickleRuntime _runtime;
     private readonly List<IDisposable> _subscriptions = [];
     private readonly object _gate = new();
@@ -195,9 +210,7 @@ public sealed class TranslationPipeline : ITranslationPipeline, IRuntimeComponen
             ["Skip"] = _runtime.Aliases.All.Select(a => a.Name).ToArray(),
         };
 
-        var script = desired
-            ? "param($path, $options) $global:PickleTranslateOptions = $options; Import-Module -Name $path -ArgumentList $options -Global -Force -DisableNameChecking"
-            : "param($path, $options) $global:PickleTranslateOptions = $options; Remove-Module -Name 'Pickle.Translate' -Force -ErrorAction Ignore";
+        var script = UnloadScript + (desired ? "\nImport-Module -Name $path -ArgumentList $options -Global -Force -DisableNameChecking" : string.Empty);
         var path = Path.Combine(EmbeddedModules.Extract(_runtime.Paths, _runtime.Log), ModuleName, ModuleName + ".psd1");
         RunspaceGate.TryInvoke(_runtime, script, new Dictionary<string, object?> { ["path"] = path, ["options"] = options }, out var result);
         foreach (var error in result.Errors)

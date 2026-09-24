@@ -1,9 +1,9 @@
 namespace Pickle.Core.Commands;
 
-/// <summary>"Did you mean" suggestions for command names, config paths and plugin ids.</summary>
+/// <summary>"Did you mean" suggestions for command names, config paths and plugin ids. Only <see cref="Suggest"/> is public so it can be swapped for the shared matcher.</summary>
 public static class Fuzzy
 {
-    public static int Distance(string a, string b)
+    private static int Distance(string a, string b)
     {
         a = a.ToLowerInvariant();
         b = b.ToLowerInvariant();

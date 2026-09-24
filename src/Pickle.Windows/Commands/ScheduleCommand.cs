@@ -17,7 +17,7 @@ internal sealed class ScheduleCommand : WindowsCommandBase
 
     public override string Usage =>
         "pk schedule list [folder] [--recurse]|add \"<when>\" <command...> [--name n] [--elevated]|remove <name>|run <name>|" +
-        "enable <name>|disable <name>|history <name>   (when: " + ScheduleParser.Examples + ")";
+        "enable <name>|disable <name>|history <name>   (quote the command, or put it after -- if it has its own --options; when: " + ScheduleParser.Examples + ")";
 
     protected override async Task<int> RunAsync(CommandOutput output, IReadOnlyList<string> rawArgs, CancellationToken cancellationToken)
     {

@@ -160,6 +160,8 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
 
     private void ProcessKey(ConsoleKeyInfo key, CancellationToken cancellationToken)
     {
+        // Requests queued while we waited apply before the key (terminals that can't poll never report idle).
+        DrainRequests();
         var terminal = _runtime.Terminal;
         var more = terminal.KeyAvailable;
         if (!more && _burst && key.Key == ConsoleKey.Enter)

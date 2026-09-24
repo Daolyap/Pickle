@@ -18,18 +18,21 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
     private static readonly string[] HelpFlags = ["--help", "-h", "-?", "/?"];
     private readonly CancellationTokenSource _cts = new();
 
-    [Parameter(Position = 0)]
-    public string? Name { get; set; }
-
-    [Parameter(Position = 1, ValueFromRemainingArguments = true)]
+    // No named parameters on purpose: `pk history list -n 5` must not bind -n to a cmdlet parameter. The pk/pickle
+    // aliases go through the Invoke-Pickle function (Pickle.psm1), which also keeps -v/-d away from common parameters.
+    [Parameter(ValueFromRemainingArguments = true)]
     public string[] Arguments { get; set; } = [];
+
+    private string? Name => Arguments.Length > 0 ? Arguments[0] : null;
+
+    private string[] CommandArguments => Arguments.Length > 1 ? Arguments[1..] : [];
 
     protected override void EndProcessing()
     {
         var runtime = Runtime;
         if (string.IsNullOrEmpty(Name) || Name is "help" || HelpFlags.Contains(Name))
         {
-            WriteHelp(runtime, Name is "help" ? Arguments.FirstOrDefault() : null);
+            WriteHelp(runtime, Name is "help" ? CommandArguments.FirstOrDefault() : null);
             return;
         }
 
@@ -49,7 +52,8 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
             return;
         }
 
-        if (Arguments.Length > 0 && (HelpFlags.Contains(Arguments[0]) || HelpFlags.Contains(Arguments[^1])))
+        var args = CommandArguments;
+        if (args.Length > 0 && (HelpFlags.Contains(args[0]) || HelpFlags.Contains(args[^1])))
         {
             WriteCommandHelp(runtime, command);
             return;
@@ -79,7 +83,7 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
         {
             try
             {
-                task = command.ExecuteAsync(context, Arguments, _cts.Token).AsTask();
+                task = command.ExecuteAsync(context, CommandArguments, _cts.Token).AsTask();
             }
             catch (Exception ex) when (ex is not PipelineStoppedException)
             {

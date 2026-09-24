@@ -14,4 +14,7 @@
     <Project Path="tests/Pickle.Windows.Tests/Pickle.Windows.Tests.csproj" />
     <Project Path="tests/Pickle.Wizards.Tests/Pickle.Wizards.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/fixtures/">
+    <Project Path="tests/fixtures/SampleDotnetPlugin/SampleDotnetPlugin.csproj" />
+  </Folder>
 </Solution>

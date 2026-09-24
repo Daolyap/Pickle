@@ -58,7 +58,8 @@ public static class Fuzzy
 
     private static int Score(string input, string candidate)
     {
-        if (candidate.StartsWith(input, StringComparison.OrdinalIgnoreCase) || input.StartsWith(candidate, StringComparison.OrdinalIgnoreCase))
+        if (candidate.StartsWith(input, StringComparison.OrdinalIgnoreCase)
+            || (input.StartsWith(candidate, StringComparison.OrdinalIgnoreCase) && input.Length - candidate.Length <= 2))
         {
             return 0;
         }

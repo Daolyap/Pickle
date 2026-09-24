@@ -20,6 +20,7 @@ public sealed class SettingsPanel : PanelWindow
     private readonly Label _status;
     private readonly IReadOnlyList<SettingField> _fields;
     private readonly Dictionary<string, View> _editors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<View> _focusOrder = [];
     private FilterableList<BindingRow>? _bindings;
     private string _category = string.Empty;
 
@@ -40,6 +41,14 @@ public sealed class SettingsPanel : PanelWindow
         _status = new Label { X = Pos.Right(path) + 1, Y = Pos.AnchorEnd(1), Width = Dim.Fill(), Height = 1 };
         Body.Add(_categories, _content, path, _status);
 
+        _categories.KeyDown += (_, key) =>
+        {
+            if (key == Key.CursorRight && _focusOrder.FirstOrDefault() is { } first)
+            {
+                first.SetFocus();
+                key.Handled = true;
+            }
+        };
         _categories.ValueChanged += (_, e) =>
         {
             if (e.NewValue is { } index && index >= 0 && index < SettingsModel.Categories.Count)
@@ -84,6 +93,7 @@ public sealed class SettingsPanel : PanelWindow
         }
 
         _editors.Clear();
+        _focusOrder.Clear();
         _bindings = null;
         _content.Title = category;
         if (category == SettingsModel.KeyBindingsCategory)
@@ -141,6 +151,8 @@ public sealed class SettingsPanel : PanelWindow
             editor.Y = row;
             _content.Add(label, editor);
             _editors[field.Path] = editor;
+            _focusOrder.Add(editor);
+            LeftReturnsToCategories(editor);
             row++;
         }
 
@@ -166,6 +178,7 @@ public sealed class SettingsPanel : PanelWindow
                     Width = Math.Max(16, choices.Select(c => c.Length).DefaultIfEmpty(10).Max() + 4),
                     Source = new ListWrapper<string>(new ObservableCollection<string>(choices)),
                     Text = current,
+                    ReadOnly = true,
                 };
                 dropDown.SetScheme(Schemes.Input);
                 dropDown.ValueChanged += (_, e) =>
@@ -211,6 +224,24 @@ public sealed class SettingsPanel : PanelWindow
         }
     }
 
+    /// <summary>Left goes back to the category list, except while it still moves the cursor inside a text field.</summary>
+    private void LeftReturnsToCategories(View view)
+    {
+        view.KeyDown += (_, key) =>
+        {
+            if (key == Key.CursorLeft && (view is not TextField field || field.ReadOnly || field.InsertionPoint == 0))
+            {
+                _categories.SetFocus();
+                key.Handled = true;
+            }
+        };
+
+        foreach (var sub in view.SubViews)
+        {
+            LeftReturnsToCategories(sub);
+        }
+    }
+
     private void SetStatus(string text, bool error)
     {
         _status.Text = text;
@@ -232,6 +263,8 @@ public sealed class SettingsPanel : PanelWindow
             Schemes = Schemes,
         };
         _content.Add(help, _bindings);
+        _focusOrder.Add(_bindings.Filter);
+        LeftReturnsToCategories(_bindings);
         _bindings.ItemAccepted += (_, row) => EditBinding(row.Chord);
         _bindings.Filter.KeyDown += (_, key) =>
         {

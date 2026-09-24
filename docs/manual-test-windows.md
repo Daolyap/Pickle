@@ -41,19 +41,36 @@ after installing a build.
 ## winget
 
 - [ ] Alt+W winget panel: Installed / Upgrades / Search tabs populate (module or CLI backend shown).
-- [ ] Search → Install a small package (e.g. `jqlang.jq`) with progress; it shows in Installed.
-- [ ] Upgrades: select one → Upgrade; "Upgrade all" asks for confirmation.
-- [ ] Sources → **Repair source (admin)** shows one UAC prompt, then succeeds
-      (`Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix'`).
-- [ ] Declining UAC shows "cancelled" and nothing breaks.
-- [ ] `pk winget upgrades`, `pk winget search git`, `pk upgrade` (asks once, then upgrades everything).
+- [ ] Search with the keyboard only: type a query, Enter → focus jumps to the results; ↑↓ shows details;
+      Enter (or `i`) → confirmation → installs (e.g. `jqlang.jq`) with progress; it shows in Installed.
+- [ ] Upgrades: every row starts ticked; click a row to untick it, Shift+click (or Alt+click if the terminal
+      keeps Shift+click for text selection) another row → the whole range takes the first row's state; Space,
+      Shift+↑/↓ and Ctrl+A (or the header checkbox) work too. F5 Refresh keeps the unticked rows unticked.
+- [ ] F9 / **Upgrade selected** on the Upgrades tab upgrades the ticked rows; on the Installed tab with packages
+      ticked it upgrades those (only ones with an upgrade; the dialog says how many were skipped).
+- [ ] Installed: tick two packages → F8 / **Uninstall** lists both → **Uninstall** removes them (progress and
+      failures with output in the pane); **As administrator** does the same after one UAC prompt.
+- [ ] Sources → **Repair source** (no UAC) and **Repair as admin** (one UAC prompt) show the full
+      `Add-AppxPackage` output in the "Repair output" pane; a failure shows the HRESULT and the AppX log lines.
+- [ ] Declining UAC shows "declined" and nothing breaks.
+- [ ] `pk winget list` / `upgrades` / `search git` print a table (Id, Version, Available, Name) that fits
+      80- and 120-column windows; `(pk winget list).Id` still returns ids.
+- [ ] `pk winget uninstall <id> <id> [--elevated]`, `pk winget repair-source [--admin] --verbose` (output shown),
+      `pk upgrade` (asks once, then upgrades everything).
 
 ## Windows Update
 
-- [ ] Alt+U updates panel: "Check for updates" lists pending updates (or none) with KB numbers/sizes.
+- [ ] Alt+U updates panel: **Check** shows progress in the Progress pane and lists pending updates (or none)
+      with KB numbers/sizes; security/other start ticked, drivers/optional unticked.
+- [ ] Tick/untick with the same mouse and keys as the winget lists (Shift+click range, Space, Ctrl+A); a
+      second Check keeps your ticks.
 - [ ] Install selected → one UAC prompt → progress → result; reboot-required state shown.
+- [ ] F7 / **Install KB…**: type a KB number (e.g. an optional preview update) → it is found even if not listed
+      → confirm → installs; an unknown KB says it is not offered for this PC.
 - [ ] On a domain/Intune-managed PC the panel says "managed by your organization".
-- [ ] `pk update check`, `pk update history`.
+- [ ] `pk update check` shows a spinner line with elapsed time and finishes (or Ctrl+C stops it at once;
+      `--timeout 30s` gives up with a clear message); `pk update history`.
+- [ ] `pk update install --kb KB5031455` (also optional/driver updates; an already-installed KB says so).
 
 ## Task Scheduler
 

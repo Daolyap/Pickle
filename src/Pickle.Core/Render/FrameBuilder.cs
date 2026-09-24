@@ -117,6 +117,8 @@ public sealed class FrameBuilder
             return false;
         }
 
+        // A cursor at the end of the input belongs before the right prompt, not after the filled row.
+        ResolvePendingCursor();
         var measure = new FrameBuilder(RowWidth(row));
         measure.WriteAnsi(ansi.Split('\n')[0], clip: true);
         var cells = measure._rows[0];

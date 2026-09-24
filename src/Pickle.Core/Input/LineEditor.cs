@@ -43,6 +43,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
     private bool _keepHistory;
     private int _renderedHighlightVersion;
     private (int Width, int Height) _renderedSize;
+    private volatile bool _promptRefreshPending;
 
     public LineEditor(PickleRuntime runtime) => _runtime = runtime;
 
@@ -89,7 +90,31 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
     {
         DefaultKeyBindings.Apply(_runtime);
         RegisterActions();
+        HookPromptRefresh();
     }
+
+    // The prompt engine raises SegmentsRefreshed (on a background thread) when a slow segment finishes after the
+    // prompt was drawn. Bound by name so any EventHandler/EventHandler<T>/Action signature works.
+    private void HookPromptRefresh()
+    {
+        var prompt = _runtime.Prompt;
+        if (prompt.GetType().GetEvent("SegmentsRefreshed") is not { EventHandlerType: { } type } evt)
+        {
+            return;
+        }
+
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var handler = Delegate.CreateDelegate(type, this, GetType().GetMethod(nameof(OnPromptRefreshed), flags)!, throwOnBindFailure: false)
+            ?? Delegate.CreateDelegate(type, this, GetType().GetMethod(nameof(OnPromptRefreshedNoArgs), flags)!, throwOnBindFailure: false);
+        if (handler is not null)
+        {
+            evt.AddEventHandler(prompt, handler);
+        }
+    }
+
+    private void OnPromptRefreshed(object? sender, object? args) => _promptRefreshPending = true;
+
+    private void OnPromptRefreshedNoArgs() => _promptRefreshPending = true;
 
     // ───────────── ReadLine ─────────────
 
@@ -108,6 +133,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         _pendingHighSurrogate = null;
         _history = null;
         _burst = false;
+        _promptRefreshPending = false;
         _undo.Clear();
         _reading = true;
         try
@@ -150,11 +176,33 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
     {
         var terminal = _runtime.Terminal;
         var changed = DrainRequests();
+        changed |= RefreshPrompt();
         changed |= (terminal.Width, terminal.Height) != _renderedSize;
         changed |= _runtime.Highlighter is SyntaxHighlighter highlighter && highlighter.Version != _renderedHighlightVersion;
         if (changed)
         {
             Render();
+        }
+    }
+
+    // Only the main prompt: nested and debugger prompts are read while a pipeline is executing.
+    private bool RefreshPrompt()
+    {
+        if (!_promptRefreshPending || _runtime.Engine.IsExecuting || _promptContext is not { } context)
+        {
+            return false;
+        }
+
+        _promptRefreshPending = false;
+        try
+        {
+            _prompt = _runtime.Prompt.Render(context);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Warn("editor", "prompt refresh failed", ex);
+            return false;
         }
     }
 
@@ -697,7 +745,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         }
 
         _pendingHighSurrogate = null;
-        var newWord = char.IsWhiteSpace(c) && _cursor > 0 && !char.IsWhiteSpace(_text[_cursor - 1]);
+        var newWord = !_inBurst && char.IsWhiteSpace(c) && _cursor > 0 && !char.IsWhiteSpace(_text[_cursor - 1]);
         InsertText(text, _inBurst ? EditKind.Paste : EditKind.Typing, newWord);
     }
 

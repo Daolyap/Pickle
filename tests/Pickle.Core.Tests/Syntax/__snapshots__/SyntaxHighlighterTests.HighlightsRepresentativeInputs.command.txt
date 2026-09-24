@@ -1,0 +1,1 @@
+«fg=#B5E36B»Get-ChildItem«» «fg=#7D8C75»-Path«» . «fg=#7D8C75»-Recurse«»

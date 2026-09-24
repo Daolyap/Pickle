@@ -126,7 +126,7 @@ internal sealed class CommandCache : IDisposable
         {
             _path = ScanPath(out _pathValue);
             var session = await QueryAsync(SessionScript, ShellTarget.Main).ConfigureAwait(false);
-            var modules = await QueryAsync(ModuleScript, ShellTarget.Background).ConfigureAwait(false);
+            var modules = QueryModules();
             if (session is null || modules is null)
             {
                 return;
@@ -199,6 +199,29 @@ internal sealed class CommandCache : IDisposable
                 {
                     names.Add(n);
                 }
+            }
+        }
+
+        return names;
+    }
+
+    // A private runspace: listing every module's commands takes seconds and must not hold the main runspace.
+    private HashSet<string>? QueryModules()
+    {
+        if (_disposedToken.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        using var ps = PowerShell.Create(System.Management.Automation.Runspaces.InitialSessionState.CreateDefault2());
+        using var registration = _disposedToken.Register(() => ps.BeginStop(null, null));
+        ps.AddScript(ModuleScript);
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in ps.Invoke())
+        {
+            if (item?.BaseObject is string name)
+            {
+                names.Add(name);
             }
         }
 

@@ -73,9 +73,10 @@ def test_w1_ctrl_c_clears_line(p):
 
 
 def test_w1_paste_burst_does_not_run(p):
+    """Newlines inside a burst are inserted literally; only the user's own Enter runs the pasted lines."""
     with PickleSession(p) as s:
         s.wait_for_prompt()
-        s.type("Write-Output 'pa-w1'\nWrite-Output 'pb-w1'\n")
+        s.type("Write-Output 'pa-w1'\nWrite-Output 'pb-w1'")
         s.wait_for("pb-w1")
         time.sleep(1.0)
         lines = _lines(s)

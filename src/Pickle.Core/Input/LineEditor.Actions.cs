@@ -51,12 +51,6 @@ public sealed partial class LineEditor
 
     private void AcceptLineAction()
     {
-        // The Enter that ends a pasted burst is dropped so pasted commands never run before the user looks at them.
-        if (_inBurst)
-        {
-            return;
-        }
-
         if (_text.Length > 0 && IsIncompleteInput(_text))
         {
             InsertText("\n", EditKind.Other);

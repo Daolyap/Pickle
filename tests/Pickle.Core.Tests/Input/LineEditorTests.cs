@@ -345,7 +345,7 @@ public class LineEditorTests
     public void PasteBurstIsInsertedLiterallyAndNeverRuns()
     {
         using var h = EditorHarness.Create(40);
-        h.Terminal.Paste("Write-Output 1\nWrite-Output 2\n");
+        h.Terminal.Paste("Write-Output 1\nWrite-Output 2");
         Assert.Equal("Write-Output 1\nWrite-Output 2", h.Pending());
         Snapshot.Match(h.Terminal.GetScreenText());
 
@@ -353,6 +353,14 @@ public class LineEditorTests
         Assert.Equal(string.Empty, h.Pending());
         h.Press("Ctrl+Y", "Enter");
         Assert.Equal("Write-Output 1\nWrite-Output 2", h.ReadLine());
+    }
+
+    [Fact]
+    public void EnterEndingABurstAcceptsTheWholeInput()
+    {
+        using var h = EditorHarness.Create(40);
+        h.Terminal.Paste("Write-Output a\nWrite-Output b\n");
+        Assert.Equal("Write-Output a\nWrite-Output b", h.ReadLine());
     }
 
     [Fact]

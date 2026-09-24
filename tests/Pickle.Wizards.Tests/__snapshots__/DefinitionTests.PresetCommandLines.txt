@@ -225,18 +225,40 @@ IP configuration:
 ## nmap
 Quick scan:
   nmap -F scanme.nmap.org
+Top 1000 with versions:
+  nmap -sV -T4 scanme.nmap.org
 Ping sweep:
   nmap -sn 192.168.1.0/24
+LAN discovery (ARP + ICMP):
+  nmap -PE -PR -sn 192.168.1.0/24
+List targets (no packets):
+  nmap -sL 192.168.1.0/28
 Services and versions:
   nmap -sV -sC scanme.nmap.org
 All TCP ports:
-  nmap -sS -Pn -p 1-65535 -T4 192.168.1.10
+  nmap -Pn -sS -p 1-65535 -T4 192.168.1.10
+All TCP ports, rate-limited:
+  nmap -p 1-65535 --open --max-rate 100 192.168.1.10
+OS and traceroute:
+  nmap --traceroute -O --osscan-guess scanme.nmap.org
 Aggressive and save:
   nmap -A -T4 -oN scan.txt scanme.nmap.org
+Save every format:
+  nmap -sV -oA scan scanme.nmap.org
 UDP top ports:
   nmap -sU --top-ports 50 192.168.1.1
 Open web ports:
-  nmap --script http-title -p '80,443,8080,8443' --open 192.168.1.0/24
+  nmap -p '80,443,8080,8443' --open --script http-title 192.168.1.0/24
+Web server details:
+  nmap -p '80,443,8080' -sV --script 'http-title,http-headers,http-methods' 192.168.1.10
+TLS certificate and ciphers:
+  nmap -p 443 --script 'ssl-cert,ssl-enum-ciphers' 192.168.1.10
+SMB host info:
+  nmap -p 445 --script 'smb-os-discovery,smb-protocols' 192.168.1.0/24
+Known vulnerabilities:
+  nmap -sV --script vuln 192.168.1.10
+Firewall rules (ACK scan):
+  nmap -sA -p 1-1024 --reason 192.168.1.1
 
 ## openssl
 Self-signed cert for localhost:

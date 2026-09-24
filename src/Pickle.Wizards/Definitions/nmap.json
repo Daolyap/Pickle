@@ -13,7 +13,28 @@
       "options": [
         { "id": "targets", "label": "Targets", "type": "list", "position": 1, "placeholder": "scanme.nmap.org", "description": "One target per line. Only scan networks you are authorized to scan." },
         { "id": "inputList", "label": "Targets from file", "type": "path", "flag": "-iL" },
-        { "id": "exclude", "label": "Exclude hosts", "type": "text", "flag": "--exclude", "placeholder": "192.168.1.1,192.168.1.254" }
+        { "id": "exclude", "label": "Exclude hosts", "type": "text", "flag": "--exclude", "placeholder": "192.168.1.1,192.168.1.254" },
+        { "id": "excludeFile", "label": "Exclude hosts from file", "type": "path", "flag": "--excludefile" },
+        { "id": "ipv6", "label": "IPv6", "type": "flag", "flag": "-6" }
+      ]
+    },
+    {
+      "title": "Host discovery",
+      "description": "How Nmap decides which hosts are up before scanning them.",
+      "options": [
+        { "id": "noPing", "label": "Skip host discovery", "type": "flag", "flag": "-Pn", "description": "Treat all hosts as online (for hosts that block ping)." },
+        { "id": "pingSyn", "label": "TCP SYN ping ports", "type": "text", "flag": "-PS", "valueStyle": "none", "placeholder": "22,80,443", "validation": "^[\\d,\\-]+$" },
+        { "id": "pingAck", "label": "TCP ACK ping ports", "type": "text", "flag": "-PA", "valueStyle": "none", "placeholder": "80,443", "validation": "^[\\d,\\-]+$" },
+        { "id": "pingUdp", "label": "UDP ping ports", "type": "text", "flag": "-PU", "valueStyle": "none", "placeholder": "53,161", "validation": "^[\\d,\\-]+$" },
+        { "id": "pingEcho", "label": "ICMP echo ping", "type": "flag", "flag": "-PE" },
+        { "id": "pingTimestamp", "label": "ICMP timestamp ping", "type": "flag", "flag": "-PP" },
+        { "id": "pingNetmask", "label": "ICMP netmask ping", "type": "flag", "flag": "-PM" },
+        { "id": "pingArp", "label": "ARP ping (local network)", "type": "flag", "flag": "-PR" },
+        { "id": "traceroute", "label": "Traceroute to each host", "type": "flag", "flag": "--traceroute" },
+        { "id": "noDns", "label": "No DNS resolution", "type": "flag", "flag": "-n" },
+        { "id": "alwaysDns", "label": "Always resolve DNS", "type": "flag", "flag": "-R", "dependsOn": "!noDns" },
+        { "id": "dnsServers", "label": "DNS servers", "type": "text", "flag": "--dns-servers", "placeholder": "1.1.1.1,8.8.8.8", "dependsOn": "!noDns" },
+        { "id": "systemDns", "label": "Use the system resolver", "type": "flag", "flag": "--system-dns", "dependsOn": "!noDns" }
       ]
     },
     {
@@ -21,61 +42,131 @@
       "options": [
         {
           "id": "scanType", "label": "Scan type", "type": "choice",
-          "description": "SYN and OS detection need administrator/root rights.",
+          "description": "Raw-packet scans (SYN, ACK, FIN, NULL, Xmas, …) and OS detection need administrator/root rights.",
           "choices": [
             { "value": "-sS", "label": "TCP SYN (stealth)" },
             { "value": "-sT", "label": "TCP connect" },
             { "value": "-sA", "label": "TCP ACK (firewall rules)" },
-            { "value": "-sn", "label": "Ping sweep only (no port scan)" }
+            { "value": "-sW", "label": "TCP Window" },
+            { "value": "-sM", "label": "TCP Maimon" },
+            { "value": "-sF", "label": "TCP FIN" },
+            { "value": "-sN", "label": "TCP NULL" },
+            { "value": "-sX", "label": "TCP Xmas" },
+            { "value": "-sY", "label": "SCTP INIT" },
+            { "value": "-sO", "label": "IP protocol scan" },
+            { "value": "-sn", "label": "Ping sweep only (no port scan)" },
+            { "value": "-sL", "label": "List targets only (sends no packets)" }
           ]
         },
         { "id": "udp", "label": "UDP scan", "type": "flag", "flag": "-sU", "description": "Slow; combine with --top-ports." },
-        { "id": "noPing", "label": "Skip host discovery", "type": "flag", "flag": "-Pn", "description": "Treat all hosts as online (for hosts that block ping)." },
-        { "id": "serviceVersion", "label": "Detect service versions", "type": "flag", "flag": "-sV" },
-        { "id": "defaultScripts", "label": "Default scripts", "type": "flag", "flag": "-sC" },
-        { "id": "osDetect", "label": "Detect OS", "type": "flag", "flag": "-O" },
         { "id": "aggressive", "label": "Aggressive (-O -sV -sC --traceroute)", "type": "flag", "flag": "-A" },
-        { "id": "script", "label": "NSE scripts", "type": "text", "flag": "--script", "placeholder": "http-title,ssl-cert" },
-        { "id": "scriptArgs", "label": "Script arguments", "type": "text", "flag": "--script-args", "dependsOn": "script" }
+        { "id": "privileged", "label": "Assume raw-socket privileges", "type": "flag", "flag": "--privileged" },
+        { "id": "unprivileged", "label": "Assume no raw-socket privileges", "type": "flag", "flag": "--unprivileged", "dependsOn": "!privileged" }
       ]
     },
     {
       "title": "Ports",
       "options": [
-        { "id": "ports", "label": "Ports", "type": "text", "flag": "-p", "placeholder": "22,80,443 or 1-65535", "validation": "^[\\dTU:,\\-]+$|^-$" },
+        { "id": "ports", "label": "Ports", "type": "text", "flag": "-p", "placeholder": "22,80,443 or 1-65535 or U:53,T:80", "validation": "^[\\dTU:,\\-]+$|^-$" },
+        { "id": "excludePorts", "label": "Exclude ports", "type": "text", "flag": "--exclude-ports", "placeholder": "9100,9101", "validation": "^[\\dTU:,\\-]+$" },
         { "id": "topPorts", "label": "Top N ports", "type": "number", "flag": "--top-ports", "validation": "^\\d+$" },
+        { "id": "portRatio", "label": "Ports more common than ratio", "type": "text", "flag": "--port-ratio", "placeholder": "0.1", "validation": "^(0(\\.\\d+)?|1(\\.0+)?)$" },
         { "id": "fast", "label": "Fast (top 100 ports)", "type": "flag", "flag": "-F" },
+        { "id": "sequential", "label": "Scan ports in order (not randomized)", "type": "flag", "flag": "-r" },
         { "id": "open", "label": "Show only open ports", "type": "flag", "flag": "--open" }
       ]
     },
     {
-      "title": "Timing and output",
+      "title": "Services, OS and scripts",
+      "options": [
+        { "id": "serviceVersion", "label": "Detect service versions", "type": "flag", "flag": "-sV" },
+        { "id": "versionIntensity", "label": "Version intensity (0-9)", "type": "number", "flag": "--version-intensity", "validation": "^[0-9]$", "dependsOn": "serviceVersion" },
+        { "id": "versionLight", "label": "Light version probes (intensity 2)", "type": "flag", "flag": "--version-light", "dependsOn": "serviceVersion" },
+        { "id": "versionAll", "label": "Try every version probe (intensity 9)", "type": "flag", "flag": "--version-all", "dependsOn": "serviceVersion" },
+        { "id": "osDetect", "label": "Detect OS", "type": "flag", "flag": "-O" },
+        { "id": "osLimit", "label": "OS detection only on promising hosts", "type": "flag", "flag": "--osscan-limit", "dependsOn": "osDetect" },
+        { "id": "osGuess", "label": "Guess OS more aggressively", "type": "flag", "flag": "--osscan-guess", "dependsOn": "osDetect" },
+        { "id": "defaultScripts", "label": "Default scripts", "type": "flag", "flag": "-sC" },
+        { "id": "script", "label": "NSE scripts", "type": "text", "flag": "--script", "placeholder": "http-title,ssl-cert or vuln or \"default and safe\"" },
+        { "id": "scriptArgs", "label": "Script arguments", "type": "text", "flag": "--script-args", "dependsOn": "script", "placeholder": "http.useragent=Mozilla" },
+        { "id": "scriptArgsFile", "label": "Script arguments file", "type": "path", "flag": "--script-args-file", "dependsOn": "script" },
+        { "id": "scriptTrace", "label": "Trace script traffic", "type": "flag", "flag": "--script-trace", "dependsOn": "script" }
+      ]
+    },
+    {
+      "title": "Timing and performance",
       "options": [
         {
-          "id": "timing", "label": "Timing", "type": "choice", "flag": "-T", "valueStyle": "none", "default": "3",
+          "id": "timing", "label": "Timing template", "type": "choice", "flag": "-T", "valueStyle": "none", "default": "3",
           "choices": [
             { "value": "0", "label": "paranoid" }, { "value": "1", "label": "sneaky" }, { "value": "2", "label": "polite" },
             { "value": "3", "label": "normal" }, { "value": "4", "label": "aggressive" }, { "value": "5", "label": "insane" }
           ]
         },
-        { "id": "noDns", "label": "No DNS resolution", "type": "flag", "flag": "-n" },
-        { "id": "ipv6", "label": "IPv6", "type": "flag", "flag": "-6" },
+        { "id": "minRate", "label": "Min packets per second", "type": "number", "flag": "--min-rate", "validation": "^\\d+(\\.\\d+)?$" },
+        { "id": "maxRate", "label": "Max packets per second", "type": "number", "flag": "--max-rate", "validation": "^\\d+(\\.\\d+)?$" },
+        { "id": "maxRetries", "label": "Max probe retransmissions", "type": "number", "flag": "--max-retries", "validation": "^\\d+$" },
+        { "id": "hostTimeout", "label": "Give up on a host after", "type": "text", "flag": "--host-timeout", "placeholder": "30m", "validation": "^\\d+(ms|s|m|h)?$" },
+        { "id": "scanDelay", "label": "Delay between probes", "type": "text", "flag": "--scan-delay", "placeholder": "500ms", "validation": "^\\d+(ms|s|m|h)?$" },
+        { "id": "maxScanDelay", "label": "Max delay between probes", "type": "text", "flag": "--max-scan-delay", "placeholder": "2s", "validation": "^\\d+(ms|s|m|h)?$" },
+        { "id": "minParallelism", "label": "Min probes in parallel", "type": "number", "flag": "--min-parallelism", "validation": "^\\d+$" },
+        { "id": "maxParallelism", "label": "Max probes in parallel", "type": "number", "flag": "--max-parallelism", "validation": "^\\d+$" },
+        { "id": "minHostgroup", "label": "Min hosts per group", "type": "number", "flag": "--min-hostgroup", "validation": "^\\d+$" },
+        { "id": "maxHostgroup", "label": "Max hosts per group", "type": "number", "flag": "--max-hostgroup", "validation": "^\\d+$" }
+      ]
+    },
+    {
+      "title": "Firewall/IDS evasion",
+      "description": "Only against systems you are authorized to test. Most of these need administrator/root rights.",
+      "options": [
+        { "id": "fragment", "label": "Fragment packets", "type": "flag", "flag": "-f" },
+        { "id": "mtu", "label": "Fragment MTU (multiple of 8)", "type": "number", "flag": "--mtu", "validation": "^\\d+$" },
+        { "id": "decoys", "label": "Decoys", "type": "text", "flag": "-D", "placeholder": "RND:5 or 10.0.0.1,10.0.0.2,ME" },
+        { "id": "sourcePort", "label": "Source port", "type": "number", "flag": "--source-port", "flagAliases": ["-g"], "validation": "^\\d+$" },
+        { "id": "dataLength", "label": "Append random data (bytes)", "type": "number", "flag": "--data-length", "validation": "^\\d+$" },
+        { "id": "ttl", "label": "IP time-to-live", "type": "number", "flag": "--ttl", "validation": "^\\d+$" },
+        { "id": "spoofMac", "label": "Spoof MAC address", "type": "text", "flag": "--spoof-mac", "placeholder": "0, a MAC, a prefix or a vendor name" },
+        { "id": "badsum", "label": "Send bogus checksums", "type": "flag", "flag": "--badsum" },
+        { "id": "networkInterface", "label": "Network interface", "type": "text", "flag": "-e", "placeholder": "eth0" },
+        { "id": "proxies", "label": "Relay through proxies", "type": "text", "flag": "--proxies", "placeholder": "socks4://127.0.0.1:9050" }
+      ]
+    },
+    {
+      "title": "Output",
+      "options": [
         { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v" },
+        { "id": "debug", "label": "Debug output", "type": "flag", "flag": "-d" },
         { "id": "reason", "label": "Show port state reason", "type": "flag", "flag": "--reason" },
+        { "id": "packetTrace", "label": "Show every packet sent and received", "type": "flag", "flag": "--packet-trace" },
+        { "id": "statsEvery", "label": "Print progress every", "type": "text", "flag": "--stats-every", "placeholder": "30s", "validation": "^\\d+(ms|s|m|h)?$" },
         { "id": "outNormal", "label": "Save normal output", "type": "path", "flag": "-oN" },
         { "id": "outXml", "label": "Save XML output", "type": "path", "flag": "-oX" },
         { "id": "outGrepable", "label": "Save grepable output", "type": "path", "flag": "-oG" },
-        { "id": "outAll", "label": "Save all formats (base name)", "type": "text", "flag": "-oA" }
+        { "id": "outAll", "label": "Save all formats (base name)", "type": "text", "flag": "-oA" },
+        { "id": "appendOutput", "label": "Append to output files", "type": "flag", "flag": "--append-output" },
+        { "id": "noStylesheet", "label": "No XSL stylesheet in XML", "type": "flag", "flag": "--no-stylesheet", "dependsOn": "outXml" },
+        { "id": "resume", "label": "Resume an aborted scan from", "type": "path", "flag": "--resume" }
       ]
     }
   ],
   "presets": [
     { "name": "Quick scan", "description": "Top 100 ports of Nmap's public test host.", "values": { "fast": "true", "targets": "scanme.nmap.org" } },
+    { "name": "Top 1000 with versions", "description": "Default port set with service versions and faster timing.", "values": { "serviceVersion": "true", "timing": "4", "targets": "scanme.nmap.org" } },
     { "name": "Ping sweep", "description": "Find live hosts on your own LAN without port scanning.", "values": { "scanType": "-sn", "targets": "192.168.1.0/24" } },
+    { "name": "LAN discovery (ARP + ICMP)", "description": "Host discovery on a local subnet using ARP and ICMP echo, no port scan.", "values": { "scanType": "-sn", "pingArp": "true", "pingEcho": "true", "targets": "192.168.1.0/24" } },
+    { "name": "List targets (no packets)", "description": "Expand a range and reverse-resolve names without scanning.", "values": { "scanType": "-sL", "targets": "192.168.1.0/28" } },
     { "name": "Services and versions", "description": "Version detection plus default scripts.", "values": { "serviceVersion": "true", "defaultScripts": "true", "targets": "scanme.nmap.org" } },
     { "name": "All TCP ports", "description": "SYN scan of every TCP port (needs admin).", "values": { "scanType": "-sS", "ports": "1-65535", "noPing": "true", "timing": "4", "targets": "192.168.1.10" } },
+    { "name": "All TCP ports, rate-limited", "description": "Every TCP port at no more than 100 packets per second.", "values": { "ports": "1-65535", "maxRate": "100", "open": "true", "targets": "192.168.1.10" } },
+    { "name": "OS and traceroute", "description": "OS detection with a traceroute (needs admin).", "values": { "osDetect": "true", "osGuess": "true", "traceroute": "true", "targets": "scanme.nmap.org" } },
     { "name": "Aggressive and save", "description": "OS/version/scripts/traceroute, saved to a file.", "values": { "aggressive": "true", "timing": "4", "outNormal": "scan.txt", "targets": "scanme.nmap.org" } },
+    { "name": "Save every format", "description": "Top 1000 ports with versions, saved as normal, XML and grepable output.", "values": { "serviceVersion": "true", "outAll": "scan", "targets": "scanme.nmap.org" } },
     { "name": "UDP top ports", "description": "The 50 most common UDP ports.", "values": { "udp": "true", "topPorts": "50", "targets": "192.168.1.1" } },
-    { "name": "Open web ports", "description": "Only report open HTTP(S) ports with page titles.", "values": { "ports": "80,443,8080,8443", "open": "true", "script": "http-title", "targets": "192.168.1.0/24" } }
+    { "name": "Open web ports", "description": "Only report open HTTP(S) ports with page titles.", "values": { "ports": "80,443,8080,8443", "open": "true", "script": "http-title", "targets": "192.168.1.0/24" } },
+    { "name": "Web server details", "description": "Titles, headers and allowed methods on common web ports.", "values": { "ports": "80,443,8080", "serviceVersion": "true", "script": "http-title,http-headers,http-methods", "targets": "192.168.1.10" } },
+    { "name": "TLS certificate and ciphers", "description": "Certificate details and the cipher suites a TLS server accepts.", "values": { "ports": "443", "script": "ssl-cert,ssl-enum-ciphers", "targets": "192.168.1.10" } },
+    { "name": "SMB host info", "description": "OS, computer name and SMB dialects of Windows hosts.", "values": { "ports": "445", "script": "smb-os-discovery,smb-protocols", "targets": "192.168.1.0/24" } },
+    { "name": "Known vulnerabilities", "description": "Service versions plus the NSE 'vuln' category (intrusive; your own systems only).", "values": { "serviceVersion": "true", "script": "vuln", "targets": "192.168.1.10" } },
+    { "name": "Firewall rules (ACK scan)", "description": "Which ports a firewall filters (needs admin).", "values": { "scanType": "-sA", "ports": "1-1024", "reason": "true", "targets": "192.168.1.1" } }
   ]
 }

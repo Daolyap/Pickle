@@ -482,7 +482,7 @@ internal sealed class WizardPanel : PanelWindow
         _form.ViewportSettings |= ViewportSettingsFlags.HasVerticalScrollBar;
 
         var extrasLabel = new Label { Text = "Extra arguments:", X = 0, Y = Pos.AnchorEnd(8) };
-        _extras = new TextField { X = LabelWidth + 2, Y = Pos.AnchorEnd(8), Width = Dim.Fill(), Text = extras };
+        _extras = Outlined(new TextField { X = LabelWidth + 2, Y = Pos.AnchorEnd(8), Width = Dim.Fill(1), Text = extras });
         _extras.TextChanged += (_, _) => Refresh();
         _help = new Label { X = 0, Y = Pos.AnchorEnd(7), Width = Dim.Fill(), Height = 1 };
         _messages = new Label { X = 0, Y = Pos.AnchorEnd(6), Width = Dim.Fill(), Height = 2 };
@@ -589,7 +589,7 @@ internal sealed class WizardPanel : PanelWindow
                 var key = option.Id + "." + template.Placeholders[i];
                 var optional = !template.RequiredPlaceholders.Contains(template.Placeholders[i]);
                 row.Add(new Label { Text = Humanize(template.Placeholders[i]) + (optional ? " (opt.)" : string.Empty), X = x, Y = i, Width = 22 });
-                var field = new TextField { X = x + 22, Y = i, Width = Dim.Fill(1), Text = _values.GetValueOrDefault(key) ?? string.Empty };
+                var field = Outlined(new TextField { X = x + 22, Y = i, Width = Dim.Fill(1), Text = _values.GetValueOrDefault(key) ?? string.Empty });
                 Bind(field, key, option);
                 row.Add(field);
             }
@@ -618,14 +618,14 @@ internal sealed class WizardPanel : PanelWindow
                     choices.Add(value);
                 }
 
-                var dropDown = new DropDownList
+                var dropDown = Outlined(new DropDownList
                 {
                     X = x,
                     Y = 0,
                     Width = Dim.Fill(1),
                     Source = Items(new[] { string.Empty }.Concat(choices)),
                     Text = value ?? option.Default ?? string.Empty,
-                };
+                });
                 Bind(dropDown, option.Id, option);
                 editor = dropDown;
                 break;
@@ -634,7 +634,7 @@ internal sealed class WizardPanel : PanelWindow
                 editor = CreateListEditor(option.Id, value, x, height);
                 break;
             case WizardOptionType.Path:
-                var path = new TextField { X = x, Y = 0, Width = Dim.Fill(5), Text = value ?? string.Empty };
+                var path = Outlined(new TextField { X = x, Y = 0, Width = Dim.Fill(5), Text = value ?? string.Empty });
                 var browse = new Button { Text = "…", X = Pos.AnchorEnd(4), Y = 0, NoDecorations = true };
                 browse.Accepting += (_, e) =>
                 {
@@ -646,7 +646,7 @@ internal sealed class WizardPanel : PanelWindow
                 editor = path;
                 break;
             default:
-                var text = new TextField { X = x, Y = 0, Width = Dim.Fill(1), Text = value ?? string.Empty };
+                var text = Outlined(new TextField { X = x, Y = 0, Width = Dim.Fill(1), Text = value ?? string.Empty });
                 Bind(text, option.Id, option);
                 editor = text;
                 break;
@@ -667,9 +667,18 @@ internal sealed class WizardPanel : PanelWindow
     // Terminal.Gui 2.5 marks TextView obsolete in favour of a separate editor package; it is still the only
     // multi-line input that ships with it, and list values are one item per line.
 #pragma warning disable CS0618
+    /// <summary>A bar at each end (no extra rows) so a field's extent is visible whatever the theme's input colors.</summary>
+    private static T Outlined<T>(T field)
+        where T : View
+    {
+        field.BorderStyle = LineStyle.Single;
+        field.Border!.Thickness = new Thickness(1, 0, 1, 0);
+        return field;
+    }
+
     private View CreateListEditor(string key, string? value, int x, int height)
     {
-        var list = new TextView { X = x, Y = 0, Width = Dim.Fill(1), Height = height, Text = value ?? string.Empty, TabKeyAddsTab = false };
+        var list = Outlined(new TextView { X = x, Y = 0, Width = Dim.Fill(1), Height = height, Text = value ?? string.Empty, TabKeyAddsTab = false });
         list.ContentsChanged += (_, _) => SetValue(key, list.Text);
         return list;
     }

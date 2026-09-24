@@ -110,6 +110,24 @@ public class HistoryAutosuggestTests
     }
 
     [Fact]
+    public void PrefixBucketsSurviveCompactionAndMatchAnyCase()
+    {
+        var index = new HistoryIndex();
+        for (var i = 0; i < 3000; i++)
+        {
+            index.Add(new HistoryEntry(i % 2 == 0 ? "git status" : "git stash list", T0.AddSeconds(i), "/w", true));
+        }
+
+        index.Add(new HistoryEntry("Get-Date", T0.AddSeconds(4000), "/w", true));
+        Assert.Equal(3, index.Count);
+        Assert.Equal("git stash list", index.Suggest("git st", "/w"));
+        Assert.Equal("GIT STash list", index.Suggest("GIT ST", "/w"));
+        Assert.Equal("get-Date", index.Suggest("ge", "/w"));
+        Assert.Equal("Get-Date", index.Suggest("G", "/w"));
+        Assert.Null(index.Suggest("gx", "/w"));
+    }
+
+    [Fact]
     public void SuggestsQuicklyOnFiftyThousandEntries()
     {
         var index = new HistoryIndex();

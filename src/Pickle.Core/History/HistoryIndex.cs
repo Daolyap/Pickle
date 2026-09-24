@@ -4,7 +4,8 @@ namespace Pickle.Core.History;
 
 /// <summary>
 /// De-duplicated history, most recent last, for prefix lookups (autosuggest). Re-adding a command tombstones its
-/// older node and appends a new one, so updates are O(1) and a lookup is a single backwards scan.
+/// older node and appends a new one, so updates are O(1). Nodes are also bucketed by their case-folded first two
+/// characters, so a lookup scans only the commands that could match (a miss on 50k entries costs nothing).
 /// </summary>
 internal sealed class HistoryIndex
 {
@@ -15,6 +16,7 @@ internal sealed class HistoryIndex
 
     private readonly object _gate = new();
     private readonly Dictionary<string, Node> _byText = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<Node>> _byPrefix = new(StringComparer.Ordinal);
     private Node[] _nodes = new Node[256];
     private int _count;
     private int _dead;
@@ -96,11 +98,14 @@ internal sealed class HistoryIndex
 
     private string? Find(string input, string? cwd, StringComparison comparison)
     {
+        ReadOnlySpan<Node> candidates = input.Length < PrefixLength
+            ? _nodes.AsSpan(0, _count)
+            : _byPrefix.TryGetValue(PrefixKey(input), out var bucket) ? System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket) : [];
         Node? best = null;
         var bestTier = -1;
-        for (var i = _count - 1; i >= 0; i--)
+        for (var i = candidates.Length - 1; i >= 0; i--)
         {
-            var node = _nodes[i];
+            var node = candidates[i];
             if (node.Dead || node.Text.Length <= input.Length || !node.Text.StartsWith(input, comparison))
             {
                 continue;
@@ -145,6 +150,17 @@ internal sealed class HistoryIndex
         }
 
         _nodes[_count++] = node;
+        if (text.Length >= PrefixLength)
+        {
+            var key = PrefixKey(text);
+            if (!_byPrefix.TryGetValue(key, out var bucket))
+            {
+                _byPrefix[key] = bucket = [];
+            }
+
+            bucket.Add(node);
+        }
+
         if (_dead > 1024 && _dead > _count / 2)
         {
             Compact();
@@ -165,15 +181,25 @@ internal sealed class HistoryIndex
         Array.Clear(_nodes, write, _count - write);
         _count = write;
         _dead = 0;
+        foreach (var bucket in _byPrefix.Values)
+        {
+            bucket.RemoveAll(n => n.Dead);
+        }
     }
 
     private void ClearCore()
     {
         _byText.Clear();
+        _byPrefix.Clear();
         Array.Clear(_nodes, 0, _count);
         _count = 0;
         _dead = 0;
     }
+
+    private const int PrefixLength = 2;
+
+    // Upper-casing is what OrdinalIgnoreCase compares, so a case-insensitive prefix match always shares the bucket.
+    private static string PrefixKey(string text) => text[..PrefixLength].ToUpperInvariant();
 
     private static string[] MergeCwd(string[]? existing, string? cwd)
     {

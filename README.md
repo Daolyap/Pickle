@@ -13,7 +13,7 @@ first-class Windows tooling on top.
 | ✨ **Editor** | Live syntax highlighting, fish-style autosuggestions, multi-line editing, undo/redo, selection & clipboard |
 | 🔎 **Search** | Fuzzy history (Ctrl+R) scoped to all / this directory / this session; fuzzy completion menu with descriptions |
 | 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, venv, node…), 5 themes, drives `$PSStyle` and your Windows Terminal colors |
-| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), settings (Alt+,) |
+| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), disks (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), settings (Alt+,) |
 | 📦 **winget** | Browse, search, install and upgrade packages interactively; `pk upgrade` updates apps *and* Windows; one-click (UAC) winget source repair |
 | 🧙 **Command wizards** | F2 on a command opens a guided builder with live preview: curl, nmap, ffmpeg, git, docker, ssh/scp, openssl, robocopy, tar, 7z, kubectl, Get-WinEvent, netsh, certutil, adb, yt-dlp, rsync |
 | 🐧 **Linux muscle memory** | `ls -la`, `grep -rn`, `rm -rf`, `export X=1`, `VAR=x cmd`, `2>/dev/null`, `!!`, `sudo`, `apt install` → sensible Windows equivalents (shown dimmed) |
@@ -49,7 +49,8 @@ pk config                    # or press Alt+, for the settings panel
 ```
 
 Keys: **F1** palette · **Ctrl+R** history · **Tab** completion · **→** accept suggestion · **Ctrl+T** files ·
-**F2** wizard · **Alt+G** git · **Alt+W** winget · **Alt+U** updates · **Alt+J** jobs · **Alt+S** scheduler · **Alt+,** settings.
+**F2** wizard · **Alt+G** git · **Alt+W** winget · **Alt+U** updates · **Alt+J** jobs · **Alt+S** scheduler · **Alt+,** settings ·
+**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+D** disks (`pk disks [folder]`).
 
 ## Configuration
 

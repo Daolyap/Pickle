@@ -37,6 +37,12 @@ after installing a build.
 - [ ] Alt+G git panel: stage/unstage file and hunk, commit, branches, log, stash.
 - [ ] Alt+J jobs: `Start-ThreadJob { Start-Sleep 5 }` appears, output preview, stop/remove.
 - [ ] Alt+, settings: toggling autosuggestions takes effect immediately and persists.
+- [ ] Alt+P processes: CPU/memory sparklines move; typing filters; F6/header click sorts; Enter shows path and
+      command line; F4 lowers a Notepad's priority; Del ends it after confirming; F8 ends a `cmd /c start cmd` tree.
+- [ ] Alt+N network: interface throughput updates every second; Connections lists processes; Tools: ping
+      (live replies, Stop shows loss/min/avg/max), DNS lookup, Flush DNS cache shows ipconfig's output.
+- [ ] Alt+D disks: volumes with usage bars; Enter on C: scans (F8 stops) and skips junctions like
+      `Documents and Settings`; Enter/Backspace drill down/up; F2 cds there; F7 Disk Cleanup, F9 Disk Management (UAC).
 
 ## winget
 

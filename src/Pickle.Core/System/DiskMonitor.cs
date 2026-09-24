@@ -52,7 +52,7 @@ public sealed class DiskMonitor : IDiskMonitor
 
     public Task<DiskToolResult> OpenDiskCleanupAsync(string? volume, CancellationToken cancellationToken = default)
     {
-        var drive = volume is { Length: >= 2 } v && char.IsAsciiLetter(v[0]) && v[1] == ':' ? v[..1] : null;
+        var drive = volume is { Length: >= 2 } v && char.IsAsciiLetter(v[0]) && v[1] == ':' ? v[..2] : null;
         return Task.FromResult(Launch("Disk Cleanup", "cleanmgr.exe", drive is null ? [] : ["/d", drive]));
     }
 

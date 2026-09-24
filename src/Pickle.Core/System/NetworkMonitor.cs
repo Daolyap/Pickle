@@ -15,6 +15,9 @@ namespace Pickle.Core.SystemMonitoring;
 /// </summary>
 public sealed class NetworkMonitor : INetworkMonitor
 {
+    // Virtual NICs on Linux report "unknown" (-1 Mb/s) and .NET turns it into ~4.3 Pb/s.
+    private const long MaxPlausibleSpeed = 10_000_000_000_000;
+
     private readonly RateTracker _rates = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly object _gate = new();
@@ -121,7 +124,7 @@ public sealed class NetworkMonitor : INetworkMonitor
                 ipv4,
                 ipv6,
                 mac,
-                TryValue(() => nic.Speed) is { } speed && speed > 0 ? speed : null,
+                TryValue(() => nic.Speed) is { } speed && speed is > 0 and < MaxPlausibleSpeed ? speed : null,
                 sent,
                 received,
                 0,
@@ -270,7 +273,17 @@ public sealed class NetworkMonitor : INetworkMonitor
     {
         if (!cache.TryGetValue(pid, out var name))
         {
-            name = ReadFile(Path.Join(_proc, pid.ToString(CultureInfo.InvariantCulture), "comm"))?.Trim();
+            var dir = Path.Join(_proc, pid.ToString(CultureInfo.InvariantCulture));
+            name = ReadFile(Path.Join(dir, "comm"))?.Trim();
+
+            // comm is cut at 15 characters; the full name is the start of argv[0].
+            if (name is { Length: 15 } && ReadFile(Path.Join(dir, "cmdline")) is { Length: > 0 } cmdline)
+            {
+                var argv0 = cmdline.Split('\0')[0];
+                var full = argv0[(argv0.LastIndexOf('/') + 1)..];
+                name = full.StartsWith(name, StringComparison.Ordinal) ? full : name;
+            }
+
             cache[pid] = name;
         }
 

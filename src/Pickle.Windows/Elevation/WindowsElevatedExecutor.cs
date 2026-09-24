@@ -5,8 +5,8 @@ using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
 using Pickle.Windows.Processes;
 using Pickle.Windows.TaskScheduler;
-using Pickle.Windows.Winget;
 using Pickle.Windows.WindowsUpdate;
+using Pickle.Windows.Winget;
 
 namespace Pickle.Windows.Elevation;
 

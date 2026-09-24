@@ -264,7 +264,7 @@
             { "id": "bare", "label": "Bare", "type": "flag", "flag": "--bare" },
             { "id": "mirror", "label": "Mirror", "type": "flag", "flag": "--mirror" },
             { "id": "repository", "label": "Repository", "type": "positional", "position": 1, "required": true, "placeholder": "https://github.com/user/repo.git" },
-            { "id": "directory", "label": "Directory", "type": "path", "position": 2 }
+            { "id": "targetDir", "label": "Directory", "type": "path", "position": 2 }
           ]
         }
       ]
@@ -288,7 +288,7 @@
     { "name": "Undo last commit, keep changes", "description": "", "mode": "reset", "values": { "mode": "--soft", "commit": "HEAD~1" } },
     { "name": "Discard all local changes", "description": "", "mode": "reset", "values": { "mode": "--hard", "commit": "HEAD" } },
     { "name": "Shallow clone", "description": "Latest commit only.", "mode": "clone", "values": { "depth": "1", "repository": "https://github.com/PowerShell/PowerShell.git" } },
-    { "name": "Partial clone", "description": "History without file contents; blobs download on demand.", "mode": "clone", "values": { "filter": "blob:none", "repository": "https://github.com/PowerShell/PowerShell.git", "directory": "pwsh" } },
+    { "name": "Partial clone", "description": "History without file contents; blobs download on demand.", "mode": "clone", "values": { "filter": "blob:none", "repository": "https://github.com/PowerShell/PowerShell.git", "targetDir": "pwsh" } },
     { "name": "Log in another folder", "description": "", "mode": "log", "values": { "directory": "C:\\src\\project", "oneline": "true", "maxCount": "10" } }
   ]
 }

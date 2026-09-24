@@ -168,7 +168,7 @@
           "title": "Digest",
           "options": [
             {
-              "id": "algorithm", "label": "Algorithm", "type": "choice", "default": "-sha256",
+              "id": "algorithm", "label": "Algorithm", "type": "choice",
               "choices": [ { "value": "-sha256" }, { "value": "-sha384" }, { "value": "-sha512" }, { "value": "-sha1" }, { "value": "-md5" } ]
             },
             { "id": "reverse", "label": "coreutils format (hash  file)", "type": "flag", "flag": "-r" },
@@ -214,7 +214,7 @@
     { "name": "SHA-256 fingerprint of a .cer", "description": "", "mode": "inspect", "values": { "in": "cert.cer", "inform": "DER", "fingerprint": "true", "fingerprintDigest": "-sha256", "noout": "true" } },
     { "name": "EC P-256 key", "description": "", "mode": "genkey", "values": { "algorithm": "EC", "pkeyopt": "ec_paramgen_curve:P-256", "out": "ec.key" } },
     { "name": "RSA 4096 key", "description": "", "mode": "genkey", "values": { "algorithm": "RSA", "pkeyopt": "rsa_keygen_bits:4096", "out": "rsa.key" } },
-    { "name": "SHA-256 of a file", "description": "", "mode": "digest", "values": { "file": "download.iso" } },
+    { "name": "SHA-256 of a file", "description": "", "mode": "digest", "values": { "algorithm": "-sha256", "file": "download.iso" } },
     { "name": "Check a server certificate", "description": "", "mode": "s_client", "values": { "connect": "example.com:443", "servername": "example.com", "brief": "true" } }
   ]
 }

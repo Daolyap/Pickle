@@ -274,7 +274,9 @@ public static partial class WizardValidator
             problems.Add($"{name}: this wizard has no modes.");
         }
 
-        var options = WizardSchema.GetOptions(definition, mode).Select(o => o.Option).ToDictionary(o => o.Id, StringComparer.Ordinal);
+        var options = WizardSchema.GetOptions(definition, mode).Select(o => o.Option)
+            .GroupBy(o => o.Id, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
         foreach (var (key, value) in preset.Values)
         {
             var dot = key.IndexOf('.', StringComparison.Ordinal);

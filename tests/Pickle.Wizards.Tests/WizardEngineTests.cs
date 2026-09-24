@@ -27,7 +27,7 @@ public class WizardEngineTests
               { "id": "plain", "label": "Plain", "type": "flag", "flag": "--plain", "dependsOn": "!silent" },
               { "id": "code", "label": "Code", "type": "text", "flag": "--code", "validation": "^[A-Z]{3}$" },
               { "id": "force", "label": "Force", "type": "flag", "flag": "--force", "warning": "Overwrites everything." },
-              { "id": "forward", "label": "Forward", "type": "text", "flag": "-L2", "template": "[{bind}:]{local}:{host}:{remote}" },
+              { "id": "forward", "label": "Forward", "type": "text", "flag": "--forward", "template": "[{bind}:]{local}:{host}:{remote}" },
               { "id": "url", "label": "URL", "type": "positional", "position": 1, "required": true },
               { "id": "rest", "label": "Rest", "type": "list", "position": 2 }
             ]
@@ -65,9 +65,9 @@ public class WizardEngineTests
     [Fact]
     public void TemplatesComposeSubValues()
     {
-        Assert.Equal("tool -L2 8080:db:5432 u", Line(("forward.local", "8080"), ("forward.host", "db"), ("forward.remote", "5432"), ("url", "u")));
+        Assert.Equal("tool --forward 8080:db:5432 u", Line(("forward.local", "8080"), ("forward.host", "db"), ("forward.remote", "5432"), ("url", "u")));
         Assert.Equal(
-            "tool -L2 0.0.0.0:8080:db:5432 u",
+            "tool --forward 0.0.0.0:8080:db:5432 u",
             Line(("forward.bind", "0.0.0.0"), ("forward.local", "8080"), ("forward.host", "db"), ("forward.remote", "5432"), ("url", "u")));
 
         var partial = WizardEngine.Build(Tool, null, V(("forward.local", "8080"), ("url", "u")));
@@ -163,7 +163,7 @@ public class WizardEngineTests
     public void ParsesCommonFlagSpellings()
     {
         var (_, values, unknown) = WizardEngine.Parse(Tool, "tool -sSL --request=POST -ofile.txt -H 'A:b' -H \"C: d\" -XPOST https://x.test");
-        Assert.Empty(unknown.Where(u => u != "-XPOST"));
+        Assert.Equal(["-XPOST"], unknown);
         Assert.Equal("true", values["silent"]);
         Assert.Equal("true", values["showError"]);
         Assert.Equal("true", values["location"]);
@@ -176,13 +176,13 @@ public class WizardEngineTests
     [Fact]
     public void ParsesCombinedFlagsEndingInAValue()
     {
-        var (_, values, unknown) = WizardEngine.Parse(Tool, "tool -sSo out.txt -Lsomething u");
+        var (_, values, unknown) = WizardEngine.Parse(Tool, "tool -sSo out.txt -L u extra");
         Assert.Empty(unknown);
         Assert.Equal("out.txt", values["output"]);
         Assert.Equal("true", values["location"]);
         Assert.Equal("true", values["silent"]);
         Assert.Equal("u", values["url"]);
-        Assert.Equal("something", values["rest"]);
+        Assert.Equal("extra", values["rest"]);
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class WizardEngineTests
     [Fact]
     public void ParsesTemplates()
     {
-        var (_, values, unknown) = WizardEngine.Parse(Tool, "tool -L2 127.0.0.1:8080:db:5432 u");
+        var (_, values, unknown) = WizardEngine.Parse(Tool, "tool --forward 127.0.0.1:8080:db:5432 u");
         Assert.Empty(unknown);
         Assert.Equal("127.0.0.1", values["forward.bind"]);
         Assert.Equal("8080", values["forward.local"]);

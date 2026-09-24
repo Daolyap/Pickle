@@ -100,7 +100,7 @@ internal static partial class WizardParser
 
         state.DistributePositionals();
         var values = state.Finish(definition, mode?.Id);
-        return new WizardParseResult(mode?.Id, values, state.Unknown);
+        return new WizardParseResult(mode?.Id, values, state.Unknown.ToList());
     }
 
     [GeneratedRegex(@"^/[A-Za-z?][A-Za-z0-9?+-]*(:.*)?$")]
@@ -255,21 +255,25 @@ internal static partial class WizardParser
     {
         private readonly Dictionary<string, string> _values = new(StringComparer.Ordinal);
         private readonly Dictionary<string, List<string>> _lists = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, List<string>> _sources = new(StringComparer.Ordinal);
-        private readonly List<CommandToken> _positionals = [];
-        private readonly Dictionary<WizardOption, List<CommandToken>> _markerTokens = [];
+        private readonly Dictionary<string, List<(int Index, string Source)>> _sources = new(StringComparer.Ordinal);
+        private readonly List<(CommandToken Token, int Index)> _positionals = [];
+        private readonly Dictionary<WizardOption, List<(CommandToken Token, int Index)>> _markerTokens = [];
         private readonly List<string> _rest = [];
         private readonly List<WizardOption> _ordered = [.. WizardEngine.OrderedPositionals(options)];
         private WizardOption? _restTarget;
         private WizardOption? _markerTarget;
+        private int _nextIndex;
 
-        public List<string> Unknown { get; } = [];
+        public UnknownTokens Unknown { get; } = new();
 
         public void ParseRange(IReadOnlyList<CommandToken> tokens, OptionLookup lookup, bool allowPositionals)
         {
+            var baseIndex = _nextIndex;
+            _nextIndex += tokens.Count;
             for (var i = 0; i < tokens.Count; i++)
             {
                 var token = tokens[i];
+                Unknown.Current = baseIndex + i;
                 if (token.IsRedirection)
                 {
                     Unknown.Add(token.Source);
@@ -284,7 +288,7 @@ internal static partial class WizardParser
 
                 if (_markerTarget is not null)
                 {
-                    _markerTokens[_markerTarget].Add(token);
+                    _markerTokens[_markerTarget].Add((token, Unknown.Current));
                     continue;
                 }
 
@@ -297,7 +301,7 @@ internal static partial class WizardParser
                 var value = token.Value;
                 if (value == "--%")
                 {
-                    Unknown.AddRange(tokens.Skip(i).Select(t => t.Source));
+                    Unknown.AddRest(tokens, i, baseIndex);
                     return;
                 }
 
@@ -318,7 +322,7 @@ internal static partial class WizardParser
 
                 if (value == "--")
                 {
-                    Unknown.AddRange(tokens.Skip(i).Select(t => t.Source));
+                    Unknown.AddRest(tokens, i, baseIndex);
                     return;
                 }
 
@@ -343,15 +347,17 @@ internal static partial class WizardParser
             var variadic = singles.FindIndex(o => o.IsMultiValued());
             if (variadic < 0)
             {
+                // Surplus positionals are most likely values of unknown flags before them; operands come last.
+                var surplus = Math.Max(0, _positionals.Count - singles.Count);
                 for (var i = 0; i < _positionals.Count; i++)
                 {
-                    if (i < singles.Count)
+                    if (i < surplus)
                     {
-                        AssignPositional(singles[i], _positionals[i]);
+                        Unknown.Add(_positionals[i].Token.Source, _positionals[i].Index);
                     }
                     else
                     {
-                        Unknown.Add(_positionals[i].Source);
+                        AssignPositional(singles[i - surplus], _positionals[i]);
                     }
                 }
             }
@@ -390,6 +396,7 @@ internal static partial class WizardParser
             if (_restTarget is not null && _rest.Count > 0)
             {
                 _values[_restTarget.Id] = string.Join(' ', _rest);
+                Unknown.Current = _nextIndex;
                 Track(_restTarget, string.Join(' ', _rest));
             }
         }
@@ -408,7 +415,11 @@ internal static partial class WizardParser
             {
                 if (!scope.IsActive(option) && _sources.TryGetValue(option.Id, out var sources))
                 {
-                    Unknown.AddRange(sources);
+                    foreach (var (index, source) in sources)
+                    {
+                        Unknown.Add(source, index);
+                    }
+
                     values.Remove(option.Id);
                     foreach (var key in values.Keys.Where(k => k.StartsWith(option.Id + ".", StringComparison.Ordinal)).ToList())
                     {
@@ -438,7 +449,14 @@ internal static partial class WizardParser
                 return;
             }
 
-            _positionals.Add(token);
+            // An expression ($x, @{...}) can't be a literal operand; keep it verbatim without taking a slot.
+            if (!token.IsLiteral)
+            {
+                Unknown.Add(token.Source);
+                return;
+            }
+
+            _positionals.Add((token, Unknown.Current));
         }
 
         private bool TryOption(IReadOnlyList<CommandToken> tokens, ref int i, OptionLookup lookup)
@@ -618,8 +636,10 @@ internal static partial class WizardParser
             SetSingle(option, value, source);
         }
 
-        private void AssignPositional(WizardOption option, CommandToken token)
+        private void AssignPositional(WizardOption option, (CommandToken Token, int Index) entry)
         {
+            var (token, index) = entry;
+            Unknown.Current = index;
             var value = token.IsLiteral ? token.Value : option.IsRaw() ? token.Source : null;
             Assign(option, value, token.Source);
         }
@@ -631,7 +651,30 @@ internal static partial class WizardParser
                 _sources[option.Id] = list = [];
             }
 
-            list.Add(source);
+            list.Add((Unknown.Current, source));
         }
+    }
+
+    /// <summary>Unknown tokens in source order (they are discovered out of order, e.g. surplus positionals).</summary>
+    private sealed class UnknownTokens
+    {
+        private readonly List<(int Index, string Source)> _items = [];
+
+        /// <summary>Index of the token being processed; <see cref="Add(string)"/> files entries under it.</summary>
+        public int Current { get; set; }
+
+        public void Add(string source) => _items.Add((Current, source));
+
+        public void Add(string source, int index) => _items.Add((index, source));
+
+        public void AddRest(IReadOnlyList<CommandToken> tokens, int from, int baseIndex)
+        {
+            for (var j = from; j < tokens.Count; j++)
+            {
+                _items.Add((baseIndex + j, tokens[j].Source));
+            }
+        }
+
+        public IReadOnlyList<string> ToList() => [.. _items.OrderBy(i => i.Index).Select(i => i.Source)];
     }
 }

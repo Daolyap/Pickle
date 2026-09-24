@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Pickle.Abstractions;
@@ -64,6 +65,44 @@ public static class WindowsTerminalProfile
         }
     }
 
+    /// <summary>
+    /// Fragment JSON for an installer (e.g. the MSI's all-users fragment under %ProgramData%): the commandline is used
+    /// verbatim, appearance comes from default <see cref="TerminalSettings"/> and the built-in "pickle" palette unless
+    /// given. No files are touched.
+    /// </summary>
+    public static string BuildFragment(string commandline, TerminalSettings? settings = null, TerminalPalette? palette = null) =>
+        WindowsTerminalFragment.BuildForCommandline(
+            commandline,
+            settings ?? new TerminalSettings(),
+            palette ?? LoadEmbeddedTheme("pickle")?.Terminal ?? new TerminalPalette());
+
+    /// <summary>Writes <see cref="BuildFragment"/> to <paramref name="path"/> (UTF-8, no BOM), creating its directory. Returns an exit code.</summary>
+    public static int WriteFragment(string path, string commandline, TextWriter? error = null)
+    {
+        if (string.IsNullOrWhiteSpace(commandline))
+        {
+            error?.WriteLine("pickle: --fragment-commandline must not be empty.");
+            return 2;
+        }
+
+        try
+        {
+            var full = Path.GetFullPath(path);
+            if (Path.GetDirectoryName(full) is { Length: > 0 } dir)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            File.WriteAllText(full, BuildFragment(commandline), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            return 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            error?.WriteLine($"pickle: could not write {path}: {ex.Message}");
+            return 1;
+        }
+    }
+
     /// <summary>Regenerates the installed fragment for the current user; false when not installed or unchanged.</summary>
     public static bool Update(TerminalSettings settings, TerminalPalette palette, WindowsTerminalLocations? locations = null) =>
         (locations ?? WindowsTerminalLocations.ForCurrentUser()) is { } l && new WindowsTerminalManager(l).Update(settings, palette);
@@ -106,8 +145,20 @@ public static class WindowsTerminalProfile
                 return JsonSerializer.Deserialize<Theme>(File.ReadAllText(userFile), PickleJson.Options);
             }
 
-            // Built-in themes are embedded in Pickle.Core, which this assembly does not reference; it is loaded in
-            // the pickle process, so find it at runtime.
+            return LoadEmbeddedTheme(name);
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    // Built-in themes are embedded in Pickle.Core, which this assembly does not reference; it is loaded in the pickle
+    // process, so find it at runtime.
+    private static Theme? LoadEmbeddedTheme(string name)
+    {
+        try
+        {
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (assembly.IsDynamic)
@@ -122,7 +173,7 @@ public static class WindowsTerminalProfile
                 }
             }
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is JsonException or IOException)
         {
         }
 

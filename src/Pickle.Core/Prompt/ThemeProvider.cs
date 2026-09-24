@@ -117,9 +117,10 @@ public sealed class ThemeProvider : IThemeProvider
         ThemeChanged?.Invoke(this, theme);
     }
 
+    // The file name is the theme's identity: Apply persists Name to config and Load finds it by file name again.
     private static Theme? Normalize(Theme? theme, string name)
     {
-        if (theme is not null && string.IsNullOrWhiteSpace(theme.Name))
+        if (theme is not null)
         {
             theme.Name = name;
         }

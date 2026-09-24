@@ -52,7 +52,7 @@ public class SegmentTests
             $"~/src/…/{Bold}pickle{Unbold}/…/Prompt",
             CwdSegment.Format("/home/me/src/github/pickle/src/Core/Prompt", "/home/me", 3, "/home/me/src/github/pickle"));
         Assert.Equal(
-            $@"~\{Bold}Pickle{Unbold}\src",
+            $@"~\{Bold}pickle{Unbold}\src",
             CwdSegment.Format(@"C:\Users\Me\pickle\src", @"C:\Users\Me", 0, @"c:\users\me\PICKLE"));
     }
 
@@ -255,7 +255,9 @@ public class SegmentTests
     {
         var probe = new NodeVersionProbe("pickle-no-such-node-binary");
         Assert.Null(await probe.GetVersionAsync(CancellationToken.None));
-        Assert.Same(probe.GetVersionAsync(CancellationToken.None).IsCompleted ? "done" : "pending", "done");
+        var again = probe.GetVersionAsync(CancellationToken.None);
+        Assert.True(again.IsCompleted);
+        Assert.Null(await again);
     }
 
     [Fact]
@@ -266,7 +268,7 @@ public class SegmentTests
         {
             var nested = Directory.CreateDirectory(Path.Combine(dir, "src", "components")).FullName;
             var env = SegmentEnvironment.Create(() => null, () => 0);
-            Assert.False(env.IsNodeProject(nested) && SegmentEnvironment.FindUpwards(nested, "package.json", directory: false) == dir);
+            Assert.NotEqual(Path.GetFullPath(dir), SegmentEnvironment.FindUpwards(nested, "package.json", directory: false));
             File.WriteAllText(Path.Combine(dir, "package.json"), "{}");
             Assert.True(env.IsNodeProject(nested));
             Assert.Equal(Path.GetFullPath(dir), SegmentEnvironment.FindUpwards(nested, "package.json", directory: false));

@@ -1,0 +1,2 @@
+«fg=#000000,bg=#FF0000» a «fg=#000000,bg=#00FF00» b «fg=#FFFFFF» c «»|
+«fg=#000000,bg=#FF0000» a «fg=#000000,bg=#00FF00» b «fg=#FFFFFF» c «»|

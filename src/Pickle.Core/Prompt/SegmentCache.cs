@@ -43,8 +43,14 @@ internal sealed class SegmentCache
                     return Slot.Ready(existing.Value);
                 }
 
-                if (existing.Pending is { IsCompleted: false } pending && existing.PendingGeneration == generation)
+                if (existing.Pending is { } pending && existing.PendingGeneration == generation)
                 {
+                    // Completed but its continuation has not stored the value yet.
+                    if (pending.IsCompleted)
+                    {
+                        return Slot.Ready(pending.IsCompletedSuccessfully ? pending.Result : null);
+                    }
+
                     return new Slot(null, false, existing, pending);
                 }
             }
@@ -126,7 +132,8 @@ internal sealed class SegmentCache
         {
             hasStale = slot.Entry.HasValue;
             stale = slot.Entry.Value;
-            if (hasStale && slot.Entry.LastDurationMs > timeoutMs)
+            slot.Entry.TimeoutMs = timeoutMs;
+            if (hasStale && slot.Entry.KnownSlow)
             {
                 slot.Entry.RenderGaveUp = true;
                 return stale;
@@ -153,6 +160,7 @@ internal sealed class SegmentCache
         lock (slot.Entry)
         {
             slot.Entry.RenderGaveUp = true;
+            slot.Entry.WaitTimedOut = true;
         }
 
         return hasStale ? stale : null;
@@ -169,7 +177,10 @@ internal sealed class SegmentCache
                 entry.ValueGeneration = generation;
             }
 
-            entry.LastDurationMs = durationMs;
+            // Slow if a render actually timed out on this refresh; a refresh that finished within the timeout while
+            // the prompt showed the stale value clears the flag, so the next render waits for fresh data again.
+            entry.KnownSlow = entry.WaitTimedOut || durationMs >= entry.TimeoutMs;
+            entry.WaitTimedOut = false;
             var notify = entry.RenderGaveUp;
             entry.RenderGaveUp = false;
             return notify;
@@ -201,7 +212,9 @@ internal sealed class SegmentCache
         public long ValueGeneration = -1;
         public Task<PromptSegmentOutput?>? Pending;
         public long PendingGeneration = -1;
-        public double LastDurationMs;
+        public double TimeoutMs = double.MaxValue;
+        public bool KnownSlow;
+        public bool WaitTimedOut;
         public bool RenderGaveUp;
         public long LastUsed;
     }

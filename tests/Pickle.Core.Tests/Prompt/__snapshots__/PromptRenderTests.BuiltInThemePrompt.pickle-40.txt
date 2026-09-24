@@ -1,0 +1,5 @@
+after a failed command:
+«fg=#E0605A»ADMIN«» «fg=#E5C07B»(pickle)«» «fg=#82C4FF»~/src/«fg=#82C4FF,bold»pickle«fg=#82C4FF»/…/Prompt«» «fg=#E0605A»❯«» █
+
+after a successful command:
+«fg=#E0605A»ADMIN«» «fg=#E5C07B»(pickle)«» «fg=#82C4FF»~/src/«fg=#82C4FF,bold»pickle«fg=#82C4FF»/…/Prompt«» «fg=#8FC34A»❯«» █

@@ -1,0 +1,6 @@
+after a failed command:
+«fg=#FFFFFF»[ADMIN]«» «fg=#E0E0E0»~/src/«fg=#E0E0E0,bold»pickle«fg=#E0E0E0»/…/Prompt«» «fg=#FFFFFF»[failed 1«»
+█
+
+after a successful command:
+«fg=#FFFFFF»[ADMIN]«» «fg=#E0E0E0»~/src/«fg=#E0E0E0,bold»pickle«fg=#E0E0E0»/…/Prompt«» «fg=#E0E0E0»>«» █ «fg=#8A8A8A»14:05«»

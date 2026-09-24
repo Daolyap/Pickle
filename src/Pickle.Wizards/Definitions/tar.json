@@ -1,0 +1,54 @@
+{
+  "id": "tar",
+  "title": "tar",
+  "description": "Create, extract and list .tar/.tar.gz/.tar.xz archives (tar.exe ships with Windows 10+).",
+  "command": "tar",
+  "aliases": ["tar.exe", "bsdtar"],
+  "homepage": "https://man.freebsd.org/cgi/man.cgi?query=bsdtar",
+  "sections": [
+    {
+      "title": "Operation",
+      "options": [
+        {
+          "id": "operation", "label": "Operation", "type": "choice", "required": true,
+          "choices": [
+            { "value": "-c", "label": "Create" },
+            { "value": "-x", "label": "Extract" },
+            { "value": "-t", "label": "List" }
+          ]
+        },
+        {
+          "id": "compression", "label": "Compression", "type": "choice",
+          "description": "When extracting, tar detects compression automatically.",
+          "choices": [
+            { "value": "-z", "label": "gzip (.tar.gz)" },
+            { "value": "-j", "label": "bzip2 (.tar.bz2)" },
+            { "value": "-J", "label": "xz (.tar.xz)" },
+            { "value": "-a", "label": "From the archive's file extension" }
+          ]
+        },
+        { "id": "file", "label": "Archive", "type": "path", "flag": "-f", "required": true, "placeholder": "archive.tar.gz" },
+        { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v" }
+      ]
+    },
+    {
+      "title": "Options",
+      "options": [
+        { "id": "directory", "label": "Change to folder first", "type": "path", "flag": "-C", "description": "Extract into / create from this folder." },
+        { "id": "exclude", "label": "Exclude patterns", "type": "list", "flag": "--exclude", "valueStyle": "equals", "placeholder": "node_modules" },
+        { "id": "stripComponents", "label": "Strip leading path components", "type": "number", "flag": "--strip-components", "valueStyle": "equals", "validation": "^\\d+$" },
+        { "id": "keepOld", "label": "Don't overwrite existing files", "type": "flag", "flag": "-k" },
+        { "id": "preserve", "label": "Preserve permissions", "type": "flag", "flag": "-p" },
+        { "id": "files", "label": "Files / folders", "type": "list", "position": 1, "placeholder": "folder", "description": "What to add (create) or extract (optional)." }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Create .tar.gz", "description": "", "values": { "operation": "-c", "compression": "-z", "file": "archive.tar.gz", "files": "folder" } },
+    { "name": "Extract archive", "description": "", "values": { "operation": "-x", "file": "archive.tar.gz" } },
+    { "name": "Extract into a folder", "description": "The folder must exist.", "values": { "operation": "-x", "file": "archive.tar.gz", "directory": "out" } },
+    { "name": "List contents", "description": "", "values": { "operation": "-t", "verbose": "true", "file": "archive.tar.gz" } },
+    { "name": "Extract without the top folder", "description": "", "values": { "operation": "-x", "file": "release.tar.gz", "stripComponents": "1", "directory": "app" } },
+    { "name": "Create .tar.xz excluding junk", "description": "", "values": { "operation": "-c", "compression": "-J", "file": "src.tar.xz", "exclude": "node_modules\n*.log", "files": "src" } }
+  ]
+}

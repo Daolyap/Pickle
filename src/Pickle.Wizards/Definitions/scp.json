@@ -1,0 +1,40 @@
+{
+  "id": "scp",
+  "title": "SCP",
+  "description": "Copy files to and from remote hosts over SSH. Remote paths look like user@host:/path.",
+  "command": "scp",
+  "aliases": ["scp.exe"],
+  "homepage": "https://man.openbsd.org/scp",
+  "sections": [
+    {
+      "title": "Files",
+      "options": [
+        { "id": "sources", "label": "Source(s)", "type": "list", "position": 1, "required": true, "placeholder": "report.pdf or user@host:/var/log/app.log", "description": "One per line." },
+        { "id": "target", "label": "Target", "type": "positional", "position": 2, "required": true, "placeholder": "user@host:/home/user/ or ." },
+        { "id": "recursive", "label": "Recursive (folders)", "type": "flag", "flag": "-r" },
+        { "id": "preserve", "label": "Preserve times and modes", "type": "flag", "flag": "-p" },
+        { "id": "throughLocal", "label": "Copy between two remotes via this machine", "type": "flag", "flag": "-3" }
+      ]
+    },
+    {
+      "title": "Connection",
+      "options": [
+        { "id": "port", "label": "Port", "type": "number", "flag": "-P", "validation": "^\\d{1,5}$", "description": "Note: capital -P for scp (ssh uses -p)." },
+        { "id": "identity", "label": "Identity file", "type": "path", "flag": "-i" },
+        { "id": "jump", "label": "Jump host(s)", "type": "text", "flag": "-J" },
+        { "id": "options", "label": "Options (-o)", "type": "keyValueList", "flag": "-o", "keyValueSeparator": "=" },
+        { "id": "compression", "label": "Compression", "type": "flag", "flag": "-C" },
+        { "id": "limit", "label": "Bandwidth limit (Kbit/s)", "type": "number", "flag": "-l" },
+        { "id": "legacy", "label": "Legacy SCP protocol", "type": "flag", "flag": "-O", "description": "For old servers without SFTP." },
+        { "id": "quiet", "label": "Quiet", "type": "flag", "flag": "-q" },
+        { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Upload a file", "description": "", "values": { "sources": "report.pdf", "target": "user@example.com:/home/user/" } },
+    { "name": "Download a file", "description": "", "values": { "sources": "user@example.com:/var/log/syslog", "target": "." } },
+    { "name": "Upload a folder", "description": "", "values": { "recursive": "true", "sources": "./site", "target": "user@example.com:/var/www/" } },
+    { "name": "Several files, custom port and key", "description": "", "values": { "port": "2222", "identity": "~/.ssh/id_ed25519", "sources": "a.txt\nb.txt", "target": "user@example.com:~/inbox/" } }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "id": "openssl",
+  "title": "OpenSSL",
+  "description": "Certificates and keys: self-signed certs, CSRs, PEM/PFX conversion, inspection, digests and TLS checks.",
+  "command": "openssl",
+  "aliases": ["openssl.exe"],
+  "wingetId": "ShiningLight.OpenSSL.Light",
+  "homepage": "https://docs.openssl.org/master/man1/",
+  "modes": [
+    {
+      "id": "selfsigned",
+      "title": "Self-signed certificate",
+      "description": "openssl req -x509: a new key and a self-signed certificate in one step.",
+      "subcommand": ["req", "-x509"],
+      "sections": [
+        {
+          "title": "Key",
+          "options": [
+            {
+              "id": "newkey", "label": "New key", "type": "choice", "flag": "-newkey",
+              "choices": [ { "value": "rsa:2048" }, { "value": "rsa:3072" }, { "value": "rsa:4096" }, { "value": "ed25519" } ]
+            },
+            { "id": "key", "label": "Existing key", "type": "path", "flag": "-key" },
+            { "id": "keyout", "label": "Write key to", "type": "path", "flag": "-keyout", "placeholder": "key.pem" },
+            { "id": "nodes", "label": "Don't encrypt the key", "type": "flag", "flag": "-nodes", "flagAliases": ["-noenc"] }
+          ]
+        },
+        {
+          "title": "Certificate",
+          "options": [
+            { "id": "subj", "label": "Subject", "type": "text", "flag": "-subj", "placeholder": "/CN=localhost", "validation": "^/" },
+            { "id": "addext", "label": "Extensions", "type": "list", "flag": "-addext", "placeholder": "subjectAltName=DNS:localhost,IP:127.0.0.1" },
+            { "id": "days", "label": "Valid for (days)", "type": "number", "flag": "-days", "validation": "^\\d+$" },
+            {
+              "id": "digest", "label": "Signature hash", "type": "choice",
+              "choices": [ { "value": "-sha256" }, { "value": "-sha384" }, { "value": "-sha512" } ]
+            },
+            { "id": "out", "label": "Write certificate to", "type": "path", "flag": "-out", "placeholder": "cert.pem" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "csr",
+      "title": "Certificate signing request",
+      "description": "openssl req -new: a CSR to send to a certificate authority.",
+      "subcommand": ["req", "-new"],
+      "sections": [
+        {
+          "title": "CSR",
+          "options": [
+            {
+              "id": "newkey", "label": "New key", "type": "choice", "flag": "-newkey",
+              "choices": [ { "value": "rsa:2048" }, { "value": "rsa:3072" }, { "value": "rsa:4096" }, { "value": "ed25519" } ]
+            },
+            { "id": "key", "label": "Existing key", "type": "path", "flag": "-key" },
+            { "id": "keyout", "label": "Write key to", "type": "path", "flag": "-keyout" },
+            { "id": "nodes", "label": "Don't encrypt the key", "type": "flag", "flag": "-nodes", "flagAliases": ["-noenc"] },
+            { "id": "subj", "label": "Subject", "type": "text", "flag": "-subj", "placeholder": "/C=US/O=Example/CN=www.example.com", "validation": "^/" },
+            { "id": "addext", "label": "Extensions", "type": "list", "flag": "-addext", "placeholder": "subjectAltName=DNS:example.com,DNS:www.example.com" },
+            {
+              "id": "digest", "label": "Signature hash", "type": "choice",
+              "choices": [ { "value": "-sha256" }, { "value": "-sha384" }, { "value": "-sha512" } ]
+            },
+            { "id": "out", "label": "Write CSR to", "type": "path", "flag": "-out", "placeholder": "server.csr" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pem2pfx",
+      "title": "PEM → PFX",
+      "description": "openssl pkcs12 -export: bundle certificate and key into a .pfx/.p12 (Windows import format).",
+      "subcommand": ["pkcs12", "-export"],
+      "sections": [
+        {
+          "title": "Export",
+          "options": [
+            { "id": "in", "label": "Certificate (PEM)", "type": "path", "flag": "-in", "required": true },
+            { "id": "inkey", "label": "Private key (PEM)", "type": "path", "flag": "-inkey" },
+            { "id": "certfile", "label": "CA chain (PEM)", "type": "path", "flag": "-certfile" },
+            { "id": "name", "label": "Friendly name", "type": "text", "flag": "-name" },
+            { "id": "passout", "label": "Export password source", "type": "text", "flag": "-passout", "placeholder": "env:PFX_PASSWORD", "description": "pass:<text>, env:<var>, file:<path> or stdin. Empty prompts for it." },
+            { "id": "legacy", "label": "Legacy encryption", "type": "flag", "flag": "-legacy", "description": "OpenSSL 3: use RC2/3DES so older Windows versions can import the file." },
+            { "id": "out", "label": "Write PFX to", "type": "path", "flag": "-out", "required": true, "placeholder": "cert.pfx" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pfx2pem",
+      "title": "PFX → PEM",
+      "description": "openssl pkcs12: extract certificate(s) and key from a .pfx/.p12.",
+      "subcommand": ["pkcs12"],
+      "sections": [
+        {
+          "title": "Extract",
+          "options": [
+            { "id": "in", "label": "PFX file", "type": "path", "flag": "-in", "required": true },
+            { "id": "out", "label": "Write PEM to", "type": "path", "flag": "-out" },
+            { "id": "nodes", "label": "Don't encrypt the key", "type": "flag", "flag": "-nodes", "flagAliases": ["-noenc"] },
+            { "id": "clcerts", "label": "Only the client certificate", "type": "flag", "flag": "-clcerts" },
+            { "id": "cacerts", "label": "Only CA certificates", "type": "flag", "flag": "-cacerts" },
+            { "id": "nokeys", "label": "No private keys", "type": "flag", "flag": "-nokeys" },
+            { "id": "nocerts", "label": "No certificates", "type": "flag", "flag": "-nocerts" },
+            { "id": "passin", "label": "Import password source", "type": "text", "flag": "-passin", "placeholder": "env:PFX_PASSWORD" },
+            { "id": "legacy", "label": "Legacy algorithms", "type": "flag", "flag": "-legacy", "description": "OpenSSL 3: needed to read PFX files that use RC2/3DES." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "inspect",
+      "title": "Inspect certificate",
+      "description": "openssl x509: show certificate details.",
+      "subcommand": ["x509"],
+      "sections": [
+        {
+          "title": "Inspect",
+          "options": [
+            { "id": "in", "label": "Certificate", "type": "path", "flag": "-in", "required": true },
+            {
+              "id": "inform", "label": "Input format", "type": "choice", "flag": "-inform", "default": "PEM",
+              "choices": [ { "value": "PEM" }, { "value": "DER", "label": "DER (binary .cer)" } ]
+            },
+            { "id": "text", "label": "Full text", "type": "flag", "flag": "-text" },
+            { "id": "subject", "label": "Subject", "type": "flag", "flag": "-subject" },
+            { "id": "issuer", "label": "Issuer", "type": "flag", "flag": "-issuer" },
+            { "id": "dates", "label": "Validity dates", "type": "flag", "flag": "-dates" },
+            { "id": "serial", "label": "Serial number", "type": "flag", "flag": "-serial" },
+            { "id": "fingerprint", "label": "Fingerprint", "type": "flag", "flag": "-fingerprint" },
+            {
+              "id": "fingerprintDigest", "label": "Fingerprint hash", "type": "choice", "dependsOn": "fingerprint",
+              "choices": [ { "value": "-sha256" }, { "value": "-sha1" } ]
+            },
+            { "id": "noout", "label": "Don't print the encoded certificate", "type": "flag", "flag": "-noout" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "genkey",
+      "title": "Generate key",
+      "description": "openssl genpkey: create a private key.",
+      "subcommand": ["genpkey"],
+      "sections": [
+        {
+          "title": "Key",
+          "options": [
+            {
+              "id": "algorithm", "label": "Algorithm", "type": "choice", "flag": "-algorithm", "required": true,
+              "choices": [ { "value": "RSA" }, { "value": "EC" }, { "value": "ED25519" } ]
+            },
+            { "id": "pkeyopt", "label": "Key options", "type": "list", "flag": "-pkeyopt", "placeholder": "rsa_keygen_bits:4096 or ec_paramgen_curve:P-256" },
+            { "id": "aes256", "label": "Encrypt with a passphrase (AES-256)", "type": "flag", "flag": "-aes256" },
+            { "id": "out", "label": "Write key to", "type": "path", "flag": "-out", "placeholder": "private.key" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "digest",
+      "title": "File digest",
+      "description": "openssl dgst: hash a file.",
+      "subcommand": ["dgst"],
+      "sections": [
+        {
+          "title": "Digest",
+          "options": [
+            {
+              "id": "algorithm", "label": "Algorithm", "type": "choice", "default": "-sha256",
+              "choices": [ { "value": "-sha256" }, { "value": "-sha384" }, { "value": "-sha512" }, { "value": "-sha1" }, { "value": "-md5" } ]
+            },
+            { "id": "reverse", "label": "coreutils format (hash  file)", "type": "flag", "flag": "-r" },
+            { "id": "file", "label": "File", "type": "path", "position": 1, "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s_client",
+      "title": "TLS client (s_client)",
+      "description": "openssl s_client: connect to a TLS server and show its certificate chain. Ctrl+C to exit.",
+      "subcommand": ["s_client"],
+      "sections": [
+        {
+          "title": "Connection",
+          "options": [
+            { "id": "connect", "label": "Host:port", "type": "text", "flag": "-connect", "required": true, "placeholder": "example.com:443" },
+            { "id": "servername", "label": "SNI server name", "type": "text", "flag": "-servername" },
+            { "id": "showcerts", "label": "Show the full chain", "type": "flag", "flag": "-showcerts" },
+            { "id": "brief", "label": "Brief summary", "type": "flag", "flag": "-brief" },
+            {
+              "id": "tlsVersion", "label": "TLS version", "type": "choice",
+              "choices": [ { "value": "-tls1_2", "label": "TLS 1.2 only" }, { "value": "-tls1_3", "label": "TLS 1.3 only" } ]
+            },
+            { "id": "alpn", "label": "ALPN protocols", "type": "text", "flag": "-alpn", "placeholder": "h2,http/1.1" },
+            { "id": "starttls", "label": "STARTTLS", "type": "choice", "flag": "-starttls", "choices": [ { "value": "smtp" }, { "value": "imap" }, { "value": "pop3" }, { "value": "ftp" } ] }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Self-signed cert for localhost", "description": "RSA 4096, one year, SAN for localhost.", "mode": "selfsigned",
+      "values": { "newkey": "rsa:4096", "keyout": "key.pem", "nodes": "true", "subj": "/CN=localhost", "addext": "subjectAltName=DNS:localhost,IP:127.0.0.1", "days": "365", "digest": "-sha256", "out": "cert.pem" }
+    },
+    { "name": "CSR with a new key", "description": "", "mode": "csr", "values": { "newkey": "rsa:2048", "keyout": "server.key", "nodes": "true", "subj": "/C=US/O=Example Inc/CN=www.example.com", "out": "server.csr" } },
+    { "name": "PEM to PFX", "description": "", "mode": "pem2pfx", "values": { "in": "cert.pem", "inkey": "key.pem", "name": "My certificate", "out": "cert.pfx" } },
+    { "name": "PFX to PEM (unencrypted key)", "description": "", "mode": "pfx2pem", "values": { "in": "cert.pfx", "nodes": "true", "out": "cert.pem" } },
+    { "name": "Inspect certificate", "description": "", "mode": "inspect", "values": { "in": "cert.pem", "text": "true", "noout": "true" } },
+    { "name": "Expiry dates", "description": "", "mode": "inspect", "values": { "in": "cert.pem", "subject": "true", "dates": "true", "noout": "true" } },
+    { "name": "SHA-256 fingerprint of a .cer", "description": "", "mode": "inspect", "values": { "in": "cert.cer", "inform": "DER", "fingerprint": "true", "fingerprintDigest": "-sha256", "noout": "true" } },
+    { "name": "EC P-256 key", "description": "", "mode": "genkey", "values": { "algorithm": "EC", "pkeyopt": "ec_paramgen_curve:P-256", "out": "ec.key" } },
+    { "name": "RSA 4096 key", "description": "", "mode": "genkey", "values": { "algorithm": "RSA", "pkeyopt": "rsa_keygen_bits:4096", "out": "rsa.key" } },
+    { "name": "SHA-256 of a file", "description": "", "mode": "digest", "values": { "file": "download.iso" } },
+    { "name": "Check a server certificate", "description": "", "mode": "s_client", "values": { "connect": "example.com:443", "servername": "example.com", "brief": "true" } }
+  ]
+}

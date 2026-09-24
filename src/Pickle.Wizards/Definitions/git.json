@@ -1,0 +1,294 @@
+{
+  "id": "git",
+  "title": "Git",
+  "description": "Common git commands: commit, branches, rebase, stash, log, reset and clone.",
+  "command": "git",
+  "aliases": ["git.exe"],
+  "wingetId": "Git.Git",
+  "homepage": "https://git-scm.com/docs",
+  "sections": [
+    {
+      "title": "Global",
+      "description": "Options for git itself (placed before the subcommand).",
+      "options": [
+        { "id": "directory", "label": "Run in directory", "type": "path", "flag": "-C" },
+        { "id": "config", "label": "Config overrides", "type": "keyValueList", "flag": "-c", "keyValueSeparator": "=", "placeholder": "core.autocrlf=false" },
+        { "id": "noPager", "label": "No pager", "type": "flag", "flag": "--no-pager" }
+      ]
+    }
+  ],
+  "modes": [
+    {
+      "id": "commit",
+      "title": "commit",
+      "description": "Record staged changes.",
+      "subcommand": ["commit"],
+      "sections": [
+        {
+          "title": "Commit",
+          "options": [
+            { "id": "message", "label": "Message", "type": "list", "flag": "-m", "flagAliases": ["--message"], "description": "One paragraph per line (the first line is the subject). Empty opens the editor." },
+            { "id": "all", "label": "Stage modified and deleted files", "type": "flag", "flag": "-a", "flagAliases": ["--all"] },
+            { "id": "amend", "label": "Amend the last commit", "type": "flag", "flag": "--amend", "warning": "Rewrites the last commit; don't amend commits that were already pushed." },
+            { "id": "noEdit", "label": "Keep the message", "type": "flag", "flag": "--no-edit", "dependsOn": "amend" },
+            { "id": "allowEmpty", "label": "Allow empty commit", "type": "flag", "flag": "--allow-empty" },
+            { "id": "fixup", "label": "Fixup for commit", "type": "text", "flag": "--fixup", "placeholder": "abc1234" },
+            { "id": "author", "label": "Author", "type": "text", "flag": "--author", "placeholder": "Name <email@example.com>" },
+            { "id": "date", "label": "Date", "type": "text", "flag": "--date" },
+            { "id": "signoff", "label": "Add Signed-off-by", "type": "flag", "flag": "-s", "flagAliases": ["--signoff"] },
+            { "id": "gpgSign", "label": "GPG-sign", "type": "flag", "flag": "-S", "flagAliases": ["--gpg-sign"] },
+            { "id": "noVerify", "label": "Skip hooks", "type": "flag", "flag": "--no-verify", "flagAliases": ["-n"], "warning": "Skips the pre-commit and commit-msg hooks (linters, tests)." },
+            { "id": "paths", "label": "Only these paths", "type": "list", "flag": "--", "position": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "branch",
+      "title": "branch",
+      "description": "List, create, rename or delete branches.",
+      "subcommand": ["branch"],
+      "sections": [
+        {
+          "title": "Branch",
+          "options": [
+            { "id": "all", "label": "List local and remote", "type": "flag", "flag": "-a", "flagAliases": ["--all"] },
+            { "id": "remotes", "label": "List remote branches", "type": "flag", "flag": "-r", "flagAliases": ["--remotes"] },
+            { "id": "verbose", "label": "Show last commit and upstream", "type": "flag", "flag": "-vv" },
+            { "id": "merged", "label": "Only merged branches", "type": "flag", "flag": "--merged" },
+            { "id": "contains", "label": "Containing commit", "type": "text", "flag": "--contains" },
+            { "id": "delete", "label": "Delete (if merged)", "type": "flag", "flag": "-d", "flagAliases": ["--delete"] },
+            { "id": "forceDelete", "label": "Force delete", "type": "flag", "flag": "-D", "warning": "Deletes the branch even if its commits aren't merged anywhere." },
+            { "id": "move", "label": "Rename", "type": "flag", "flag": "-m", "flagAliases": ["--move"] },
+            { "id": "setUpstream", "label": "Set upstream", "type": "text", "flag": "-u", "flagAliases": ["--set-upstream-to"], "placeholder": "origin/main" },
+            { "id": "name", "label": "Branch name", "type": "positional", "position": 1, "placeholder": "feature/login" },
+            { "id": "startPoint", "label": "Start point / new name", "type": "positional", "position": 2, "placeholder": "main" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "switch",
+      "title": "switch",
+      "description": "Switch branches (optionally creating one).",
+      "subcommand": ["switch"],
+      "sections": [
+        {
+          "title": "Switch",
+          "options": [
+            { "id": "create", "label": "Create the branch", "type": "flag", "flag": "-c", "flagAliases": ["--create"] },
+            { "id": "forceCreate", "label": "Create or reset the branch", "type": "flag", "flag": "-C", "flagAliases": ["--force-create"], "warning": "Resets the branch to the start point if it already exists." },
+            { "id": "detach", "label": "Detached HEAD", "type": "flag", "flag": "--detach", "flagAliases": ["-d"] },
+            { "id": "track", "label": "Track the start point", "type": "flag", "flag": "-t", "flagAliases": ["--track"] },
+            { "id": "discardChanges", "label": "Discard local changes", "type": "flag", "flag": "--discard-changes", "warning": "Throws away uncommitted changes." },
+            { "id": "branch", "label": "Branch", "type": "positional", "position": 1, "required": true, "placeholder": "main" },
+            { "id": "startPoint", "label": "Start point", "type": "positional", "position": 2, "placeholder": "origin/main" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rebase",
+      "title": "rebase",
+      "description": "Reapply commits on top of another base.",
+      "subcommand": ["rebase"],
+      "sections": [
+        {
+          "title": "Rebase",
+          "options": [
+            { "id": "interactive", "label": "Interactive", "type": "flag", "flag": "-i", "flagAliases": ["--interactive"] },
+            { "id": "onto", "label": "Onto", "type": "text", "flag": "--onto" },
+            { "id": "autosquash", "label": "Autosquash fixups", "type": "flag", "flag": "--autosquash" },
+            { "id": "autostash", "label": "Autostash", "type": "flag", "flag": "--autostash" },
+            { "id": "rebaseMerges", "label": "Keep merge commits", "type": "flag", "flag": "--rebase-merges", "flagAliases": ["-r"] },
+            {
+              "id": "control", "label": "In-progress rebase", "type": "choice",
+              "choices": [
+                { "value": "--continue", "label": "Continue" }, { "value": "--skip", "label": "Skip commit" },
+                { "value": "--abort", "label": "Abort" }, { "value": "--edit-todo", "label": "Edit todo list" }
+              ]
+            },
+            { "id": "upstream", "label": "Upstream", "type": "positional", "position": 1, "placeholder": "origin/main or HEAD~3" },
+            { "id": "branch", "label": "Branch", "type": "positional", "position": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stash",
+      "title": "stash push",
+      "description": "Save local changes and clean the working tree.",
+      "subcommand": ["stash", "push"],
+      "sections": [
+        {
+          "title": "Stash",
+          "options": [
+            { "id": "message", "label": "Message", "type": "text", "flag": "-m", "flagAliases": ["--message"] },
+            { "id": "includeUntracked", "label": "Include untracked files", "type": "flag", "flag": "-u", "flagAliases": ["--include-untracked"] },
+            { "id": "all", "label": "Include ignored files too", "type": "flag", "flag": "-a", "flagAliases": ["--all"] },
+            { "id": "keepIndex", "label": "Keep staged changes", "type": "flag", "flag": "-k", "flagAliases": ["--keep-index"] },
+            { "id": "staged", "label": "Only staged changes", "type": "flag", "flag": "-S", "flagAliases": ["--staged"] },
+            { "id": "paths", "label": "Only these paths", "type": "list", "flag": "--", "position": 1 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stash-pop",
+      "title": "stash pop",
+      "description": "Apply a stash and remove it.",
+      "subcommand": ["stash", "pop"],
+      "sections": [
+        {
+          "title": "Stash",
+          "options": [
+            { "id": "index", "label": "Restore the index too", "type": "flag", "flag": "--index" },
+            { "id": "stash", "label": "Stash", "type": "positional", "position": 1, "placeholder": "stash@{0}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stash-apply",
+      "title": "stash apply",
+      "description": "Apply a stash and keep it.",
+      "subcommand": ["stash", "apply"],
+      "sections": [
+        {
+          "title": "Stash",
+          "options": [
+            { "id": "index", "label": "Restore the index too", "type": "flag", "flag": "--index" },
+            { "id": "stash", "label": "Stash", "type": "positional", "position": 1, "placeholder": "stash@{0}" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stash-list",
+      "title": "stash list",
+      "description": "List stashes.",
+      "subcommand": ["stash", "list"],
+      "sections": []
+    },
+    {
+      "id": "stash-drop",
+      "title": "stash drop",
+      "description": "Delete a stash.",
+      "subcommand": ["stash", "drop"],
+      "sections": [
+        {
+          "title": "Stash",
+          "options": [
+            { "id": "stash", "label": "Stash", "type": "positional", "position": 1, "placeholder": "stash@{0}", "warning": "Dropped stashes are hard to recover." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "log",
+      "title": "log",
+      "description": "Show commit history.",
+      "subcommand": ["log"],
+      "sections": [
+        {
+          "title": "Format",
+          "options": [
+            { "id": "oneline", "label": "One line per commit", "type": "flag", "flag": "--oneline" },
+            { "id": "graph", "label": "Graph", "type": "flag", "flag": "--graph" },
+            { "id": "decorate", "label": "Show refs", "type": "flag", "flag": "--decorate" },
+            { "id": "stat", "label": "Changed files (stat)", "type": "flag", "flag": "--stat" },
+            { "id": "patch", "label": "Show patches", "type": "flag", "flag": "-p", "flagAliases": ["--patch"] },
+            { "id": "format", "label": "Pretty format", "type": "text", "flag": "--format", "valueStyle": "equals", "placeholder": "%h %an %ar %s" }
+          ]
+        },
+        {
+          "title": "Filter",
+          "options": [
+            { "id": "all", "label": "All refs", "type": "flag", "flag": "--all" },
+            { "id": "maxCount", "label": "Max commits", "type": "number", "flag": "-n", "flagAliases": ["--max-count"], "validation": "^\\d+$" },
+            { "id": "author", "label": "Author", "type": "text", "flag": "--author" },
+            { "id": "grep", "label": "Message contains", "type": "text", "flag": "--grep" },
+            { "id": "since", "label": "Since", "type": "text", "flag": "--since", "placeholder": "2 weeks ago" },
+            { "id": "until", "label": "Until", "type": "text", "flag": "--until" },
+            { "id": "follow", "label": "Follow renames (one file)", "type": "flag", "flag": "--follow" },
+            { "id": "revision", "label": "Revision range", "type": "positional", "position": 1, "placeholder": "main..feature" },
+            { "id": "paths", "label": "Paths", "type": "list", "flag": "--", "position": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reset",
+      "title": "reset",
+      "description": "Move HEAD (and optionally the index and working tree).",
+      "subcommand": ["reset"],
+      "sections": [
+        {
+          "title": "Reset",
+          "options": [
+            {
+              "id": "mode", "label": "Mode", "type": "choice", "default": "--mixed",
+              "choices": [
+                { "value": "--soft", "label": "soft (keep index and files)" },
+                { "value": "--mixed", "label": "mixed (keep files, reset index)" },
+                { "value": "--hard", "label": "hard (discard everything)", "warning": "Permanently discards uncommitted changes to tracked files." },
+                { "value": "--keep", "label": "keep (abort if local changes conflict)" },
+                { "value": "--merge", "label": "merge" }
+              ]
+            },
+            { "id": "quiet", "label": "Quiet", "type": "flag", "flag": "-q", "flagAliases": ["--quiet"] },
+            { "id": "commit", "label": "Commit", "type": "positional", "position": 1, "placeholder": "HEAD~1" },
+            { "id": "paths", "label": "Paths (unstage)", "type": "list", "flag": "--", "position": 2 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clone",
+      "title": "clone",
+      "description": "Clone a repository.",
+      "subcommand": ["clone"],
+      "sections": [
+        {
+          "title": "Clone",
+          "options": [
+            { "id": "branch", "label": "Branch", "type": "text", "flag": "-b", "flagAliases": ["--branch"] },
+            { "id": "depth", "label": "Depth (shallow)", "type": "number", "flag": "--depth", "validation": "^\\d+$" },
+            { "id": "singleBranch", "label": "Single branch", "type": "flag", "flag": "--single-branch" },
+            {
+              "id": "filter", "label": "Partial clone filter", "type": "choice", "flag": "--filter", "valueStyle": "equals",
+              "choices": [ { "value": "blob:none", "label": "No blobs (fetch on demand)" }, { "value": "tree:0", "label": "No trees" } ]
+            },
+            { "id": "recurseSubmodules", "label": "Clone submodules", "type": "flag", "flag": "--recurse-submodules" },
+            { "id": "origin", "label": "Remote name", "type": "text", "flag": "-o", "flagAliases": ["--origin"] },
+            { "id": "bare", "label": "Bare", "type": "flag", "flag": "--bare" },
+            { "id": "mirror", "label": "Mirror", "type": "flag", "flag": "--mirror" },
+            { "id": "repository", "label": "Repository", "type": "positional", "position": 1, "required": true, "placeholder": "https://github.com/user/repo.git" },
+            { "id": "directory", "label": "Directory", "type": "path", "position": 2 }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Commit all tracked changes", "description": "Stage modified files and commit.", "mode": "commit", "values": { "all": "true", "message": "Fix typo in README" } },
+    { "name": "Commit with subject and body", "description": "Two -m paragraphs.", "mode": "commit", "values": { "message": "Add login page\nIncludes form validation and tests." } },
+    { "name": "Amend, keep message", "description": "Add staged changes to the last commit.", "mode": "commit", "values": { "amend": "true", "noEdit": "true" } },
+    { "name": "New branch from origin/main", "description": "Create and switch.", "mode": "switch", "values": { "create": "true", "branch": "feature/login", "startPoint": "origin/main" } },
+    { "name": "Delete merged branch", "description": "", "mode": "branch", "values": { "delete": "true", "name": "feature/old" } },
+    { "name": "Branches with upstream info", "description": "", "mode": "branch", "values": { "all": "true", "verbose": "true" } },
+    { "name": "Interactive rebase (last 5)", "description": "Squash, reorder or edit recent commits.", "mode": "rebase", "values": { "interactive": "true", "autosquash": "true", "upstream": "HEAD~5" } },
+    { "name": "Continue rebase", "description": "", "mode": "rebase", "values": { "control": "--continue" } },
+    { "name": "Stash including untracked", "description": "", "mode": "stash", "values": { "includeUntracked": "true", "message": "wip: experiments" } },
+    { "name": "Pop latest stash", "description": "", "mode": "stash-pop", "values": {} },
+    { "name": "Apply a specific stash", "description": "", "mode": "stash-apply", "values": { "stash": "stash@{1}" } },
+    { "name": "Graph of all branches", "description": "", "mode": "log", "values": { "oneline": "true", "graph": "true", "decorate": "true", "all": "true", "maxCount": "30" } },
+    { "name": "History of a file", "description": "", "mode": "log", "values": { "follow": "true", "patch": "true", "paths": "src/Program.cs" } },
+    { "name": "My commits this week", "description": "", "mode": "log", "values": { "author": "me@example.com", "since": "1 week ago", "format": "%h %ad %s" } },
+    { "name": "Undo last commit, keep changes", "description": "", "mode": "reset", "values": { "mode": "--soft", "commit": "HEAD~1" } },
+    { "name": "Discard all local changes", "description": "", "mode": "reset", "values": { "mode": "--hard", "commit": "HEAD" } },
+    { "name": "Shallow clone", "description": "Latest commit only.", "mode": "clone", "values": { "depth": "1", "repository": "https://github.com/PowerShell/PowerShell.git" } },
+    { "name": "Partial clone", "description": "History without file contents; blobs download on demand.", "mode": "clone", "values": { "filter": "blob:none", "repository": "https://github.com/PowerShell/PowerShell.git", "directory": "pwsh" } },
+    { "name": "Log in another folder", "description": "", "mode": "log", "values": { "directory": "C:\\src\\project", "oneline": "true", "maxCount": "10" } }
+  ]
+}

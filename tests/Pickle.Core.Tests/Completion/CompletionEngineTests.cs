@@ -42,12 +42,13 @@ public class CompletionEngineTests
         t.Runtime.Engine.SetLocation(dir);
 
         var set = await Complete(t, "Get-Content ./alph");
-        Assert.Equal(["./alpha.txt", "./alphabet.md"], set.Items.Select(i => i.CompletionText));
+        var sep = Path.DirectorySeparatorChar;
+        Assert.Equal([$".{sep}alpha.txt", $".{sep}alphabet.md"], set.Items.Select(i => i.CompletionText));
         Assert.All(set.Items, i => Assert.Equal(CompletionKind.File, i.Kind));
         Assert.All(set.Items, i => Assert.Null(i.Description));
 
         var dirs = await Complete(t, "Set-Location ./al");
-        Assert.Contains(dirs.Items, i => i.CompletionText == "./alps" && i.Kind == CompletionKind.Directory);
+        Assert.Contains(dirs.Items, i => i.CompletionText == $".{sep}alps" && i.Kind == CompletionKind.Directory);
     }
 
     [Fact]

@@ -85,18 +85,24 @@ public class HistoryCommandTests
         Assert.Equal(["git clone https://example.com/r.git", "dotnet build", "git status"], t.Run("(Get-PickleHistory).CommandLine"));
         Assert.Equal(["git status"], t.Run("(Get-PickleHistory -Count 1).CommandLine"));
         Assert.Equal(["git status", "git clone https://example.com/r.git"], t.Run("(Get-PickleHistory git).CommandLine"));
-        Assert.Equal(["dotnet build"], t.Run("(Get-PickleHistory -Directory '/work/app').CommandLine"));
+        var inApp = await t.Runtime.Shell.InvokeAsync(
+            "param($d) (Get-PickleHistory -Directory $d).CommandLine",
+            new Dictionary<string, object?> { ["d"] = AppDir });
+        Assert.Equal(["dotnet build"], inApp.Output.Select(o => o.ToString()));
         Assert.Equal(["git status"], t.Run("(Get-PickleHistory -Query stat -Count 1).CommandLine"));
         Assert.IsType<HistoryEntry>((await t.Runtime.Shell.InvokeAsync("Get-PickleHistory -Count 1")).Output[0].BaseObject);
     }
+
+    private static readonly string WorkDir = Path.Combine(Path.GetTempPath(), "pickle-w2-work");
+    private static readonly string AppDir = Path.Combine(WorkDir, "app");
 
     private static TestPickle Seeded()
     {
         var t = TestPickle.Create(width: 120, height: 30, start: true);
         var history = t.Runtime.History;
-        Add(history, "git clone https://example.com/r.git", "/work", true);
-        Add(history, "dotnet build", "/work/app", false);
-        Add(history, "git status", "/work", true);
+        Add(history, "git clone https://example.com/r.git", WorkDir, true);
+        Add(history, "dotnet build", AppDir, false);
+        Add(history, "git status", WorkDir, true);
         return t;
     }
 

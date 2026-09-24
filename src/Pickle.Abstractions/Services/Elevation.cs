@@ -20,10 +20,18 @@ public enum ElevatedOperationKind
 
     /// <summary>Register a scheduled task that runs with highest privileges. Arguments: [serialized ScheduledTaskDefinition JSON].</summary>
     TaskRegisterElevated,
+
+    /// <summary>Uninstall winget packages. Arguments: package ids (validated like <see cref="WingetUpgrade"/>; no "--all").</summary>
+    WingetUninstall,
 }
 
 public sealed record ElevatedRequest(ElevatedOperationKind Kind, IReadOnlyList<string> Arguments);
 
+/// <summary>
+/// The result of one elevated operation. <c>Output</c> carries extra detail: the full program output for winget and
+/// source-repair operations, a JSON summary for <see cref="ElevatedOperationKind.WindowsUpdateInstall"/> (trimmed to
+/// fit the helper's message size limit).
+/// </summary>
 public sealed record ElevatedResponse(bool Success, string Message, int ExitCode = 0, string? Output = null);
 
 public interface IElevationBroker

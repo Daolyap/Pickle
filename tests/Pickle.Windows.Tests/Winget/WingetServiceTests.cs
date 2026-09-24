@@ -125,6 +125,71 @@ public class WingetServiceTests
     }
 
     [Fact]
+    public async Task RepairRunsTheFixedScriptInWindowsPowerShellAndReturnsItsOutput()
+    {
+        const string PowerShell = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
+        var runner = new FakeProcessRunner();
+        var service = new WingetService(new NullShell(), () => null, new ListLogger(), runner, () => Exe, isSupported: true, () => PowerShell);
+        runner.Replies["-NoProfile"] = new ProcessResult(1, WingetSourceRepairTests.InUse);
+
+        var result = await service.RepairSourceAsync(elevated: false);
+
+        Assert.False(result.Success);
+        Assert.Contains("in use", result.Message, StringComparison.Ordinal);
+        Assert.Contains("Deployment failed with HRESULT: 0x80073D02", result.Output, StringComparison.Ordinal);
+        var call = Assert.Single(runner.Calls);
+        Assert.Equal(PowerShell, call.File);
+        Assert.Equal(WingetSourceRepair.Arguments(), call.Args);
+        Assert.True(runner.Environments.Single()!.ContainsKey("PSModulePath"));
+    }
+
+    [Fact]
+    public async Task ElevatedRepairCarriesTheHelpersOutput()
+    {
+        var (service, _, broker) = Create();
+        broker.Respond = _ => new ElevatedResponse(false, "Repairing the winget source failed: The source package is in use. (0x80073D02)", unchecked((int)0x80073D02), "Add-AppxPackage : Deployment failed");
+
+        var result = await service.RepairSourceAsync(elevated: true);
+
+        Assert.False(result.Success);
+        Assert.Equal("Repairing the winget source failed: The source package is in use. (0x80073D02)", result.Message);
+        Assert.Equal("Add-AppxPackage : Deployment failed", result.Output);
+    }
+
+    [Fact]
+    public async Task ElevatedUninstallIsOneBrokerRequest()
+    {
+        var (service, runner, broker) = Create();
+        var result = await service.UninstallElevatedAsync(["Git.Git", "git.git", "7zip.7zip"]);
+
+        Assert.True(result.Success);
+        Assert.Empty(runner.Calls);
+        var request = Assert.Single(broker.Requests);
+        Assert.Equal(ElevatedOperationKind.WingetUninstall, request.Kind);
+        Assert.Equal(["Git.Git", "7zip.7zip"], request.Arguments);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UninstallElevatedAsync(["Git.Git", "x; calc"]));
+        Assert.Single(broker.Requests);
+
+        broker.DeclineUac = true;
+        var declined = await service.UninstallElevatedAsync(["Git.Git"]);
+        Assert.False(declined.Success);
+        Assert.Contains("declined", declined.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CliResultsCarryACleanTranscript()
+    {
+        var (service, runner, _) = Create();
+        runner.Replies["uninstall"] = new ProcessResult(unchecked((int)0x8A150101), "Found Git [Git.Git]\r\n  -\r\n  \\\r\n  ██████  50%\r\nStarting package uninstall...\r\nThe application is currently running.\r\n");
+
+        var result = await service.UninstallAsync("Git.Git");
+
+        Assert.False(result.Success);
+        Assert.Equal("Found Git [Git.Git]\nStarting package uninstall...\nThe application is currently running.", result.Output);
+    }
+
+    [Fact]
     public async Task UnavailableAndUnsupportedBackends()
     {
         var (service, _, _) = Create(withExe: false);

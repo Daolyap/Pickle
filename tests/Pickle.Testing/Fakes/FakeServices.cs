@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
 
@@ -51,6 +52,9 @@ public sealed class FakeWingetService : IWingetService
     public List<WingetSource> Sources { get; } = [new("winget", "https://cdn.winget.microsoft.com/cache", "Microsoft.PreIndexed.Package")];
     public List<string> Calls { get; } = [];
 
+    /// <summary>Overrides the result of a mutating call, keyed by the recorded call (e.g. "repair-source elevated").</summary>
+    public Func<string, WingetOperationResult?>? Result { get; set; }
+
     public Task<WingetBackend> GetBackendAsync(CancellationToken cancellationToken = default) => Task.FromResult(Backend);
     public Task<WingetOperationResult> InstallClientModuleAsync(CancellationToken cancellationToken = default) => Ok("install-module");
     public Task<IReadOnlyList<WingetPackage>> ListInstalledAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<WingetPackage>>(Installed);
@@ -65,14 +69,21 @@ public sealed class FakeWingetService : IWingetService
     public Task<WingetOperationResult> InstallAsync(string id, WingetInstallOptions options, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("install " + id, progress);
     public Task<WingetOperationResult> UpgradeAsync(string id, WingetInstallOptions options, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("upgrade " + id, progress);
     public Task<WingetOperationResult> UninstallAsync(string id, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("uninstall " + id, progress);
+    public Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        Ok("uninstall-elevated " + string.Join(',', ids), progress);
     public Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<WingetSource>>(Sources);
     public Task<WingetOperationResult> RepairSourceAsync(bool elevated, CancellationToken cancellationToken = default) => Ok(elevated ? "repair-source elevated" : "repair-source");
 
     private Task<WingetOperationResult> Ok(string call, IProgress<WingetProgress>? progress = null)
     {
-        Calls.Add(call);
-        progress?.Report(new WingetProgress("Done", 100));
-        return Task.FromResult(new WingetOperationResult(true, call + " ok", 0));
+        lock (Calls)
+        {
+            Calls.Add(call);
+        }
+
+        var result = Result?.Invoke(call) ?? new WingetOperationResult(true, call + " ok", 0);
+        progress?.Report(new WingetProgress(result.Success ? "Done" : "Failed", result.Success ? 100 : null));
+        return Task.FromResult(result);
     }
 }
 
@@ -83,10 +94,67 @@ public sealed class FakeWindowsUpdateService : IWindowsUpdateService
     public List<WindowsUpdateInfo> Available { get; } = [];
     public List<WindowsUpdateHistoryEntry> History { get; } = [];
     public List<string> Installed { get; } = [];
+    public List<WindowsUpdateQuery> Queries { get; } = [];
+
+    /// <summary>
+    /// Makes searches slow like a real online scan: the result arrives after this delay from another thread, which
+    /// reports progress every few milliseconds meanwhile.
+    /// </summary>
+    public TimeSpan SearchDelay { get; set; }
+
+    /// <summary>Like the Windows Update Agent's synchronous search: cancelling the token doesn't stop it.</summary>
+    public bool IgnoreCancellation { get; set; }
+
+    public int ProgressReports => Volatile.Read(ref _progressReports);
+
+    private int _progressReports;
 
     public Task<WindowsUpdateStatus> GetStatusAsync(CancellationToken cancellationToken = default) => Task.FromResult(Status);
+
     public Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<WindowsUpdateInfo>>([.. Available.Where(u => (query.IncludeDrivers || !u.IsDriver) && (query.IncludeOptional || !u.IsOptional))]);
+        SearchAsync(query, null, cancellationToken);
+
+    public Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, IProgress<WindowsUpdateProgress>? progress, CancellationToken cancellationToken = default)
+    {
+        lock (Queries)
+        {
+            Queries.Add(query);
+        }
+
+        IReadOnlyList<WindowsUpdateInfo> result = [.. Available.Where(u => (query.IncludeDrivers || !u.IsDriver) && (query.IncludeOptional || !u.IsOptional))];
+        if (SearchDelay <= TimeSpan.Zero)
+        {
+            return Task.FromResult(result);
+        }
+
+        var tcs = new TaskCompletionSource<IReadOnlyList<WindowsUpdateInfo>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var delay = SearchDelay;
+        var ignoreCancellation = IgnoreCancellation;
+        var thread = new Thread(() =>
+        {
+            var clock = Stopwatch.StartNew();
+            while (clock.Elapsed < delay)
+            {
+                if (!ignoreCancellation && cancellationToken.IsCancellationRequested)
+                {
+                    tcs.TrySetCanceled(cancellationToken);
+                    return;
+                }
+
+                progress?.Report(new WindowsUpdateProgress("Searching", $"{clock.ElapsedMilliseconds} ms", null));
+                Interlocked.Increment(ref _progressReports);
+                Thread.Sleep(5);
+            }
+
+            tcs.TrySetResult(result);
+        })
+        {
+            IsBackground = true,
+            Name = "fake-wua-search",
+        };
+        thread.Start();
+        return tcs.Task;
+    }
     public Task<WindowsUpdateInstallResult> InstallAsync(IReadOnlyList<string> updateIds, IProgress<WindowsUpdateProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         Installed.AddRange(updateIds);
@@ -149,6 +217,9 @@ public sealed class FakeElevationBroker : IElevationBroker
     public bool DeclineUac { get; set; }
     public List<ElevatedRequest> Requests { get; } = [];
 
+    /// <summary>Custom responses (default: success with "&lt;Kind&gt; ok").</summary>
+    public Func<ElevatedRequest, ElevatedResponse>? Respond { get; set; }
+
     public Task<IReadOnlyList<ElevatedResponse>> RunAsync(IReadOnlyList<ElevatedRequest> batch, IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
         if (DeclineUac)
@@ -157,7 +228,7 @@ public sealed class FakeElevationBroker : IElevationBroker
         }
 
         Requests.AddRange(batch);
-        return Task.FromResult<IReadOnlyList<ElevatedResponse>>([.. batch.Select(b => new ElevatedResponse(true, b.Kind + " ok"))]);
+        return Task.FromResult<IReadOnlyList<ElevatedResponse>>([.. batch.Select(b => Respond?.Invoke(b) ?? new ElevatedResponse(true, b.Kind + " ok"))]);
     }
 }
 

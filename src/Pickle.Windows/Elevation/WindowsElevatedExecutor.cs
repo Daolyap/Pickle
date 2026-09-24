@@ -21,16 +21,16 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
 
     public async Task<ElevatedResponse> RepairWingetSourceAsync(IProgress<string> progress, CancellationToken cancellationToken)
     {
-        progress.Report("Re-registering the winget source package for all users…");
+        progress.Report($"Re-registering the winget source package for {Environment.UserDomainName}\\{Environment.UserName} (elevated)…");
         var result = await _runner.RunAsync(
             WingetService.WindowsPowerShellPath,
-            ["-NoProfile", "-NonInteractive", "-Command", WingetService.RepairSourceCommand],
+            WingetSourceRepair.Arguments(),
             null,
             ElevatedOperations.TimeoutFor(ElevatedOperationKind.WingetRepairSource),
-            cancellationToken).ConfigureAwait(false);
-        return result.ExitCode == 0
-            ? new ElevatedResponse(true, "The winget source was repaired (elevated).")
-            : new ElevatedResponse(false, "Repairing the winget source failed: " + (WingetCliParser.LastMessage(result.Output) ?? "unknown error"), result.ExitCode);
+            cancellationToken,
+            WingetSourceRepair.Environment()).ConfigureAwait(false);
+        var outcome = WingetSourceRepair.Interpret(result.ExitCode, result.Output, result.TimedOut, "for the elevated account");
+        return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0, outcome.Output);
     }
 
     public async Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken)
@@ -47,7 +47,7 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
         var idIndex = arguments.ToList().IndexOf("--id");
         var target = idIndex >= 0 && idIndex + 1 < arguments.Count ? arguments[idIndex + 1] : "all packages";
         var outcome = WingetErrors.FromExitCode(result.TimedOut ? -1 : result.ExitCode, result.Output, arguments[0], target);
-        return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0);
+        return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0, WingetCliParser.Transcript(result.Output));
     }
 
     public async Task<ElevatedResponse> InstallWindowsUpdatesAsync(IReadOnlyList<string> updateIds, IProgress<string> progress, CancellationToken cancellationToken)

@@ -29,6 +29,9 @@ internal static class ElevatedOperations
     private static readonly string[] WingetCommon =
         ["--silent", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"];
 
+    // winget uninstall has no package agreements to accept.
+    private static readonly string[] WingetUninstallCommon = ["--silent", "--accept-source-agreements", "--disable-interactivity"];
+
     /// <summary>Throws <see cref="ArgumentException"/> for anything outside the allowlist.</summary>
     public static ValidatedOperation Validate(ElevatedRequest request)
     {
@@ -61,6 +64,7 @@ internal static class ElevatedOperations
 
             case ElevatedOperationKind.WingetUpgrade:
             case ElevatedOperationKind.WingetInstall:
+            case ElevatedOperationKind.WingetUninstall:
                 if (args.Count == 0)
                 {
                     throw new ArgumentException($"{request.Kind} needs at least one package id.");
@@ -120,6 +124,7 @@ internal static class ElevatedOperations
             ElevatedOperationKind.WingetUpgrade when id is null => ["upgrade", AllPackages, .. WingetCommon],
             ElevatedOperationKind.WingetUpgrade => ["upgrade", "--id", Checked(id), "--exact", .. WingetCommon],
             ElevatedOperationKind.WingetInstall when id is not null => ["install", "--id", Checked(id), "--exact", "--scope", "machine", .. WingetCommon],
+            ElevatedOperationKind.WingetUninstall when id is not null => ["uninstall", "--id", Checked(id), "--exact", .. WingetUninstallCommon],
             _ => throw new ArgumentException($"{kind} does not run winget with a package id."),
         };
 
@@ -127,10 +132,17 @@ internal static class ElevatedOperations
             WindowsIds.IsValidWingetId(value) ? value : throw new ArgumentException($"'{value}' is not a valid winget package id.");
     }
 
+    private static string Verb(ElevatedOperationKind kind) => kind switch
+    {
+        ElevatedOperationKind.WingetInstall => "Installing",
+        ElevatedOperationKind.WingetUninstall => "Uninstalling",
+        _ => "Upgrading",
+    };
+
     public static TimeSpan TimeoutFor(ElevatedOperationKind kind) => kind switch
     {
         ElevatedOperationKind.WingetRepairSource => TimeSpan.FromMinutes(10),
-        ElevatedOperationKind.WingetUpgrade or ElevatedOperationKind.WingetInstall => TimeSpan.FromHours(2),
+        ElevatedOperationKind.WingetUpgrade or ElevatedOperationKind.WingetInstall or ElevatedOperationKind.WingetUninstall => TimeSpan.FromHours(2),
         ElevatedOperationKind.WindowsUpdateInstall => TimeSpan.FromHours(3),
         ElevatedOperationKind.TaskRegisterElevated => TimeSpan.FromMinutes(2),
         _ => TimeSpan.FromMinutes(1),
@@ -153,18 +165,23 @@ internal static class ElevatedOperations
 
                 case ElevatedOperationKind.WingetUpgrade:
                 case ElevatedOperationKind.WingetInstall:
-                    var responses = new List<ElevatedResponse>();
+                case ElevatedOperationKind.WingetUninstall:
+                    var responses = new List<(string Id, ElevatedResponse Response)>();
                     foreach (var id in operation.Ids)
                     {
-                        progress.Report($"{(operation.Kind == ElevatedOperationKind.WingetInstall ? "Installing" : "Upgrading")} {id}…");
-                        responses.Add(await executor.RunWingetAsync(BuildWingetArguments(operation.Kind, id), progress, timeout.Token).ConfigureAwait(false));
+                        progress.Report($"{Verb(operation.Kind)} {id}…");
+                        responses.Add((id, await executor.RunWingetAsync(BuildWingetArguments(operation.Kind, id), progress, timeout.Token).ConfigureAwait(false)));
                     }
 
-                    var failed = responses.FirstOrDefault(r => !r.Success);
+                    var failed = responses.Select(r => r.Response).FirstOrDefault(r => !r.Success);
+                    var output = string.Join(
+                        Environment.NewLine,
+                        responses.Where(r => !string.IsNullOrWhiteSpace(r.Response.Output)).Select(r => $"── {r.Id} ──{Environment.NewLine}{r.Response.Output!.TrimEnd()}"));
                     return new ElevatedResponse(
                         failed is null,
-                        string.Join(Environment.NewLine, responses.Select(r => r.Message)),
-                        failed?.ExitCode ?? 0);
+                        string.Join(Environment.NewLine, responses.Select(r => r.Response.Message)),
+                        failed?.ExitCode ?? 0,
+                        output.Length == 0 ? null : output);
 
                 case ElevatedOperationKind.WindowsUpdateInstall:
                     return await executor.InstallWindowsUpdatesAsync(operation.Ids, progress, timeout.Token).ConfigureAwait(false);

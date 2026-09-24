@@ -709,7 +709,8 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
                 buffer.Accept();
                 break;
             case PanelResultKind.ChangeDirectory:
-                var cmd = "Set-Location -LiteralPath '" + result.Text.Replace("'", "''", StringComparison.Ordinal) + "'";
+                // SingleQuote also escapes the typographic quotes (‘ ’ ‚ ‛) PowerShell treats as single quotes.
+                var cmd = "Set-Location -LiteralPath " + Translation.PowerShellText.SingleQuote(result.Text);
                 buffer.Replace(cmd, cmd.Length);
                 buffer.Accept();
                 break;

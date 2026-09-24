@@ -120,7 +120,8 @@ public class HistoryAutosuggestTests
 
         index.Suggest("zzz", "/dir/1");
         var best = long.MaxValue;
-        for (var run = 0; run < 5; run++)
+        // Best of many: the suite runs in parallel, so any single run can lose the CPU.
+        for (var run = 0; run < 20; run++)
         {
             var sw = Stopwatch.StartNew();
             Assert.Null(index.Suggest("no-such-prefix", "/dir/3"));

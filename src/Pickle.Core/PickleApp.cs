@@ -90,5 +90,5 @@ public static class PickleApp
     private static string Mode(PickleOptions o) =>
         o.Command is not null ? "command" : o.File is not null ? "file" : o.Headless ? "headless" : "interactive";
 
-    private static string Quote(string s) => "'" + s.Replace("'", "''", StringComparison.Ordinal) + "'";
+    private static string Quote(string s) => Translation.PowerShellText.SingleQuote(s);
 }

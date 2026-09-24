@@ -76,7 +76,11 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   `VirtualTerminal` tests see everything.
 - **No shell-string injection**: pass user values to PowerShell as parameters
   (`InvokeAsync("param($p) ...", new Dictionary<string, object?>{["p"]=value})`) and to processes via
-  `ProcessStartInfo.ArgumentList`.
+  `ProcessStartInfo.ArgumentList`. When generated script text must embed a value, use `PowerShellText.SingleQuote`
+  (PowerShell also treats ‘ ’ ‚ ‛ as quotes — never hand-roll `Replace("'", "''")`).
+- **Never start a program by bare name**: resolve it with `Commands.ExecutableLocator.Find` (absolute PATH entries only;
+  Windows and .NET's Unix resolver would otherwise run a copy planted in the current directory). Automatic git calls
+  go through `GitService`, which also disables repo-configured fsmonitor/filters/textconv.
 - Package versions live only in `Directory.Packages.props`. Don't add packages without need.
 - New config setting: add a property with a default in `Abstractions/Config.cs` (and the JSON schema).
 - New `pk` subcommand: implement `IPickleCommand`, register it in your plugin's/component's `Initialize`.

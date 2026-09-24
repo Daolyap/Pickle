@@ -117,6 +117,23 @@ public sealed class FilesPanelTests : IDisposable
     }
 
     [Theory]
+    [InlineData("alpha.txt", "alpha.txt")]
+    [InlineData(@"C:\Users\me\src", @"C:\Users\me\src")]
+    [InlineData("sub dir/gamma.cs", "'sub dir/gamma.cs'")]
+    [InlineData("-rf", "'-rf'")]
+    [InlineData("x’;Write-Output INJECTED;’", "'x’’;Write-Output INJECTED;’’'")]
+    [InlineData("a‘b‚c‛d", "'a‘‘b‚‚c‛‛d'")]
+    public void QuotedPathsParseBackAsOneLiteralArgument(string path, string expected)
+    {
+        var quoted = FilesPanel.Quote(path);
+        Assert.Equal(expected, quoted);
+        var ast = System.Management.Automation.Language.Parser.ParseInput("Write-Output " + quoted, out _, out var errors);
+        Assert.Empty(errors);
+        var command = Assert.IsType<System.Management.Automation.Language.CommandAst>(Assert.Single(ast.FindAll(a => a is System.Management.Automation.Language.CommandAst, true)));
+        Assert.Equal(path, Assert.IsType<System.Management.Automation.Language.StringConstantExpressionAst>(command.CommandElements[1]).Value);
+    }
+
+    [Theory]
     [InlineData("/work/src/a.cs", "/work", "src/a.cs")]
     [InlineData("/work/my file.txt", "/work", "'my file.txt'")]
     [InlineData("/other/it's.txt", "/work", "'/other/it''s.txt'")]

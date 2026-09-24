@@ -244,10 +244,10 @@ public class GitPanelTests
         var screen = h.Screen();
         Assert.Contains("* 2222222 (HEAD -> main) Sec", screen, StringComparison.Ordinal);
         Assert.Contains("* 1111111 First change", screen, StringComparison.Ordinal);
-        Assert.Equal("show --stat --format=fuller " + Sha2, git.Calls[^1]);
+        Assert.Equal("show --stat --no-ext-diff --no-textconv --format=fuller " + Sha2, git.Calls[^1]);
 
         h.Press(Key.CursorDown);
-        Assert.Equal("show --stat --format=fuller " + Sha1, git.Calls[^1]);
+        Assert.Equal("show --stat --no-ext-diff --no-textconv --format=fuller " + Sha1, git.Calls[^1]);
 
         h.Press(Key.L);
         Assert.Contains("Staged (1)", h.Screen(), StringComparison.Ordinal);
@@ -262,7 +262,7 @@ public class GitPanelTests
 
         h.Press(Key.Z);
         Assert.Contains("stash@{0}  On main: wip", h.Screen(), StringComparison.Ordinal);
-        Assert.Equal("stash show -p --include-untracked --no-color stash@{0}", git.Calls[^1]);
+        Assert.Equal("stash show -p --include-untracked --no-color --no-ext-diff --no-textconv stash@{0}", git.Calls[^1]);
 
         // Every action refreshes, which re-reads the selected stash's patch, so look for the action call itself.
         h.Press(Key.Enter);
@@ -277,7 +277,7 @@ public class GitPanelTests
         h.Prompts.StashAnswer = ("my work", true);
         h.Press(Key.N);
         Assert.Contains("stash push my work", git.Calls);
-        Assert.Equal("stash show -p --include-untracked --no-color stash@{1}", git.Calls[^1]);
+        Assert.Equal("stash show -p --include-untracked --no-color --no-ext-diff --no-textconv stash@{1}", git.Calls[^1]);
     }
 
     [Fact]

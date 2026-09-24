@@ -25,7 +25,7 @@ public static class EditorLauncher
                 continue;
             }
 
-            var exe = findOnPath(parts[0]) ?? (File.Exists(parts[0]) ? parts[0] : null);
+            var exe = findOnPath(parts[0]);
             if (exe is not null)
             {
                 return Create(exe, parts.Skip(1).ToList());
@@ -89,36 +89,7 @@ public static class EditorLauncher
         }
     }
 
-    public static string? FindOnPath(string name)
-    {
-        if (Path.IsPathRooted(name))
-        {
-            return File.Exists(name) ? name : null;
-        }
-
-        var extensions = OperatingSystem.IsWindows()
-            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT").Split(';', StringSplitOptions.RemoveEmptyEntries).Prepend(string.Empty)
-            : [string.Empty];
-        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            foreach (var extension in extensions)
-            {
-                try
-                {
-                    var candidate = Path.Combine(dir, name + extension);
-                    if (File.Exists(candidate) && (extension.Length > 0 || !OperatingSystem.IsWindows() || Path.HasExtension(name)))
-                    {
-                        return candidate;
-                    }
-                }
-                catch (ArgumentException)
-                {
-                }
-            }
-        }
-
-        return null;
-    }
+    public static string? FindOnPath(string name) => ExecutableLocator.Find(name);
 
     private static EditorCommand Create(string exe, List<string> args)
     {

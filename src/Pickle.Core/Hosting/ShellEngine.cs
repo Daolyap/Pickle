@@ -100,7 +100,7 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         MainRunspace.Debugger.DebuggerStop += (_, e) => _runtime.Repl.OnDebuggerStop(e);
 
         // Import the core Pickle module (aliases pk/pickle, helper functions).
-        InvokeSilently($"Import-Module -Name '{Path.Combine(modulesDir, "Pickle", "Pickle.psd1").Replace("'", "''", StringComparison.Ordinal)}' -Global");
+        InvokeSilently("param($path) Import-Module -Name $path -Global", new Dictionary<string, object?> { ["path"] = Path.Combine(modulesDir, "Pickle", "Pickle.psd1") });
         RefreshCwd();
     }
 

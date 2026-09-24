@@ -548,4 +548,21 @@ public class LineEditorTests
             return OverlayKeyResult.Handled;
         }
     }
+
+    [Theory]
+    [InlineData("/tmp/plain")]
+    [InlineData("/tmp/it's")]
+    [InlineData("/tmp/x’; Write-Output INJECTED; ’")]
+    [InlineData("/tmp/a‘b‚c‛d")]
+    public void ChangeDirectoryResultRunsOneSetLocationWithTheLiteralPath(string path)
+    {
+        var buffer = new FakeEditorBuffer();
+        LineEditor.ApplyPanelResult(buffer, new PanelResult(PanelResultKind.ChangeDirectory, path));
+        Assert.True(buffer.Accepted);
+        var ast = System.Management.Automation.Language.Parser.ParseInput(buffer.Text, out _, out var errors);
+        Assert.Empty(errors);
+        var command = Assert.IsType<System.Management.Automation.Language.CommandAst>(Assert.Single(ast.FindAll(a => a is System.Management.Automation.Language.CommandAst, true)));
+        Assert.Equal("Set-Location", command.GetCommandName());
+        Assert.Equal(path, Assert.IsType<System.Management.Automation.Language.StringConstantExpressionAst>(command.CommandElements[^1]).Value);
+    }
 }

@@ -548,4 +548,38 @@ public class GitServiceTests
         repo.CommitAll("again");
         return repo.TryRun("revert", "--no-edit", "HEAD~1");
     }
+
+    [Fact]
+    public async Task CommandsFromTheRepositoryConfigNeverRunForStatusOrDiff()
+    {
+        using var repo = TempRepo.Create();
+        repo.Write("a.txt", "same\n");
+        repo.Write(".gitattributes", "* filter=evil diff=evil\n");
+        repo.CommitAll("init");
+
+        // What an extracted archive's .git/config could contain; git runs these through sh (on Windows too).
+        var marker = Path.Combine(repo.BaseDirectory, "marker").Replace('\\', '/');
+        repo.Run("config", "filter.evil.clean", $"echo clean >> '{marker}'; cat");
+        repo.Run("config", "filter.evil.process", $"sh -c \"echo process >> '{marker}'\"");
+        repo.Run("config", "diff.evil.textconv", $"echo textconv >> '{marker}'; cat");
+        repo.Run("config", "filter.evil.required", "true");
+        repo.Run("config", "core.fsmonitor", $"echo fsmonitor >> '{marker}'");
+
+        // Same size, new mtime: status has to re-read the file (which is when clean filters run).
+        File.SetLastWriteTimeUtc(Path.Combine(repo.Root, "a.txt"), DateTime.UtcNow.AddDays(-1));
+        Assert.Empty(repo.Status().Entries);
+        repo.Write("a.txt", "changed\n");
+        Assert.Equal("a.txt", Assert.Single(repo.Status().Entries).Path);
+        Assert.Contains("+changed", await repo.Git.GetDiffAsync(repo.Root, "a.txt", staged: false), StringComparison.Ordinal);
+
+        Assert.False(File.Exists(marker), File.Exists(marker) ? File.ReadAllText(marker) : null);
+    }
+
+    [Fact]
+    public async Task FilterDriversThatCannotBeOverriddenSkipStatus()
+    {
+        using var repo = TempRepo.Create();
+        repo.Run("config", "filter.a=b.clean", "cat");
+        Assert.Null(await repo.Git.GetStatusAsync(repo.Root));
+    }
 }

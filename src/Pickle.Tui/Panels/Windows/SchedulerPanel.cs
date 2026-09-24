@@ -230,7 +230,17 @@ public sealed class SchedulerPanel : WindowsPanelBase
         }
 
         var folder = _folder;
-        Load(ct => _scheduler.GetTasksAsync(folder, false, ct), ApplyTasks, "loading tasks…");
+        Load(
+            ct => _scheduler.GetTasksAsync(folder, false, ct),
+            tasks =>
+            {
+                // A reload started by an action can finish after the user moved to another folder.
+                if (string.Equals(folder, _folder, StringComparison.OrdinalIgnoreCase))
+                {
+                    ApplyTasks(tasks);
+                }
+            },
+            "loading tasks…");
     }
 
     private void ShowDetails()

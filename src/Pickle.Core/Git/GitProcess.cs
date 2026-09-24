@@ -130,21 +130,9 @@ internal static class GitProcess
     /// </summary>
     public static string? Locate(string? pathVariable = null)
     {
-        pathVariable ??= Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var fileName = OperatingSystem.IsWindows() ? "git.exe" : "git";
-        foreach (var entry in pathVariable.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        if (Commands.ExecutableLocator.Find(OperatingSystem.IsWindows() ? "git.exe" : "git", pathVariable) is { } onPath)
         {
-            var directory = entry.Trim('"');
-            if (!Path.IsPathFullyQualified(directory))
-            {
-                continue;
-            }
-
-            var candidate = Path.Combine(directory, fileName);
-            if (IsExecutableFile(candidate))
-            {
-                return candidate;
-            }
+            return onPath;
         }
 
         if (OperatingSystem.IsWindows())
@@ -167,21 +155,5 @@ internal static class GitProcess
         }
 
         return null;
-    }
-
-    private static bool IsExecutableFile(string path)
-    {
-        if (!File.Exists(path))
-        {
-            return false;
-        }
-
-        if (OperatingSystem.IsWindows())
-        {
-            return true;
-        }
-
-        const UnixFileMode anyExecute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-        return (File.GetUnixFileMode(path) & anyExecute) != 0;
     }
 }

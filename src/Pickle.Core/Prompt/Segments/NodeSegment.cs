@@ -40,7 +40,12 @@ public sealed class NodeVersionProbe
 
     private static async Task<string?> RunAsync(string executable, TimeSpan timeout)
     {
-        var psi = new ProcessStartInfo(executable)
+        if (Commands.ExecutableLocator.Find(executable) is not { } path)
+        {
+            return null;
+        }
+
+        var psi = new ProcessStartInfo(path)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,

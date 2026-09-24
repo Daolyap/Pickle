@@ -35,7 +35,12 @@ public static class ProcessRunner
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        var psi = new ProcessStartInfo(fileName)
+        if (ExecutableLocator.Find(fileName) is not { } executable)
+        {
+            return new ProcessResult(NotFound, string.Empty, $"{fileName} was not found on PATH.");
+        }
+
+        var psi = new ProcessStartInfo(executable)
         {
             UseShellExecute = false,
             RedirectStandardInput = true,

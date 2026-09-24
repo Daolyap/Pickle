@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Pickle.Abstractions;
+using Pickle.Core.Commands;
 
 namespace Pickle.Core.Aliases;
 
@@ -190,11 +191,11 @@ internal static class EditorProcess
 {
     public static int Run(string file)
     {
-        var (exe, args) = Resolve();
+        var (exe, args) = Resolve() ?? throw new InvalidOperationException("No editor found. Set $env:EDITOR (or $env:VISUAL).");
         var psi = new ProcessStartInfo { UseShellExecute = false };
         if (exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || exe.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))
         {
-            psi.FileName = "cmd.exe";
+            psi.FileName = ExecutableLocator.SystemProgram("cmd.exe");
             psi.ArgumentList.Add("/c");
             psi.ArgumentList.Add(exe);
         }
@@ -214,7 +215,7 @@ internal static class EditorProcess
         return process.ExitCode;
     }
 
-    private static (string Exe, List<string> Args) Resolve()
+    private static (string Exe, List<string> Args)? Resolve()
     {
         foreach (var variable in new[] { "VISUAL", "EDITOR" })
         {
@@ -222,21 +223,24 @@ internal static class EditorProcess
             if (!string.IsNullOrWhiteSpace(value))
             {
                 var parts = SplitCommandLine(value);
-                return (FindOnPath(parts[0]) ?? parts[0], parts.Skip(1).ToList());
+                if (parts.Count > 0 && ExecutableLocator.Find(parts[0]) is { } exe)
+                {
+                    return (exe, parts.Skip(1).ToList());
+                }
             }
         }
 
-        if (FindOnPath("code") is { } code)
+        if (ExecutableLocator.Find("code") is { } code)
         {
             return (code, ["--wait"]);
         }
 
         if (OperatingSystem.IsWindows())
         {
-            return ("notepad.exe", []);
+            return (ExecutableLocator.SystemProgram("notepad.exe"), []);
         }
 
-        return (FindOnPath("nano") ?? FindOnPath("vi") ?? "nano", []);
+        return (ExecutableLocator.Find("nano") ?? ExecutableLocator.Find("vi")) is { } terminal ? (terminal, []) : null;
     }
 
     private static List<string> SplitCommandLine(string value)
@@ -274,30 +278,5 @@ internal static class EditorProcess
         }
 
         return parts.Count == 0 ? [value] : parts;
-    }
-
-    private static string? FindOnPath(string name)
-    {
-        if (Path.IsPathRooted(name))
-        {
-            return File.Exists(name) ? name : null;
-        }
-
-        var extensions = OperatingSystem.IsWindows()
-            ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT").Split(';', StringSplitOptions.RemoveEmptyEntries).Prepend(string.Empty)
-            : [string.Empty];
-        foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
-        {
-            foreach (var ext in extensions)
-            {
-                var candidate = Path.Combine(dir, name + ext);
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-        }
-
-        return null;
     }
 }

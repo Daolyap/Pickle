@@ -30,7 +30,7 @@ public sealed partial class GitPanel
                 }, "diff…");
                 break;
             case GitMode.Log when _list.Current?.Tag is GitCommit commit && _git is { } git && IsHex(commit.Sha):
-                Background(ct => git.RunAsync(root, ["show", "--stat", "--format=fuller", commit.Sha], ct), result =>
+                Background(ct => git.RunAsync(root, ["show", "--stat", "--no-ext-diff", "--no-textconv", "--format=fuller", commit.Sha], ct), result =>
                 {
                     if (request == _detailRequest)
                     {
@@ -40,7 +40,7 @@ public sealed partial class GitPanel
                 break;
             case GitMode.Stash when _list.Current?.Tag is GitStash stash && _git is { } git:
                 var name = "stash@{" + stash.Index.ToString(CultureInfo.InvariantCulture) + "}";
-                Background(ct => git.RunAsync(root, ["stash", "show", "-p", "--include-untracked", "--no-color", name], ct), result =>
+                Background(ct => git.RunAsync(root, ["stash", "show", "-p", "--include-untracked", "--no-color", "--no-ext-diff", "--no-textconv", name], ct), result =>
                 {
                     if (request == _detailRequest)
                     {

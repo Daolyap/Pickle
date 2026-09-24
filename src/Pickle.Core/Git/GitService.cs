@@ -44,9 +44,14 @@ public sealed class GitService(IPickleLogger log) : IGitService
             return null;
         }
 
+        if (await RepositoryFilterOverridesAsync(root, cancellationToken).ConfigureAwait(false) is not { } overrides)
+        {
+            return null;
+        }
+
         var result = await ExecAsync(
             root,
-            ["--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash", "-z"],
+            [.. overrides, "--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash", "-z"],
             StatusTimeout,
             cancellationToken).ConfigureAwait(false);
         if (!result.Success)
@@ -76,14 +81,19 @@ public sealed class GitService(IPickleLogger log) : IGitService
         }
 
         // Fixed prefixes keep patches appliable whatever diff.noprefix / diff.mnemonicPrefix say.
-        args.AddRange(["--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/"]);
+        args.AddRange(["--no-color", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/"]);
         if (file is not null)
         {
             args.Add("--");
             args.Add(file);
         }
 
-        var result = await ExecAsync(root, args, LocalTimeout, cancellationToken).ConfigureAwait(false);
+        if (await RepositoryFilterOverridesAsync(root, cancellationToken).ConfigureAwait(false) is not { } overrides)
+        {
+            return string.Empty;
+        }
+
+        var result = await ExecAsync(root, [.. overrides, .. args], LocalTimeout, cancellationToken).ConfigureAwait(false);
         if (!result.Success)
         {
             log.Debug(Category, $"diff failed: {result.Error.Trim()}");
@@ -386,9 +396,10 @@ public sealed class GitService(IPickleLogger log) : IGitService
             return Task.FromResult(new GitProcessResult(-1, string.Empty, NotFoundMessage, false));
         }
 
-        // quotepath=off: UTF-8 paths verbatim. literal-pathspecs (only where paths follow "--"; it breaks
-        // `stash push -u`): file names like ":x" or "a[1]" are never pathspec magic or globs.
-        List<string> argv = ["-c", "core.quotepath=off", "-c", "color.ui=false"];
+        // quotepath=off: UTF-8 paths verbatim. fsmonitor=false: a repository's config can name a program that
+        // status/diff would run (the prompt runs status in any directory). literal-pathspecs (only where paths
+        // follow "--"; it breaks `stash push -u`): file names like ":x" or "a[1]" are never pathspec magic or globs.
+        List<string> argv = ["-c", "core.quotepath=off", "-c", "color.ui=false", "-c", "core.fsmonitor=false"];
         if (literalPathspecs ?? args.Contains("--"))
         {
             argv.Add("--literal-pathspecs");
@@ -399,6 +410,60 @@ public sealed class GitService(IPickleLogger log) : IGitService
             ? (IReadOnlyDictionary<string, string?>)new Dictionary<string, string?>()
             : new Dictionary<string, string?>(ExtraEnvironment);
         return GitProcess.RunAsync(git, workingDirectory, argv, timeout, environment, stdin, cancellationToken);
+    }
+
+    /// <summary>
+    /// <c>-c filter.&lt;driver&gt;.clean=</c> (etc.) for every filter command set in the repository's own config.
+    /// `git status`/`git diff` run clean filters on files whose stat data changed, and the prompt runs status on every
+    /// cd, so a .git/config shipped in an archive would otherwise run its commands. Global/system config (git-lfs) is
+    /// the user's and stays active. Null when the config can't be read safely (the caller then skips the command).
+    /// </summary>
+    internal async Task<IReadOnlyList<string>?> RepositoryFilterOverridesAsync(string root, CancellationToken cancellationToken)
+    {
+        var result = await ExecAsync(
+            root,
+            ["config", "--includes", "--show-scope", "--name-only", "--get-regexp", @"^filter\..+\.(clean|smudge|process)$"],
+            StatusTimeout,
+            cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode == 1 && !result.TimedOut && result.Output.Length == 0)
+        {
+            return [];
+        }
+
+        if (!result.Success)
+        {
+            log.Debug(Category, $"config scan failed in {root} ({result.ExitCode}): {result.Error.Trim()}");
+            return null;
+        }
+
+        var overrides = new List<string>();
+        var drivers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var line in result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = line.Split('\t', 2);
+            if (parts.Length != 2 || parts[1].Contains('=', StringComparison.Ordinal))
+            {
+                // `-c` splits at the first '=', so such a driver name can't be overridden.
+                log.Debug(Category, $"status skipped in {root}: unexpected filter config '{line}'");
+                return null;
+            }
+
+            if (parts[0] is not ("global" or "system"))
+            {
+                overrides.Add("-c");
+                overrides.Add(parts[1] + "=");
+                drivers.Add(parts[1][..parts[1].LastIndexOf('.')]);
+            }
+        }
+
+        // A required filter without a command is an error; compare the raw bytes instead.
+        foreach (var driver in drivers)
+        {
+            overrides.Add("-c");
+            overrides.Add(driver + ".required=false");
+        }
+
+        return overrides;
     }
 
     private static string RootOf(string repo) => GitStatusParser.FindRoot(repo) ?? repo;

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Pickle.Abstractions;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -94,7 +95,7 @@ public abstract class SystemPanelBase : PanelWindow
     internal string? Choose(string title, IReadOnlyList<string> options) =>
         PickHook is { } hook ? hook(title, options) : Pick(title, options, o => o);
 
-    /// <summary>A scrollable, word-wrapped, read-only text dialog.</summary>
+    /// <summary>A scrollable, read-only text dialog (long lines are wrapped).</summary>
     internal void ShowText(string title, IReadOnlyList<string> lines)
     {
         if (MessageHook is { } hook)
@@ -108,22 +109,30 @@ public abstract class SystemPanelBase : PanelWindow
             return;
         }
 
+        var width = Math.Max(40, (app.Screen.Width * 85 / 100) - 4);
+        var wrapped = new ObservableCollection<string>(lines.SelectMany(line => Wrap(line, width)));
         using var dialog = new Dialog { Title = title, Width = Dim.Percent(85), Height = Dim.Percent(75) };
-        var text = new TextView
-        {
-            X = 0,
-            Y = 0,
-            Width = Dim.Fill(),
-            Height = Dim.Fill(),
-            ReadOnly = true,
-            WordWrap = true,
-            Text = string.Join('\n', lines),
-        };
-        dialog.Add(text);
+        var list = new ListView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true, ShowMarks = false };
+        list.SetSource(wrapped);
+        dialog.Add(list);
         dialog.AddButton(new Button { Title = "_OK" });
         dialog.SetScheme(Schemes.Dialog);
-        text.SetScheme(Schemes.Dialog);
+        list.SetScheme(Schemes.Dialog);
         app.Run(dialog);
+    }
+
+    internal static IEnumerable<string> Wrap(string line, int width)
+    {
+        if (line.Length <= width)
+        {
+            yield return line;
+            yield break;
+        }
+
+        for (var i = 0; i < line.Length; i += width)
+        {
+            yield return line.Substring(i, Math.Min(width, line.Length - i));
+        }
     }
 
     /// <summary>Create the panel's tabs (Left/Right move between them).</summary>

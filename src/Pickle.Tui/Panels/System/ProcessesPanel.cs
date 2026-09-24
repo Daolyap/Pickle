@@ -77,7 +77,6 @@ public sealed class ProcessesPanel : SystemPanelBase
         AddHint(Key.F8, "End tree", () => End(tree: true));
         AddHint(Key.F4, "Priority", ChangePriority);
         AddHint(Key.F6, "Sort", () => _table.HandleKey(Key.F6));
-        AddHint(Key.F5, "Refresh", Refresh);
         Every(RefreshInterval, Refresh);
         _table.Table.SetFocus();
     }

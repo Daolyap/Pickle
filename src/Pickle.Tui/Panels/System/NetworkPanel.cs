@@ -422,7 +422,7 @@ public sealed class NetworkPanel : SystemPanelBase
             return;
         }
 
-        var details = new[] { nic.Description, SystemFormat.Bits(nic.Speed), nic.IPv6.Count > 0 ? string.Join(", ", nic.IPv6) : null }
+        var details = new[] { nic.Description, nic.Mac, nic.IPv6.Count > 0 ? string.Join(", ", nic.IPv6) : null }
             .Where(s => !string.IsNullOrEmpty(s) && s != nic.Name);
         _selected.Text = $"{nic.Name}  ·  {string.Join("  ·  ", details)}";
         double Level(double rate) => nic.Speed is > 0 ? rate * 8 / nic.Speed.Value : 0;
@@ -450,8 +450,6 @@ public sealed class NetworkPanel : SystemPanelBase
         new() { Header = "↑ Send", Text = n => SystemFormat.Rate(n.SendRate), SortKey = n => n.SendRate, Numeric = true, MinWidth = 11, MaxWidth = 11 },
         new() { Header = "↓ Receive", Text = n => SystemFormat.Rate(n.ReceiveRate), SortKey = n => n.ReceiveRate, Numeric = true, MinWidth = 11, MaxWidth = 11 },
         new() { Header = "Speed", Text = n => SystemFormat.Bits(n.Speed), SortKey = n => n.Speed ?? 0, Numeric = true, MinWidth = 5, MaxWidth = 10 },
-        new() { Header = "MAC", Text = n => n.Mac ?? string.Empty, MaxWidth = 17 },
-        new() { Header = "IPv6", Text = n => string.Join(", ", n.IPv6) },
     ];
 
     private static List<TableColumn<NetworkConnection>> ConnectionColumns() =>

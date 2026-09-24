@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.Text;
 using Pickle.Abstractions;
 using Pickle.Tui.Widgets;
@@ -7,6 +6,7 @@ using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using Attribute = Terminal.Gui.Drawing.Attribute;
+using Point = System.Drawing.Point;
 
 namespace Pickle.Tui.Panels.SystemMonitoring;
 

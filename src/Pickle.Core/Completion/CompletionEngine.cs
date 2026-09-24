@@ -155,6 +155,12 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
             return null;
         }
 
+        // Hold the engine's runspace lock so background InvokeAsync calls can't start a pipeline mid-completion.
+        if (!engine.TryEnterMain(TimeSpan.Zero))
+        {
+            return null;
+        }
+
         var ps = PowerShell.Create();
         ps.Runspace = runspace;
         var work = Task.Run(() => CommandCompletion.CompleteInput(request.Input, request.Cursor, null, ps), CancellationToken.None);
@@ -184,10 +190,19 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
             if (work.IsCompleted)
             {
                 ps.Dispose();
+                engine.ExitMain();
             }
             else
             {
-                _ = work.ContinueWith(_ => ps.Dispose(), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+                _ = work.ContinueWith(
+                    _ =>
+                    {
+                        ps.Dispose();
+                        engine.ExitMain();
+                    },
+                    CancellationToken.None,
+                    TaskContinuationOptions.None,
+                    TaskScheduler.Default);
             }
         }
     }

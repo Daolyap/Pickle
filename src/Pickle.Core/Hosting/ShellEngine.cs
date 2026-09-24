@@ -160,6 +160,14 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         return LastResult;
     }
 
+    /// <summary>
+    /// Take exclusive use of the main runspace without running a pipeline through the engine (e.g. tab completion).
+    /// Returns false if it is busy. Always pair with <see cref="ExitMain"/>.
+    /// </summary>
+    internal bool TryEnterMain(TimeSpan timeout) => _mainLock.Wait(timeout);
+
+    internal void ExitMain() => _mainLock.Release();
+
     /// <summary>Stop the running interactive pipeline (Ctrl+C).</summary>
     public bool StopCurrent()
     {

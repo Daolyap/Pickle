@@ -122,6 +122,29 @@ public sealed class CommandTests : IDisposable
     }
 
     [Fact]
+    public async Task SandboxRunAppliesOverridesToThePreset()
+    {
+        var sandbox = new FakeSandboxService();
+        _t.Runtime.ServiceRegistry.Add<ISandboxService>(sandbox);
+
+        Assert.Equal(0, await RunAsync("sandbox", "run", "safe", "--no-network", "--map", "/tmp", "--pickle", "--memory", "4096"));
+        var launched = Assert.Single(sandbox.Launched);
+        Assert.Equal("Safe browsing", launched.Name);
+        Assert.Equal(SandboxSwitch.Disable, launched.Networking);
+        Assert.Equal((true, true, 4096), (launched.IncludePickle, launched.StartPickle, launched.MemoryInMB));
+        Assert.True(Assert.Single(launched.MappedFolders).ReadOnly);
+
+        Assert.Equal(1, await RunAsync("sandbox", "run", "Offline analysis", "--winget", "Git.Git"));
+        Assert.Contains("✗ Installing winget or packages needs networking.", Host, StringComparison.Ordinal);
+
+        Assert.Equal(0, await RunAsync("sandbox", "list"));
+        Assert.Equal(["Safe browsing", "Offline analysis"], Objects<SandboxCommand.SandboxRow>().Select(r => r.Name));
+
+        Assert.Equal(0, await RunAsync("sandbox", "enable"));
+        Assert.Equal(1, sandbox.EnableCalls);
+    }
+
+    [Fact]
     public async Task ToolListShowsTheCatalog()
     {
         Assert.Equal(0, await RunAsync("tool", "list", "zip"));

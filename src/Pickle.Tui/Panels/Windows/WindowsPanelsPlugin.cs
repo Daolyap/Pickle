@@ -2,7 +2,7 @@ using Pickle.Abstractions;
 
 namespace Pickle.Tui.Panels.Windows;
 
-/// <summary>Registers the winget (Alt+W), Windows Update (Alt+U) and Task Scheduler (Alt+S) panels (Windows only).</summary>
+/// <summary>Registers the winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S) and Windows Sandbox (Alt+X) panels (Windows only).</summary>
 public sealed class WindowsPanelsPlugin : IPicklePlugin
 {
     public string Id => "pickle.windows.panels";
@@ -39,6 +39,15 @@ public sealed class WindowsPanelsPlugin : IPicklePlugin
             DefaultKey = "Alt+S",
             WindowsOnly = true,
             CreateView = ctx => new SchedulerPanel(ctx),
+        });
+        context.Panels.Register(new PanelDescriptor
+        {
+            Id = "sandbox",
+            Title = "Windows Sandbox",
+            Description = "Launch throwaway Windows sandboxes: presets, shared folders, winget packages, Pickle inside",
+            DefaultKey = "Alt+X",
+            WindowsOnly = true,
+            CreateView = ctx => new SandboxPanel(ctx),
         });
     }
 }

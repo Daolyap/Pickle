@@ -117,6 +117,8 @@ internal sealed class FakeExecutor : IElevatedExecutor
     public Task<ElevatedResponse> RegisterTaskAsync(ScheduledTaskDefinition definition, IProgress<string> progress, CancellationToken cancellationToken) =>
         Record($"task {definition.Folder}\\{definition.Name} elevated={definition.RunElevated}");
 
+    public Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken) => Record("enable-sandbox");
+
     private Task<ElevatedResponse> Record(string call)
     {
         lock (Calls)

@@ -33,6 +33,22 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
         return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0, outcome.Output);
     }
 
+    public async Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken)
+    {
+        progress.Report("Turning on Windows Sandbox (this can take a few minutes)…");
+        var dism = Path.Combine(Environment.SystemDirectory, "dism.exe");
+        var result = await _runner.RunAsync(dism, ElevatedOperations.EnableSandboxArguments, null, ElevatedOperations.TimeoutFor(ElevatedOperationKind.EnableWindowsSandbox), cancellationToken).ConfigureAwait(false);
+
+        // 3010 = ERROR_SUCCESS_REBOOT_REQUIRED.
+        return result.ExitCode switch
+        {
+            0 => new ElevatedResponse(true, "Windows Sandbox is turned on.", 0, result.Output),
+            3010 => new ElevatedResponse(true, "Windows Sandbox is turned on. Restart your PC to finish.", 3010, result.Output),
+            _ when result.TimedOut => new ElevatedResponse(false, "Turning on Windows Sandbox timed out.", 1460, result.Output),
+            var code => new ElevatedResponse(false, $"dism failed ({code}). Windows Sandbox needs Windows Pro, Enterprise or Education and virtualization enabled in the firmware.", code, result.Output),
+        };
+    }
+
     public async Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken)
     {
         var exe = WingetLocator.FindTrusted(log);

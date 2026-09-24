@@ -23,6 +23,9 @@ public enum ElevatedOperationKind
 
     /// <summary>Uninstall winget packages. Arguments: package ids (validated like <see cref="WingetUpgrade"/>; no "--all").</summary>
     WingetUninstall,
+
+    /// <summary>Turn on the Windows Sandbox optional feature (<c>dism /Enable-Feature Containers-DisposableClientVM</c>). No arguments.</summary>
+    EnableWindowsSandbox,
 }
 
 public sealed record ElevatedRequest(ElevatedOperationKind Kind, IReadOnlyList<string> Arguments);

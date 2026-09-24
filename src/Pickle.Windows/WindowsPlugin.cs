@@ -29,12 +29,14 @@ public sealed class WindowsPlugin : IPicklePlugin
         AddIfMissing(services, () => CreateWindowsUpdateService(context));
         AddIfMissing(services, () => CreateTaskSchedulerService(context));
         AddIfMissing(services, () => CreateToolInstaller(context));
+        AddIfMissing<ISandboxService>(services, () => new Sandbox.WindowsSandboxService(context));
 
         context.Commands.Register(new WingetCommand());
         context.Commands.Register(new UpgradeCommand());
         context.Commands.Register(new UpdateCommand());
         context.Commands.Register(new ScheduleCommand());
         context.Commands.Register(new ToolCommand());
+        context.Commands.Register(new SandboxCommand());
 
         Terminal.WindowsTerminalIntegration.Register(context);
     }

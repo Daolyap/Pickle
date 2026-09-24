@@ -240,7 +240,7 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
     private static readonly (string Section, string[] Members)[] HelpSections =
     [
         ("Shell", ["history", "translate", "wizard", "git", "alias", "theme", "config", "reload"]),
-        ("Windows", ["winget", "tool", "upgrade", "update", "schedule", "terminal"]),
+        ("Windows", ["winget", "tool", "upgrade", "update", "schedule", "sandbox", "terminal"]),
         ("System", ["top", "net", "disks"]),
         ("Setup", ["plugin", "sync", "paths", "doctor", "version"]),
         ("More", []),

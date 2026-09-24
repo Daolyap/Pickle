@@ -17,6 +17,9 @@ internal interface IElevatedExecutor
     Task<ElevatedResponse> InstallWindowsUpdatesAsync(IReadOnlyList<string> updateIds, IProgress<string> progress, CancellationToken cancellationToken);
 
     Task<ElevatedResponse> RegisterTaskAsync(ScheduledTaskDefinition definition, IProgress<string> progress, CancellationToken cancellationToken);
+
+    /// <summary>Runs System32 dism.exe with <see cref="ElevatedOperations.EnableSandboxArguments"/>.</summary>
+    Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken);
 }
 
 /// <summary>The allowlist: strict per-kind argument validation and dispatch to an <see cref="IElevatedExecutor"/>.</summary>
@@ -28,6 +31,10 @@ internal static class ElevatedOperations
 
     private static readonly string[] WingetCommon =
         ["--silent", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"];
+
+    /// <summary>The only dism command the helper runs.</summary>
+    public static readonly IReadOnlyList<string> EnableSandboxArguments =
+        ["/Online", "/Enable-Feature", "/FeatureName:Containers-DisposableClientVM", "/All", "/NoRestart", "/Quiet"];
 
     // winget uninstall has no package agreements to accept.
     private static readonly string[] WingetUninstallCommon = ["--silent", "--accept-source-agreements", "--disable-interactivity"];
@@ -54,10 +61,10 @@ internal static class ElevatedOperations
 
         switch (request.Kind)
         {
-            case ElevatedOperationKind.WingetRepairSource:
+            case ElevatedOperationKind.WingetRepairSource or ElevatedOperationKind.EnableWindowsSandbox:
                 return args.Count == 0
                     ? new ValidatedOperation(request.Kind, [])
-                    : throw new ArgumentException("WingetRepairSource takes no arguments.");
+                    : throw new ArgumentException($"{request.Kind} takes no arguments.");
 
             case ElevatedOperationKind.WingetUpgrade when args.Count == 1 && args[0] == AllPackages:
                 return new ValidatedOperation(request.Kind, [], All: true);
@@ -145,6 +152,7 @@ internal static class ElevatedOperations
         ElevatedOperationKind.WingetUpgrade or ElevatedOperationKind.WingetInstall or ElevatedOperationKind.WingetUninstall => TimeSpan.FromHours(2),
         ElevatedOperationKind.WindowsUpdateInstall => TimeSpan.FromHours(3),
         ElevatedOperationKind.TaskRegisterElevated => TimeSpan.FromMinutes(2),
+        ElevatedOperationKind.EnableWindowsSandbox => TimeSpan.FromMinutes(20),
         _ => TimeSpan.FromMinutes(1),
     };
 
@@ -188,6 +196,9 @@ internal static class ElevatedOperations
 
                 case ElevatedOperationKind.TaskRegisterElevated when operation.Task is not null:
                     return await executor.RegisterTaskAsync(operation.Task, progress, timeout.Token).ConfigureAwait(false);
+
+                case ElevatedOperationKind.EnableWindowsSandbox:
+                    return await executor.EnableWindowsSandboxAsync(progress, timeout.Token).ConfigureAwait(false);
 
                 default:
                     return new ElevatedResponse(false, $"Operation {operation.Kind} is not allowed.", 1);

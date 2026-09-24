@@ -303,3 +303,62 @@ public sealed class FakeToolInstaller : IToolInstaller
         return Task.FromResult(new ToolInstallResult(true, "Removed."));
     }
 }
+
+/// <summary>In-memory Windows Sandbox: two presets, saved setups in a list, launches and exports recorded.</summary>
+public sealed class FakeSandboxService : ISandboxService
+{
+    public bool IsSupported { get; set; } = true;
+    public SandboxStatus Status { get; set; } = new(true, true, false, null);
+    public List<SandboxConfig> Saved { get; } = [];
+    public List<SandboxConfig> Launched { get; } = [];
+    public List<(SandboxConfig Config, string Path)> Exported { get; } = [];
+    public int EnableCalls { get; private set; }
+
+    public IReadOnlyList<SandboxConfig> Presets =>
+    [
+        new() { Name = "Safe browsing", Description = "Throwaway browser", Networking = SandboxSwitch.Enable, StartUrl = "https://example.com" },
+        new() { Name = "Offline analysis", Description = "Locked down", Networking = SandboxSwitch.Disable, ProtectedClient = SandboxSwitch.Enable },
+    ];
+
+    public SandboxStatus GetStatus() => Status;
+
+    public IReadOnlyList<SandboxConfig> LoadSaved() => [.. Saved];
+
+    public void Save(SandboxConfig config)
+    {
+        Saved.RemoveAll(c => c.Name.Equals(config.Name, StringComparison.OrdinalIgnoreCase));
+        Saved.Add(config);
+    }
+
+    public bool Delete(string name) => Saved.RemoveAll(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) > 0;
+
+    public string BuildWsb(SandboxConfig config, string setupFolder) => $"<Configuration><Networking>{config.Networking}</Networking></Configuration>";
+
+    public string? BuildSetupScript(SandboxConfig config) => config.DarkMode ? "# dark mode" : null;
+
+    public IReadOnlyList<string> Validate(SandboxConfig config) =>
+        config.WingetPackages.Count > 0 && config.Networking == SandboxSwitch.Disable ? ["Installing winget or packages needs networking."] : [];
+
+    public SandboxOperationResult Export(SandboxConfig config, string path)
+    {
+        Exported.Add((config, path));
+        return new SandboxOperationResult(true, "Wrote " + path, path);
+    }
+
+    public Task<SandboxOperationResult> LaunchAsync(SandboxConfig config, CancellationToken cancellationToken = default)
+    {
+        if (Validate(config) is { Count: > 0 } errors)
+        {
+            return Task.FromResult(new SandboxOperationResult(false, errors[0]));
+        }
+
+        Launched.Add(config);
+        return Task.FromResult(new SandboxOperationResult(true, $"Starting sandbox '{config.Name}'…"));
+    }
+
+    public Task<SandboxOperationResult> EnableFeatureAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
+    {
+        EnableCalls++;
+        return Task.FromResult(new SandboxOperationResult(true, "Windows Sandbox is turned on. Restart your PC to finish."));
+    }
+}

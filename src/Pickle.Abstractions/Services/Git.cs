@@ -21,7 +21,7 @@ public sealed record GitStatusEntry(
     GitChangeKind WorktreeStatus)
 {
     public bool IsStaged => IndexStatus is not (GitChangeKind.None or GitChangeKind.Untracked or GitChangeKind.Ignored);
-    public bool IsUnstaged => WorktreeStatus is not (GitChangeKind.None);
+    public bool IsUnstaged => WorktreeStatus is not GitChangeKind.None && !IsConflicted;
     public bool IsUntracked => WorktreeStatus == GitChangeKind.Untracked;
     public bool IsConflicted => IndexStatus == GitChangeKind.Unmerged || WorktreeStatus == GitChangeKind.Unmerged;
 }

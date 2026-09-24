@@ -23,6 +23,8 @@ internal static class GitProcess
         string? stdin,
         CancellationToken cancellationToken)
     {
+        // A fast git can exit before WaitForExitAsync observes a token that was already cancelled.
+        cancellationToken.ThrowIfCancellationRequested();
         var psi = new ProcessStartInfo(gitPath)
         {
             WorkingDirectory = workingDirectory,

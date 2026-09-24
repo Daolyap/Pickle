@@ -10,41 +10,27 @@ namespace Pickle.Wizards;
 /// </summary>
 public static class WizardSchema
 {
-    private static readonly ConditionalWeakTable<WizardOption, OptionExtras> OptionExtrasTable = new();
-    private static readonly ConditionalWeakTable<WizardChoice, string> ChoiceWarnings = new();
+    public static bool IsRaw(this WizardOption option) => option.Raw;
 
-    public static bool IsRaw(this WizardOption option) =>
-        OptionExtrasTable.TryGetValue(option, out var extras) && extras.Raw;
+    public static string? GetWarning(this WizardOption option) => option.Warning;
 
-    public static string? GetWarning(this WizardOption option) =>
-        OptionExtrasTable.TryGetValue(option, out var extras) ? extras.Warning : null;
-
-    public static string? GetWarning(this WizardChoice choice) =>
-        ChoiceWarnings.TryGetValue(choice, out var warning) ? warning : null;
+    public static string? GetWarning(this WizardChoice choice) => choice.Warning;
 
     public static WizardOption SetRaw(this WizardOption option, bool raw = true)
     {
-        OptionExtrasTable.GetOrCreateValue(option).Raw = raw;
+        option.Raw = raw;
         return option;
     }
 
     public static WizardOption SetWarning(this WizardOption option, string? warning)
     {
-        OptionExtrasTable.GetOrCreateValue(option).Warning = string.IsNullOrWhiteSpace(warning) ? null : warning;
+        option.Warning = string.IsNullOrWhiteSpace(warning) ? null : warning;
         return option;
     }
 
     public static WizardChoice SetWarning(this WizardChoice choice, string? warning)
     {
-        if (string.IsNullOrWhiteSpace(warning))
-        {
-            ChoiceWarnings.Remove(choice);
-        }
-        else
-        {
-            ChoiceWarnings.AddOrUpdate(choice, warning);
-        }
-
+        choice.Warning = string.IsNullOrWhiteSpace(warning) ? null : warning;
         return choice;
     }
 
@@ -108,12 +94,6 @@ public static class WizardSchema
     public static WizardTemplate? GetTemplate(this WizardOption option) =>
         string.IsNullOrEmpty(option.Template) ? null : WizardTemplate.Get(option.Template);
 
-    private sealed class OptionExtras
-    {
-        public bool Raw { get; set; }
-
-        public string? Warning { get; set; }
-    }
 }
 
 public sealed record ScopedOption(WizardOption Option, WizardSection Section, bool IsGlobal);

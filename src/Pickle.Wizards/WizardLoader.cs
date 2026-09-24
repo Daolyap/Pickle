@@ -22,18 +22,8 @@ public static class WizardLoader
     {
         var node = JsonNode.Parse(json, NodeOptions, DocumentOptions) as JsonObject
             ?? throw new JsonException("A wizard definition must be a JSON object.");
-        var definition = node.Deserialize<WizardDefinition>(PickleJson.Options)
+        return node.Deserialize<WizardDefinition>(PickleJson.Options)
             ?? throw new JsonException("Empty wizard definition.");
-        ApplyExtras(node["sections"], definition.Sections);
-        if (node["modes"] is JsonArray modes)
-        {
-            for (var i = 0; i < modes.Count && i < definition.Modes.Count; i++)
-            {
-                ApplyExtras(modes[i]?["sections"], definition.Modes[i].Sections);
-            }
-        }
-
-        return definition;
     }
 
     public static IReadOnlyList<string> EmbeddedNames =>
@@ -90,52 +80,5 @@ public static class WizardLoader
         }
 
         return list;
-    }
-
-    private static void ApplyExtras(JsonNode? sectionsNode, List<WizardSection> sections)
-    {
-        if (sectionsNode is not JsonArray sectionArray)
-        {
-            return;
-        }
-
-        for (var s = 0; s < sectionArray.Count && s < sections.Count; s++)
-        {
-            if (sectionArray[s]?["options"] is not JsonArray optionArray)
-            {
-                continue;
-            }
-
-            var options = sections[s].Options;
-            for (var o = 0; o < optionArray.Count && o < options.Count; o++)
-            {
-                if (optionArray[o] is not JsonObject optionNode)
-                {
-                    continue;
-                }
-
-                var option = options[o];
-                if (optionNode["raw"] is JsonValue raw && raw.TryGetValue<bool>(out var isRaw) && isRaw)
-                {
-                    option.SetRaw();
-                }
-
-                if (optionNode["warning"] is JsonValue warning && warning.TryGetValue<string>(out var text))
-                {
-                    option.SetWarning(text);
-                }
-
-                if (optionNode["choices"] is JsonArray choiceArray)
-                {
-                    for (var c = 0; c < choiceArray.Count && c < option.Choices.Count; c++)
-                    {
-                        if (choiceArray[c]?["warning"] is JsonValue choiceWarning && choiceWarning.TryGetValue<string>(out var choiceText))
-                        {
-                            option.Choices[c].SetWarning(choiceText);
-                        }
-                    }
-                }
-            }
-        }
     }
 }

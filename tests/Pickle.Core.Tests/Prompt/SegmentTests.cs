@@ -89,7 +89,7 @@ public class SegmentTests
             StashCount: 3,
             Operation: "REBASING");
 
-        Assert.Equal("feature/x REBASING ↑2 ↓1 +3 !3 ?1 ✖1 ≡3", GitSegment.Format(status));
+        Assert.Equal("feature/x REBASING ↑2 ↓1 +3 !2 ?1 ✖1 ≡3", GitSegment.Format(status));
         Assert.Equal("feature/x REBASING", GitSegment.Format(status, counts: false));
     }
 

@@ -60,7 +60,8 @@ Everything lives in `%APPDATA%\Pickle` (`~/.config/pickle` elsewhere; override w
 ## Development
 
 C# / .NET 10, hosting `Microsoft.PowerShell.SDK`; Terminal.Gui v2 for panels. See [CLAUDE.md](CLAUDE.md) for the
-architecture, conventions and testing approach, and [docs/](docs/) for more.
+conventions and testing approach, [docs/architecture.md](docs/architecture.md) for a map of the code, and
+[docs/](docs/) for more.
 
 ```bash
 scripts/check.sh            # build (warnings = errors) + format + all tests

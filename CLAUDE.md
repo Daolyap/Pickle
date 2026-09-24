@@ -24,6 +24,8 @@ Tests use xunit.v3 on Microsoft.Testing.Platform: `dotnet test --solution Pickle
 
 ## Layout
 
+Diagrams (projects, data flow, trust boundaries, feature → folder): `docs/architecture.md`.
+
 ```
 src/Pickle.Abstractions  Contracts only (plugins, registries, services, theme/config models, KeyChord, Ansi, TextWidth).
                          Plugins reference just this. Changing it affects everyone — add, don't break.

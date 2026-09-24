@@ -1,0 +1,81 @@
+{
+  "id": "nmap",
+  "title": "Nmap",
+  "description": "Network discovery and port scanning. Only scan hosts and networks you own or are explicitly authorized to test (scanme.nmap.org permits light scans).",
+  "command": "nmap",
+  "aliases": ["nmap.exe"],
+  "wingetId": "Insecure.Nmap",
+  "homepage": "https://nmap.org/book/man.html",
+  "sections": [
+    {
+      "title": "Targets",
+      "description": "Hosts, IP addresses, CIDR ranges (192.168.1.0/24) or ranges (10.0.0.1-50).",
+      "options": [
+        { "id": "targets", "label": "Targets", "type": "list", "position": 1, "placeholder": "scanme.nmap.org", "description": "One target per line. Only scan networks you are authorized to scan." },
+        { "id": "inputList", "label": "Targets from file", "type": "path", "flag": "-iL" },
+        { "id": "exclude", "label": "Exclude hosts", "type": "text", "flag": "--exclude", "placeholder": "192.168.1.1,192.168.1.254" }
+      ]
+    },
+    {
+      "title": "Scan technique",
+      "options": [
+        {
+          "id": "scanType", "label": "Scan type", "type": "choice",
+          "description": "SYN and OS detection need administrator/root rights.",
+          "choices": [
+            { "value": "-sS", "label": "TCP SYN (stealth)" },
+            { "value": "-sT", "label": "TCP connect" },
+            { "value": "-sA", "label": "TCP ACK (firewall rules)" },
+            { "value": "-sn", "label": "Ping sweep only (no port scan)" }
+          ]
+        },
+        { "id": "udp", "label": "UDP scan", "type": "flag", "flag": "-sU", "description": "Slow; combine with --top-ports." },
+        { "id": "noPing", "label": "Skip host discovery", "type": "flag", "flag": "-Pn", "description": "Treat all hosts as online (for hosts that block ping)." },
+        { "id": "serviceVersion", "label": "Detect service versions", "type": "flag", "flag": "-sV" },
+        { "id": "defaultScripts", "label": "Default scripts", "type": "flag", "flag": "-sC" },
+        { "id": "osDetect", "label": "Detect OS", "type": "flag", "flag": "-O" },
+        { "id": "aggressive", "label": "Aggressive (-O -sV -sC --traceroute)", "type": "flag", "flag": "-A" },
+        { "id": "script", "label": "NSE scripts", "type": "text", "flag": "--script", "placeholder": "http-title,ssl-cert" },
+        { "id": "scriptArgs", "label": "Script arguments", "type": "text", "flag": "--script-args", "dependsOn": "script" }
+      ]
+    },
+    {
+      "title": "Ports",
+      "options": [
+        { "id": "ports", "label": "Ports", "type": "text", "flag": "-p", "placeholder": "22,80,443 or 1-65535", "validation": "^[\\dTU:,\\-]+$|^-$" },
+        { "id": "topPorts", "label": "Top N ports", "type": "number", "flag": "--top-ports", "validation": "^\\d+$" },
+        { "id": "fast", "label": "Fast (top 100 ports)", "type": "flag", "flag": "-F" },
+        { "id": "open", "label": "Show only open ports", "type": "flag", "flag": "--open" }
+      ]
+    },
+    {
+      "title": "Timing and output",
+      "options": [
+        {
+          "id": "timing", "label": "Timing", "type": "choice", "flag": "-T", "valueStyle": "none", "default": "3",
+          "choices": [
+            { "value": "0", "label": "paranoid" }, { "value": "1", "label": "sneaky" }, { "value": "2", "label": "polite" },
+            { "value": "3", "label": "normal" }, { "value": "4", "label": "aggressive" }, { "value": "5", "label": "insane" }
+          ]
+        },
+        { "id": "noDns", "label": "No DNS resolution", "type": "flag", "flag": "-n" },
+        { "id": "ipv6", "label": "IPv6", "type": "flag", "flag": "-6" },
+        { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v" },
+        { "id": "reason", "label": "Show port state reason", "type": "flag", "flag": "--reason" },
+        { "id": "outNormal", "label": "Save normal output", "type": "path", "flag": "-oN" },
+        { "id": "outXml", "label": "Save XML output", "type": "path", "flag": "-oX" },
+        { "id": "outGrepable", "label": "Save grepable output", "type": "path", "flag": "-oG" },
+        { "id": "outAll", "label": "Save all formats (base name)", "type": "text", "flag": "-oA" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Quick scan", "description": "Top 100 ports of Nmap's public test host.", "values": { "fast": "true", "targets": "scanme.nmap.org" } },
+    { "name": "Ping sweep", "description": "Find live hosts on your own LAN without port scanning.", "values": { "scanType": "-sn", "targets": "192.168.1.0/24" } },
+    { "name": "Services and versions", "description": "Version detection plus default scripts.", "values": { "serviceVersion": "true", "defaultScripts": "true", "targets": "scanme.nmap.org" } },
+    { "name": "All TCP ports", "description": "SYN scan of every TCP port (needs admin).", "values": { "scanType": "-sS", "ports": "1-65535", "noPing": "true", "timing": "4", "targets": "192.168.1.10" } },
+    { "name": "Aggressive and save", "description": "OS/version/scripts/traceroute, saved to a file.", "values": { "aggressive": "true", "timing": "4", "outNormal": "scan.txt", "targets": "scanme.nmap.org" } },
+    { "name": "UDP top ports", "description": "The 50 most common UDP ports.", "values": { "udp": "true", "topPorts": "50", "targets": "192.168.1.1" } },
+    { "name": "Open web ports", "description": "Only report open HTTP(S) ports with page titles.", "values": { "ports": "80,443,8080,8443", "open": "true", "script": "http-title", "targets": "192.168.1.0/24" } }
+  ]
+}

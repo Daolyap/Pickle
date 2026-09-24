@@ -1,0 +1,134 @@
+{
+  "id": "ffmpeg",
+  "title": "FFmpeg",
+  "description": "Convert, trim, resize and remux audio and video.",
+  "command": "ffmpeg",
+  "aliases": ["ffmpeg.exe"],
+  "wingetId": "Gyan.FFmpeg",
+  "homepage": "https://ffmpeg.org/ffmpeg.html",
+  "sections": [
+    {
+      "title": "Input",
+      "description": "Options here come before -i and apply to the input (e.g. -ss here seeks quickly).",
+      "options": [
+        { "id": "overwrite", "label": "Overwrite output without asking", "type": "flag", "flag": "-y" },
+        { "id": "hideBanner", "label": "Hide banner", "type": "flag", "flag": "-hide_banner" },
+        {
+          "id": "logLevel", "label": "Log level", "type": "choice", "flag": "-loglevel", "default": "info",
+          "choices": [ { "value": "quiet" }, { "value": "error" }, { "value": "warning" }, { "value": "info" }, { "value": "verbose" }, { "value": "debug" } ]
+        },
+        { "id": "seek", "label": "Start at", "type": "text", "flag": "-ss", "placeholder": "00:01:30", "description": "Input seek position (hh:mm:ss[.ms] or seconds)." },
+        { "id": "inputs", "label": "Input files", "type": "list", "flag": "-i", "required": true, "placeholder": "input.mp4", "description": "One file per line; extra inputs are e.g. audio or subtitle tracks (use -map)." }
+      ]
+    },
+    {
+      "title": "Trim",
+      "options": [
+        { "id": "duration", "label": "Duration", "type": "text", "flag": "-t", "placeholder": "00:00:30" },
+        { "id": "to", "label": "Stop at", "type": "text", "flag": "-to", "placeholder": "00:02:00" }
+      ]
+    },
+    {
+      "title": "Video",
+      "options": [
+        {
+          "id": "videoCodec", "label": "Video codec", "type": "choice", "flag": "-c:v",
+          "choices": [
+            { "value": "libx264", "label": "H.264 (x264)" }, { "value": "libx265", "label": "H.265/HEVC (x265)" },
+            { "value": "libvpx-vp9", "label": "VP9" }, { "value": "libaom-av1", "label": "AV1 (libaom)" }, { "value": "libsvtav1", "label": "AV1 (SVT)" },
+            { "value": "h264_nvenc", "label": "H.264 (NVIDIA)" }, { "value": "hevc_nvenc", "label": "HEVC (NVIDIA)" },
+            { "value": "copy", "label": "Copy (no re-encode)" }
+          ]
+        },
+        { "id": "crf", "label": "Quality (CRF)", "type": "number", "flag": "-crf", "validation": "^\\d+$", "description": "Lower is better. x264 default 23, x265 default 28; ~18 is visually lossless." },
+        {
+          "id": "preset", "label": "Encoder preset", "type": "choice", "flag": "-preset", "default": "medium",
+          "choices": [
+            { "value": "ultrafast" }, { "value": "superfast" }, { "value": "veryfast" }, { "value": "faster" }, { "value": "fast" },
+            { "value": "medium" }, { "value": "slow" }, { "value": "slower" }, { "value": "veryslow" }
+          ]
+        },
+        { "id": "videoBitrate", "label": "Video bitrate", "type": "text", "flag": "-b:v", "placeholder": "2M" },
+        { "id": "videoFilter", "label": "Video filter", "type": "text", "flag": "-vf", "placeholder": "scale=-2:720", "description": "Filter chain, e.g. scale=-2:720, fps=30, crop=w:h:x:y." },
+        { "id": "frameRate", "label": "Frame rate", "type": "number", "flag": "-r" },
+        {
+          "id": "pixFmt", "label": "Pixel format", "type": "choice", "flag": "-pix_fmt",
+          "description": "yuv420p is the most compatible for H.264 players.",
+          "choices": [ { "value": "yuv420p" }, { "value": "yuv420p10le" }, { "value": "yuv444p" } ]
+        },
+        { "id": "noVideo", "label": "Drop video", "type": "flag", "flag": "-vn" }
+      ]
+    },
+    {
+      "title": "Audio",
+      "options": [
+        {
+          "id": "audioCodec", "label": "Audio codec", "type": "choice", "flag": "-c:a",
+          "choices": [
+            { "value": "aac" }, { "value": "libmp3lame", "label": "MP3 (LAME)" }, { "value": "libopus", "label": "Opus" },
+            { "value": "flac" }, { "value": "pcm_s16le", "label": "WAV (PCM 16-bit)" }, { "value": "copy", "label": "Copy (no re-encode)" }
+          ]
+        },
+        { "id": "audioBitrate", "label": "Audio bitrate", "type": "text", "flag": "-b:a", "placeholder": "192k" },
+        { "id": "audioChannels", "label": "Channels", "type": "number", "flag": "-ac" },
+        { "id": "sampleRate", "label": "Sample rate", "type": "number", "flag": "-ar", "placeholder": "48000" },
+        { "id": "audioFilter", "label": "Audio filter", "type": "text", "flag": "-af", "placeholder": "loudnorm" },
+        { "id": "noAudio", "label": "Drop audio", "type": "flag", "flag": "-an" }
+      ]
+    },
+    {
+      "title": "Output",
+      "options": [
+        {
+          "id": "codec", "label": "All streams", "type": "choice", "flag": "-c",
+          "choices": [ { "value": "copy", "label": "Copy all streams (no re-encode)" } ]
+        },
+        { "id": "map", "label": "Stream mapping", "type": "list", "flag": "-map", "placeholder": "0:v:0" },
+        {
+          "id": "movflags", "label": "MP4 flags", "type": "choice", "flag": "-movflags",
+          "choices": [ { "value": "+faststart", "label": "Fast start (web playback)" } ]
+        },
+        { "id": "metadata", "label": "Metadata", "type": "keyValueList", "flag": "-metadata", "keyValueSeparator": "=", "placeholder": "title=My video" },
+        { "id": "format", "label": "Container format", "type": "text", "flag": "-f", "placeholder": "mp4" },
+        { "id": "output", "label": "Output file", "type": "path", "position": 1, "required": true, "placeholder": "output.mp4" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Convert to MP4 (H.264/AAC)",
+      "description": "Widely compatible MP4 for the web.",
+      "values": { "inputs": "input.mkv", "videoCodec": "libx264", "crf": "23", "pixFmt": "yuv420p", "audioCodec": "aac", "audioBitrate": "192k", "movflags": "+faststart", "output": "output.mp4" }
+    },
+    {
+      "name": "Extract audio as MP3",
+      "description": "Drop the video and encode the audio to MP3.",
+      "values": { "inputs": "video.mp4", "noVideo": "true", "audioCodec": "libmp3lame", "audioBitrate": "192k", "output": "audio.mp3" }
+    },
+    {
+      "name": "Trim without re-encoding",
+      "description": "Cut 30 s starting at 1:00 (cuts on keyframes).",
+      "values": { "seek": "00:01:00", "inputs": "input.mp4", "duration": "00:00:30", "codec": "copy", "output": "clip.mp4" }
+    },
+    {
+      "name": "Resize to 720p",
+      "description": "Scale to 720 lines keeping the aspect ratio.",
+      "values": { "inputs": "input.mp4", "videoFilter": "scale=-2:720", "videoCodec": "libx264", "crf": "23", "audioCodec": "copy", "output": "output-720p.mp4" }
+    },
+    {
+      "name": "Compress with H.265",
+      "description": "Smaller files at similar quality.",
+      "values": { "inputs": "input.mp4", "videoCodec": "libx265", "crf": "28", "preset": "slow", "audioCodec": "aac", "audioBitrate": "128k", "output": "output-hevc.mp4" }
+    },
+    {
+      "name": "Make a GIF",
+      "description": "10 fps, 480 px wide.",
+      "values": { "inputs": "input.mp4", "videoFilter": "fps=10,scale=480:-1:flags=lanczos", "output": "output.gif" }
+    },
+    {
+      "name": "Remux MKV to MP4",
+      "description": "Change container without re-encoding.",
+      "values": { "overwrite": "true", "inputs": "input.mkv", "codec": "copy", "output": "output.mp4" }
+    }
+  ]
+}

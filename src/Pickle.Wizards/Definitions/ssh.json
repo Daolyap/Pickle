@@ -1,0 +1,70 @@
+{
+  "id": "ssh",
+  "title": "SSH",
+  "description": "Connect to a remote host, run commands, and forward ports (tunnels, SOCKS proxy, jump hosts).",
+  "command": "ssh",
+  "aliases": ["ssh.exe"],
+  "homepage": "https://man.openbsd.org/ssh",
+  "sections": [
+    {
+      "title": "Connection",
+      "options": [
+        { "id": "destination", "label": "Destination", "type": "positional", "position": 1, "required": true, "placeholder": "user@host" },
+        { "id": "port", "label": "Port", "type": "number", "flag": "-p", "validation": "^\\d{1,5}$" },
+        { "id": "identity", "label": "Identity file (private key)", "type": "path", "flag": "-i", "placeholder": "~/.ssh/id_ed25519" },
+        { "id": "login", "label": "Login name", "type": "text", "flag": "-l" },
+        { "id": "jump", "label": "Jump host(s)", "type": "text", "flag": "-J", "placeholder": "user@bastion[,user@second]", "description": "Connect through one or more bastion hosts (ProxyJump)." },
+        { "id": "options", "label": "Options (-o)", "type": "keyValueList", "flag": "-o", "keyValueSeparator": "=", "placeholder": "ServerAliveInterval=30", "description": "ssh_config options, e.g. StrictHostKeyChecking=accept-new." },
+        { "id": "configFile", "label": "Config file", "type": "path", "flag": "-F" }
+      ]
+    },
+    {
+      "title": "Port forwarding",
+      "description": "Tip: enable 'No remote command' for a tunnel-only session.",
+      "options": [
+        {
+          "id": "localForward", "label": "Local forward (-L)", "type": "text", "flag": "-L",
+          "template": "[{bindAddress}:]{localPort}:{remoteHost}:{remotePort}",
+          "description": "Listen on localPort here and forward to remoteHost:remotePort as seen from the server."
+        },
+        {
+          "id": "remoteForward", "label": "Remote forward (-R)", "type": "text", "flag": "-R",
+          "template": "[{bindAddress}:]{remotePort}:{localHost}:{localPort}",
+          "description": "Listen on remotePort on the server and forward to localHost:localPort as seen from this machine."
+        },
+        {
+          "id": "dynamicForward", "label": "SOCKS proxy (-D)", "type": "text", "flag": "-D",
+          "template": "[{bindAddress}:]{port}",
+          "description": "Local SOCKS5 proxy that tunnels through the server."
+        },
+        { "id": "noCommand", "label": "No remote command (forwarding only)", "type": "flag", "flag": "-N" },
+        { "id": "background", "label": "Go to background after connecting", "type": "flag", "flag": "-f" }
+      ]
+    },
+    {
+      "title": "Session",
+      "options": [
+        { "id": "tty", "label": "Force a TTY", "type": "flag", "flag": "-t" },
+        { "id": "noTty", "label": "No TTY", "type": "flag", "flag": "-T" },
+        { "id": "forwardAgent", "label": "Forward agent", "type": "flag", "flag": "-A", "warning": "The remote host can use your loaded keys while you are connected; only use with hosts you trust." },
+        { "id": "x11", "label": "Forward X11", "type": "flag", "flag": "-X" },
+        { "id": "compression", "label": "Compression", "type": "flag", "flag": "-C" },
+        { "id": "verbose", "label": "Verbose", "type": "flag", "flag": "-v" },
+        { "id": "quiet", "label": "Quiet", "type": "flag", "flag": "-q" },
+        { "id": "ipv4", "label": "IPv4 only", "type": "flag", "flag": "-4" },
+        { "id": "ipv6", "label": "IPv6 only", "type": "flag", "flag": "-6" },
+        { "id": "command", "label": "Remote command", "type": "positional", "position": 2, "raw": true, "placeholder": "uptime", "description": "Runs instead of an interactive shell (PowerShell argument syntax)." }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Connect with a key", "description": "", "values": { "identity": "~/.ssh/id_ed25519", "destination": "user@example.com" } },
+    { "name": "Database tunnel", "description": "localhost:5432 → db.internal:5432 through the server.", "values": { "localForward.localPort": "5432", "localForward.remoteHost": "db.internal", "localForward.remotePort": "5432", "noCommand": "true", "destination": "user@bastion.example.com" } },
+    { "name": "SOCKS proxy on 1080", "description": "Browse through the server.", "values": { "dynamicForward.port": "1080", "noCommand": "true", "compression": "true", "destination": "user@example.com" } },
+    { "name": "Expose a local dev server", "description": "Server port 8080 → this machine's localhost:3000.", "values": { "remoteForward.remotePort": "8080", "remoteForward.localHost": "localhost", "remoteForward.localPort": "3000", "noCommand": "true", "destination": "user@example.com" } },
+    { "name": "Through a jump host", "description": "", "values": { "jump": "user@bastion.example.com", "destination": "admin@10.0.0.5" } },
+    { "name": "Run a remote command", "description": "", "values": { "destination": "user@example.com", "command": "df -h /" } },
+    { "name": "Custom port, accept new host key", "description": "", "values": { "port": "2222", "options": "StrictHostKeyChecking=accept-new\nServerAliveInterval=30", "destination": "user@example.com" } },
+    { "name": "Tunnel bound to all interfaces", "description": "Others on your network can use the tunnel.", "values": { "localForward.bindAddress": "0.0.0.0", "localForward.localPort": "8080", "localForward.remoteHost": "localhost", "localForward.remotePort": "80", "noCommand": "true", "destination": "user@example.com" } }
+  ]
+}

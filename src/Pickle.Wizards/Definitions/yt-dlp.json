@@ -1,0 +1,77 @@
+{
+  "id": "yt-dlp",
+  "title": "yt-dlp",
+  "description": "Download video and audio from YouTube and many other sites. Respect the sites' terms and copyright.",
+  "command": "yt-dlp",
+  "aliases": ["yt-dlp.exe"],
+  "wingetId": "yt-dlp.yt-dlp",
+  "homepage": "https://github.com/yt-dlp/yt-dlp#usage-and-options",
+  "sections": [
+    {
+      "title": "Source",
+      "options": [
+        { "id": "urls", "label": "URL(s)", "type": "list", "position": 1, "required": true, "placeholder": "https://www.youtube.com/watch?v=..." },
+        { "id": "listFormats", "label": "List available formats", "type": "flag", "flag": "-F", "flagAliases": ["--list-formats"] }
+      ]
+    },
+    {
+      "title": "Format",
+      "options": [
+        { "id": "format", "label": "Format", "type": "text", "flag": "-f", "flagAliases": ["--format"], "placeholder": "bv*+ba/b" },
+        { "id": "formatSort", "label": "Format sort", "type": "text", "flag": "-S", "flagAliases": ["--format-sort"], "placeholder": "res:1080,ext" },
+        {
+          "id": "mergeFormat", "label": "Merge into", "type": "choice", "flag": "--merge-output-format",
+          "choices": [ { "value": "mp4" }, { "value": "mkv" }, { "value": "webm" } ]
+        },
+        { "id": "extractAudio", "label": "Audio only", "type": "flag", "flag": "-x", "flagAliases": ["--extract-audio"], "description": "Needs ffmpeg." },
+        {
+          "id": "audioFormat", "label": "Audio format", "type": "choice", "flag": "--audio-format", "dependsOn": "extractAudio",
+          "choices": [ { "value": "best" }, { "value": "mp3" }, { "value": "m4a" }, { "value": "opus" }, { "value": "flac" }, { "value": "wav" } ]
+        },
+        { "id": "audioQuality", "label": "Audio quality", "type": "text", "flag": "--audio-quality", "dependsOn": "extractAudio", "placeholder": "0 (best) to 10, or 192K" }
+      ]
+    },
+    {
+      "title": "Output",
+      "options": [
+        { "id": "output", "label": "File name template", "type": "text", "flag": "-o", "flagAliases": ["--output"], "placeholder": "%(title)s [%(id)s].%(ext)s" },
+        { "id": "paths", "label": "Download folder", "type": "path", "flag": "-P", "flagAliases": ["--paths"] },
+        { "id": "restrictFilenames", "label": "ASCII-only file names", "type": "flag", "flag": "--restrict-filenames" },
+        { "id": "downloadArchive", "label": "Download archive", "type": "path", "flag": "--download-archive", "description": "Skips videos already listed in this file." }
+      ]
+    },
+    {
+      "title": "Playlists",
+      "options": [
+        { "id": "yesPlaylist", "label": "Whole playlist", "type": "flag", "flag": "--yes-playlist" },
+        { "id": "noPlaylist", "label": "Only the video", "type": "flag", "flag": "--no-playlist" },
+        { "id": "playlistItems", "label": "Items", "type": "text", "flag": "-I", "flagAliases": ["--playlist-items"], "placeholder": "1:5,10" }
+      ]
+    },
+    {
+      "title": "Extras",
+      "options": [
+        { "id": "writeSubs", "label": "Download subtitles", "type": "flag", "flag": "--write-subs" },
+        { "id": "writeAutoSubs", "label": "Download auto-generated subtitles", "type": "flag", "flag": "--write-auto-subs" },
+        { "id": "subLangs", "label": "Subtitle languages", "type": "text", "flag": "--sub-langs", "placeholder": "en.*,de" },
+        { "id": "embedSubs", "label": "Embed subtitles", "type": "flag", "flag": "--embed-subs" },
+        { "id": "embedThumbnail", "label": "Embed thumbnail", "type": "flag", "flag": "--embed-thumbnail" },
+        { "id": "embedMetadata", "label": "Embed metadata", "type": "flag", "flag": "--embed-metadata" },
+        { "id": "sponsorblockRemove", "label": "SponsorBlock: remove", "type": "text", "flag": "--sponsorblock-remove", "placeholder": "sponsor,selfpromo" },
+        {
+          "id": "cookiesFromBrowser", "label": "Cookies from browser", "type": "choice", "flag": "--cookies-from-browser",
+          "choices": [ { "value": "edge" }, { "value": "chrome" }, { "value": "firefox" }, { "value": "brave" }, { "value": "opera" }, { "value": "vivaldi" }, { "value": "chromium" } ]
+        },
+        { "id": "limitRate", "label": "Rate limit", "type": "text", "flag": "-r", "flagAliases": ["--limit-rate"], "placeholder": "2M" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Best quality as MP4", "description": "", "values": { "format": "bv*+ba/b", "mergeFormat": "mp4", "urls": "https://www.youtube.com/watch?v=VIDEO_ID" } },
+    { "name": "Audio as MP3", "description": "", "values": { "extractAudio": "true", "audioFormat": "mp3", "audioQuality": "0", "urls": "https://www.youtube.com/watch?v=VIDEO_ID" } },
+    { "name": "At most 1080p", "description": "", "values": { "formatSort": "res:1080", "urls": "https://www.youtube.com/watch?v=VIDEO_ID" } },
+    { "name": "Numbered playlist", "description": "", "values": { "yesPlaylist": "true", "output": "%(playlist_index)03d - %(title)s.%(ext)s", "urls": "https://www.youtube.com/playlist?list=PLAYLIST_ID" } },
+    { "name": "With English subtitles", "description": "", "values": { "writeSubs": "true", "subLangs": "en.*", "embedSubs": "true", "urls": "https://www.youtube.com/watch?v=VIDEO_ID" } },
+    { "name": "List formats", "description": "", "values": { "listFormats": "true", "urls": "https://www.youtube.com/watch?v=VIDEO_ID" } }
+  ]
+}

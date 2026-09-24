@@ -1,0 +1,245 @@
+{
+  "id": "kubectl",
+  "title": "kubectl",
+  "description": "Inspect and manage Kubernetes resources.",
+  "command": "kubectl",
+  "aliases": ["kubectl.exe", "k"],
+  "wingetId": "Kubernetes.kubectl",
+  "homepage": "https://kubernetes.io/docs/reference/kubectl/",
+  "sections": [
+    {
+      "title": "Cluster",
+      "options": [
+        { "id": "namespace", "label": "Namespace", "type": "text", "flag": "-n", "flagAliases": ["--namespace"] },
+        { "id": "context", "label": "Context", "type": "text", "flag": "--context" },
+        { "id": "kubeconfig", "label": "Kubeconfig", "type": "path", "flag": "--kubeconfig" }
+      ]
+    }
+  ],
+  "modes": [
+    {
+      "id": "get",
+      "title": "get",
+      "description": "List resources.",
+      "subcommand": ["get"],
+      "sections": [
+        {
+          "title": "Get",
+          "options": [
+            {
+              "id": "resource", "label": "Resource type", "type": "choice", "position": 1, "required": true,
+              "choices": [
+                { "value": "pods" }, { "value": "deployments" }, { "value": "services" }, { "value": "ingress" }, { "value": "nodes" },
+                { "value": "namespaces" }, { "value": "configmaps" }, { "value": "secrets" }, { "value": "events" }, { "value": "jobs" },
+                { "value": "cronjobs" }, { "value": "statefulsets" }, { "value": "daemonsets" }, { "value": "replicasets" },
+                { "value": "pvc" }, { "value": "pv" }, { "value": "all" }
+              ]
+            },
+            { "id": "name", "label": "Name", "type": "positional", "position": 2 },
+            {
+              "id": "output", "label": "Output", "type": "choice", "flag": "-o", "flagAliases": ["--output"],
+              "choices": [ { "value": "wide" }, { "value": "yaml" }, { "value": "json" }, { "value": "name" } ]
+            },
+            { "id": "allNamespaces", "label": "All namespaces", "type": "flag", "flag": "-A", "flagAliases": ["--all-namespaces"] },
+            { "id": "selector", "label": "Label selector", "type": "text", "flag": "-l", "flagAliases": ["--selector"], "placeholder": "app=web" },
+            { "id": "fieldSelector", "label": "Field selector", "type": "text", "flag": "--field-selector", "placeholder": "status.phase=Running" },
+            { "id": "sortBy", "label": "Sort by", "type": "text", "flag": "--sort-by", "placeholder": ".metadata.creationTimestamp" },
+            { "id": "showLabels", "label": "Show labels", "type": "flag", "flag": "--show-labels" },
+            { "id": "watch", "label": "Watch", "type": "flag", "flag": "-w", "flagAliases": ["--watch"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "describe",
+      "title": "describe",
+      "description": "Show details and events of resources.",
+      "subcommand": ["describe"],
+      "sections": [
+        {
+          "title": "Describe",
+          "options": [
+            {
+              "id": "resource", "label": "Resource type", "type": "choice", "position": 1, "required": true,
+              "choices": [ { "value": "pod" }, { "value": "deployment" }, { "value": "service" }, { "value": "node" }, { "value": "ingress" }, { "value": "pvc" } ]
+            },
+            { "id": "name", "label": "Name", "type": "positional", "position": 2 },
+            { "id": "selector", "label": "Label selector", "type": "text", "flag": "-l", "flagAliases": ["--selector"] },
+            { "id": "allNamespaces", "label": "All namespaces", "type": "flag", "flag": "-A", "flagAliases": ["--all-namespaces"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "logs",
+      "title": "logs",
+      "description": "Print container logs.",
+      "subcommand": ["logs"],
+      "sections": [
+        {
+          "title": "Logs",
+          "options": [
+            { "id": "pod", "label": "Pod", "type": "positional", "position": 1, "placeholder": "my-pod or deploy/web", "description": "Pod name or type/name." },
+            { "id": "container", "label": "Container", "type": "text", "flag": "-c", "flagAliases": ["--container"] },
+            { "id": "allContainers", "label": "All containers", "type": "flag", "flag": "--all-containers" },
+            { "id": "selector", "label": "Label selector", "type": "text", "flag": "-l", "flagAliases": ["--selector"] },
+            { "id": "follow", "label": "Follow", "type": "flag", "flag": "-f", "flagAliases": ["--follow"] },
+            { "id": "previous", "label": "Previous (crashed) container", "type": "flag", "flag": "-p", "flagAliases": ["--previous"] },
+            { "id": "tail", "label": "Last N lines", "type": "number", "flag": "--tail", "valueStyle": "equals" },
+            { "id": "since", "label": "Since", "type": "text", "flag": "--since", "valueStyle": "equals", "placeholder": "1h" },
+            { "id": "timestamps", "label": "Timestamps", "type": "flag", "flag": "--timestamps" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "apply",
+      "title": "apply",
+      "description": "Create or update resources from manifests.",
+      "subcommand": ["apply"],
+      "sections": [
+        {
+          "title": "Apply",
+          "options": [
+            { "id": "file", "label": "Manifests (files, folders, URLs)", "type": "list", "flag": "-f", "flagAliases": ["--filename"], "placeholder": "deployment.yaml" },
+            { "id": "kustomize", "label": "Kustomize folder", "type": "path", "flag": "-k", "flagAliases": ["--kustomize"] },
+            { "id": "recursive", "label": "Recurse into folders", "type": "flag", "flag": "-R", "flagAliases": ["--recursive"] },
+            {
+              "id": "dryRun", "label": "Dry run", "type": "choice", "flag": "--dry-run", "valueStyle": "equals",
+              "choices": [ { "value": "client" }, { "value": "server" } ]
+            },
+            { "id": "serverSide", "label": "Server-side apply", "type": "flag", "flag": "--server-side" },
+            { "id": "prune", "label": "Prune", "type": "flag", "flag": "--prune", "warning": "Deletes resources that are no longer in the applied manifests." },
+            { "id": "selector", "label": "Label selector", "type": "text", "flag": "-l", "flagAliases": ["--selector"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delete",
+      "title": "delete",
+      "description": "Delete resources.",
+      "subcommand": ["delete"],
+      "sections": [
+        {
+          "title": "Delete",
+          "options": [
+            {
+              "id": "resource", "label": "Resource type", "type": "choice", "position": 1,
+              "choices": [ { "value": "pod" }, { "value": "deployment" }, { "value": "service" }, { "value": "job" }, { "value": "configmap" }, { "value": "secret" }, { "value": "namespace", "warning": "Deletes everything in the namespace." } ]
+            },
+            { "id": "names", "label": "Names", "type": "list", "position": 2 },
+            { "id": "file", "label": "Manifests", "type": "list", "flag": "-f", "flagAliases": ["--filename"] },
+            { "id": "selector", "label": "Label selector", "type": "text", "flag": "-l", "flagAliases": ["--selector"] },
+            { "id": "all", "label": "All of this type", "type": "flag", "flag": "--all", "warning": "Deletes every resource of this type in the namespace." },
+            { "id": "force", "label": "Force", "type": "flag", "flag": "--force", "warning": "Removes pods immediately without waiting for graceful shutdown." },
+            { "id": "gracePeriod", "label": "Grace period (s)", "type": "number", "flag": "--grace-period", "valueStyle": "equals" },
+            {
+              "id": "dryRun", "label": "Dry run", "type": "choice", "flag": "--dry-run", "valueStyle": "equals",
+              "choices": [ { "value": "client" }, { "value": "server" } ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exec",
+      "title": "exec",
+      "description": "Run a command in a container.",
+      "subcommand": ["exec"],
+      "sections": [
+        {
+          "title": "Exec",
+          "options": [
+            { "id": "stdin", "label": "Interactive (stdin)", "type": "flag", "flag": "-i", "flagAliases": ["--stdin"] },
+            { "id": "tty", "label": "TTY", "type": "flag", "flag": "-t", "flagAliases": ["--tty"] },
+            { "id": "container", "label": "Container", "type": "text", "flag": "-c", "flagAliases": ["--container"] },
+            { "id": "pod", "label": "Pod", "type": "positional", "position": 1, "required": true, "placeholder": "my-pod or deploy/web" },
+            { "id": "command", "label": "Command", "type": "positional", "flag": "--", "position": 2, "raw": true, "required": true, "placeholder": "sh" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "port-forward",
+      "title": "port-forward",
+      "description": "Forward local ports to a pod or service.",
+      "subcommand": ["port-forward"],
+      "sections": [
+        {
+          "title": "Port forward",
+          "options": [
+            { "id": "target", "label": "Target", "type": "positional", "position": 1, "required": true, "placeholder": "svc/web or pod/my-pod" },
+            { "id": "ports", "label": "Ports", "type": "list", "position": 2, "required": true, "placeholder": "8080:80", "description": "local:remote, one per line." },
+            { "id": "address", "label": "Listen address", "type": "text", "flag": "--address", "placeholder": "0.0.0.0" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "use-context",
+      "title": "config use-context",
+      "description": "Switch the current context.",
+      "subcommand": ["config", "use-context"],
+      "sections": [
+        {
+          "title": "Context",
+          "options": [
+            { "id": "contextName", "label": "Context", "type": "positional", "position": 1, "required": true, "placeholder": "docker-desktop" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rollout",
+      "title": "rollout",
+      "description": "Restart, undo or watch a rollout.",
+      "subcommand": ["rollout"],
+      "sections": [
+        {
+          "title": "Rollout",
+          "options": [
+            {
+              "id": "action", "label": "Action", "type": "choice", "position": 1, "required": true,
+              "choices": [ { "value": "status" }, { "value": "restart" }, { "value": "undo" }, { "value": "history" }, { "value": "pause" }, { "value": "resume" } ]
+            },
+            { "id": "resource", "label": "Resource", "type": "positional", "position": 2, "required": true, "placeholder": "deployment/web" },
+            { "id": "toRevision", "label": "To revision", "type": "number", "flag": "--to-revision", "valueStyle": "equals", "dependsOn": "action=undo" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scale",
+      "title": "scale",
+      "description": "Set the number of replicas.",
+      "subcommand": ["scale"],
+      "sections": [
+        {
+          "title": "Scale",
+          "options": [
+            { "id": "replicas", "label": "Replicas", "type": "number", "flag": "--replicas", "valueStyle": "equals", "required": true, "validation": "^\\d+$" },
+            { "id": "currentReplicas", "label": "Only if currently", "type": "number", "flag": "--current-replicas", "valueStyle": "equals" },
+            { "id": "resource", "label": "Resource", "type": "positional", "position": 1, "required": true, "placeholder": "deployment/web" }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Pods everywhere", "description": "", "mode": "get", "values": { "resource": "pods", "allNamespaces": "true", "output": "wide" } },
+    { "name": "Pod as YAML", "description": "", "mode": "get", "values": { "resource": "pods", "name": "my-pod", "output": "yaml" } },
+    { "name": "Recent events", "description": "", "mode": "get", "values": { "resource": "events", "sortBy": ".metadata.creationTimestamp" } },
+    { "name": "Describe a node", "description": "", "mode": "describe", "values": { "resource": "node", "name": "worker-1" } },
+    { "name": "Follow logs", "description": "", "mode": "logs", "values": { "pod": "deploy/web", "follow": "true", "tail": "100" } },
+    { "name": "Logs of the crashed container", "description": "", "mode": "logs", "values": { "pod": "my-pod", "previous": "true" } },
+    { "name": "Apply a manifest", "description": "", "mode": "apply", "values": { "file": "deployment.yaml" } },
+    { "name": "Server dry run of a folder", "description": "", "mode": "apply", "values": { "file": "k8s/", "recursive": "true", "dryRun": "server" } },
+    { "name": "Delete a pod", "description": "", "mode": "delete", "values": { "resource": "pod", "names": "my-pod" } },
+    { "name": "Shell into a pod", "description": "", "mode": "exec", "values": { "stdin": "true", "tty": "true", "pod": "my-pod", "command": "sh" } },
+    { "name": "Port-forward a service", "description": "", "mode": "port-forward", "values": { "target": "svc/web", "ports": "8080:80" } },
+    { "name": "Switch context", "description": "", "mode": "use-context", "values": { "contextName": "docker-desktop" } },
+    { "name": "Restart a deployment", "description": "", "mode": "rollout", "values": { "action": "restart", "resource": "deployment/web", "namespace": "prod" } },
+    { "name": "Scale to 3", "description": "", "mode": "scale", "values": { "replicas": "3", "resource": "deployment/web" } }
+  ]
+}

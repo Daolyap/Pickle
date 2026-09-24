@@ -51,9 +51,43 @@ public static class RunspaceGate
             return result;
         }
 
-        return runtime.Engine.IsOpen
-            ? runtime.Engine.InvokeAsync(script, parameters, ShellTarget.Background).GetAwaiter().GetResult()
-            : ShellResult.Empty;
+        if (!runtime.Engine.IsOpen)
+        {
+            return ShellResult.Empty;
+        }
+
+        try
+        {
+            return runtime.Engine.InvokeAsync(script, parameters, ShellTarget.Background).GetAwaiter().GetResult();
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or RuntimeException)
+        {
+            runtime.Log.Debug("engine", $"Background pool unavailable ({ex.Message}); using a temporary runspace");
+            return InvokeIsolated(script, parameters);
+        }
+    }
+
+    private static ShellResult InvokeIsolated(string script, IReadOnlyDictionary<string, object?>? parameters)
+    {
+        using var runspace = RunspaceFactory.CreateRunspace(InitialSessionState.CreateDefault2());
+        runspace.Open();
+        using var ps = PowerShell.Create();
+        ps.Runspace = runspace;
+        ps.AddScript(script, useLocalScope: true);
+        foreach (var (name, value) in parameters ?? new Dictionary<string, object?>())
+        {
+            ps.AddParameter(name, value);
+        }
+
+        try
+        {
+            var output = ps.Invoke();
+            return new ShellResult([.. output], [.. ps.Streams.Error]);
+        }
+        catch (RuntimeException ex)
+        {
+            return new ShellResult([], [ex.ErrorRecord]);
+        }
     }
 
     private static ShellResult InvokeNested(string script, IReadOnlyDictionary<string, object?>? parameters)

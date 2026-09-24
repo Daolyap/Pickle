@@ -49,7 +49,7 @@ public sealed class FilesPanelTests : IDisposable
     }
 
     [Fact]
-    public void FilterSelectAndEnterInsertsTheRelativeQuotedPath()
+    public void FilterSelectAndEnterInsertsTheQuotedPath()
     {
         var script = new UiScript()
             .WaitFor("scanned", Scanned)
@@ -60,12 +60,13 @@ public sealed class FilesPanelTests : IDisposable
             .Press(Key.Enter);
         var (t, host) = TuiHarness.Start(script);
         using var _ = t;
-        t.Runtime.Shell.SetLocation(_root);
 
-        var result = host.Show(FilesPanelPlugin.PanelId);
+        // Relative paths are covered by FormatsPathsRelativeToTheCurrentDirectory; changing the location here would
+        // change the process working directory under the other tests running in parallel.
+        var result = host.Show(FilesPanelPlugin.PanelId, _root);
 
         script.AssertOk();
-        Assert.Equal(new PanelResult(PanelResultKind.InsertText, "'" + Path.Combine("sub dir", "gamma.cs") + "'"), result);
+        Assert.Equal(new PanelResult(PanelResultKind.InsertText, "'" + Path.Combine(_root, "sub dir", "gamma.cs") + "'"), result);
     }
 
     [Fact]

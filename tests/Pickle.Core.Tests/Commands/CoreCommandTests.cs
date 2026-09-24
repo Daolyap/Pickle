@@ -45,7 +45,7 @@ public class CoreCommandTests
         File.WriteAllText(t.Paths.ConfigFile, """{ "prompt": { "gitTimeoutMs": 55 } }""");
         t.Run("pk reload");
         Assert.Equal(55, t.Runtime.Config.Current.Prompt.GitTimeoutMs);
-        Assert.Contains("config\n", Pickle.Abstractions.TextWidth.StripAnsi(t.Terminal.RawOutput), StringComparison.Ordinal);
+        Assert.Contains("✔ config\n", Pickle.Abstractions.TextWidth.StripAnsi(t.Terminal.RawOutput), StringComparison.Ordinal);
     }
 
     [Fact]

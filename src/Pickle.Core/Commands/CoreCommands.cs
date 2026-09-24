@@ -79,10 +79,11 @@ public sealed class DoctorCommand(PickleRuntime runtime) : IPickleCommand
         var modulePath = (Environment.GetEnvironmentVariable("PSModulePath") ?? string.Empty)
             .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
         var missing = modulePath.Where(p => !Directory.Exists(p)).ToList();
+        // PowerShell lists its default locations even when they don't exist; that's informational, not a problem.
         Add(
-            missing.Count == 0 ? DoctorCheck.Ok : DoctorCheck.Warning,
+            missing.Count == 0 ? DoctorCheck.Ok : DoctorCheck.Info,
             "PSModulePath",
-            $"{modulePath.Length} entries" + (missing.Count > 0 ? $"; missing: {string.Join(", ", missing)}" : string.Empty));
+            $"{modulePath.Length} entries" + (missing.Count > 0 ? $"; not present: {string.Join(", ", missing)}" : string.Empty));
 
         var pwsh = EditorLauncher.FindOnPath(OperatingSystem.IsWindows() ? "pwsh.exe" : "pwsh");
         Add(pwsh is null ? DoctorCheck.Info : DoctorCheck.Ok, "pwsh", pwsh ?? "not installed (optional; its bundled modules are used when present)");

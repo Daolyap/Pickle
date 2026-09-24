@@ -4,7 +4,7 @@ using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Panels.Windows;
 
-internal enum NewTaskTrigger
+public enum NewTaskTrigger
 {
     Daily,
     Weekly,
@@ -17,7 +17,7 @@ internal enum NewTaskTrigger
 }
 
 /// <summary>What the New task dialog collected.</summary>
-internal sealed record NewTaskValues(
+public sealed record NewTaskValues(
     string Name,
     NewTaskTrigger Trigger,
     string Time,

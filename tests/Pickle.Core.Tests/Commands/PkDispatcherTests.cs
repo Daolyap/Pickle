@@ -111,8 +111,8 @@ public class PkDispatcherTests
     [Fact]
     public void FuzzySuggestsCloseNamesOnly()
     {
-        Assert.Equal(["config"], Fuzzy.Suggest("cofnig", ["config", "plugin", "sync"]));
-        Assert.Equal(["editor.bellStyle"], Fuzzy.Suggest("bellstyle", ["editor.bellStyle", "theme"]));
-        Assert.Empty(Fuzzy.Suggest("zzzzzz", ["config", "plugin"]));
+        Assert.Equal(["config"], DidYouMean.Suggest("cofnig", ["config", "plugin", "sync"]));
+        Assert.Equal(["editor.bellStyle"], DidYouMean.Suggest("bellstyle", ["editor.bellStyle", "theme"]));
+        Assert.Empty(DidYouMean.Suggest("zzzzzz", ["config", "plugin"]));
     }
 }

@@ -48,4 +48,25 @@ public class EngineSmokeTests
         t.Runtime.Engine.ExecuteInteractive($"Set-Location -LiteralPath '{dir}'");
         Assert.Equal(Path.GetFullPath(dir), Path.GetFullPath(t.Runtime.Engine.CurrentDirectory));
     }
+
+    [Fact]
+    public async Task BackgroundTargetRunsOnThePool()
+    {
+        using var t = TestPickle.Create(start: true);
+        var result = await t.Runtime.Shell.InvokeAsync("param($n) $n * 3", new Dictionary<string, object?> { ["n"] = 14 }, Pickle.Abstractions.ShellTarget.Background);
+        Assert.False(result.HadErrors);
+        Assert.Equal("42", result.Output.Single().ToString());
+    }
+
+    [Fact]
+    public void PanelsRequestedDuringAPipelineAreQueued()
+    {
+        using var t = TestPickle.Create(start: true);
+        var panel = new Pickle.Abstractions.PanelDescriptor { Id = "p", Title = "P", Description = "d", CreateView = _ => new object() };
+        Assert.False(t.Runtime.Shell.IsBusy);
+        t.Runtime.Shell.OpenPanelWhenIdle(panel, "arg");
+        Assert.True(t.Runtime.Engine.PendingPanels.TryDequeue(out var pending));
+        Assert.Same(panel, pending.Panel);
+        Assert.Equal("arg", pending.Argument);
+    }
 }

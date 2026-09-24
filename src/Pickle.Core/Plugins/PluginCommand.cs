@@ -547,7 +547,7 @@ public sealed partial class PluginCommand(PickleRuntime runtime, PluginManager m
 
     private int NotFound(PickleCommandContext context, string id)
     {
-        var suggestions = Fuzzy.Suggest(id, manager.Plugins.Select(p => p.Id));
+        var suggestions = DidYouMean.Suggest(id, manager.Plugins.Select(p => p.Id));
         context.WriteError($"No plugin '{id}'." + (suggestions.Count > 0 ? $" Did you mean {string.Join(" or ", suggestions.Select(s => $"'{s}'"))}?" : " See: pk plugin list"));
         return 1;
     }
@@ -555,7 +555,7 @@ public sealed partial class PluginCommand(PickleRuntime runtime, PluginManager m
     private static int Unknown(PickleCommandContext context, string sub)
     {
         string[] subcommands = ["list", "install", "remove", "enable", "disable", "trust", "new"];
-        var hint = Fuzzy.Suggest(sub, subcommands) is [var best, ..] ? $" Did you mean 'pk plugin {best}'?" : " Run 'pk plugin --help'.";
+        var hint = DidYouMean.Suggest(sub, subcommands) is [var best, ..] ? $" Did you mean 'pk plugin {best}'?" : " Run 'pk plugin --help'.";
         context.WriteError($"Unknown subcommand 'pk plugin {sub}'.{hint}");
         return 2;
     }

@@ -74,7 +74,7 @@ public sealed class SyncCommand(PickleRuntime runtime, SyncService service) : IP
                 report = await service.OffAsync(cancellationToken).ConfigureAwait(false);
                 break;
             default:
-                var hint = Fuzzy.Suggest(sub, ["status", "init", "push", "pull", "now", "off"]) is [var best, ..] ? $" Did you mean 'pk sync {best}'?" : " Run 'pk sync --help'.";
+                var hint = DidYouMean.Suggest(sub, ["status", "init", "push", "pull", "now", "off"]) is [var best, ..] ? $" Did you mean 'pk sync {best}'?" : " Run 'pk sync --help'.";
                 context.WriteError($"Unknown subcommand 'pk sync {sub}'.{hint}");
                 return 2;
         }

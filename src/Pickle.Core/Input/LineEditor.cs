@@ -142,6 +142,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
             Renderer.Reset();
             DrainRequests();
             Render();
+            DrainPendingPanels();
             while (_outcome == Outcome.None)
             {
                 var key = NextKey(cancellationToken);
@@ -640,7 +641,19 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
 
     public void CloseOverlay() => _overlay = null;
 
-    public void ShowPanel(string panelId, string? argument = null)
+    public void ShowPanel(string panelId, string? argument = null) =>
+        ShowPanelCore(panelId, host => host.Show(panelId, argument, _text));
+
+    /// <summary>Opens panels queued by <see cref="IPickleShell.OpenPanelWhenIdle"/> while a pipeline was running.</summary>
+    private void DrainPendingPanels()
+    {
+        while (_outcome == Outcome.None && _runtime.Engine.PendingPanels.TryDequeue(out var pending))
+        {
+            ShowPanelCore(pending.Panel.Id, host => host.Show(pending.Panel, pending.Argument, _text));
+        }
+    }
+
+    private void ShowPanelCore(string panelId, Func<IPanelHost, PanelResult?> show)
     {
         var host = _runtime.ServiceRegistry.Get<IPanelHost>();
         if (host is null)
@@ -651,7 +664,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
 
         if (!_reading)
         {
-            ApplyPanelResult(this, host.Show(panelId, argument, _text));
+            ApplyPanelResult(this, show(host));
             return;
         }
 
@@ -664,7 +677,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         PanelResult? result = null;
         try
         {
-            result = host.Show(panelId, argument, _text);
+            result = show(host);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

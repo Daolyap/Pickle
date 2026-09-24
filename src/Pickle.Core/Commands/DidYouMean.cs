@@ -1,7 +1,7 @@
 namespace Pickle.Core.Commands;
 
-/// <summary>"Did you mean" suggestions for command names, config paths and plugin ids. Only <see cref="Suggest"/> is public so it can be swapped for the shared matcher.</summary>
-public static class Fuzzy
+/// <summary>"Did you mean" typo suggestions (edit distance with transpositions) for command names, config paths and plugin ids.</summary>
+public static class DidYouMean
 {
     private static int Distance(string a, string b)
     {

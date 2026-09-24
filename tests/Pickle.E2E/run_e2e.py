@@ -71,6 +71,18 @@ def test_panel_open_close_repeatedly(p):
             s.run(f"Write-Output 'back-{i}'", f"back-{i}", timeout=15)
 
 
+def test_pk_command_opens_panel_after_pipeline(p):
+    """`pk git` runs inside a pipeline; the panel must open once the prompt is back, load, and close cleanly."""
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        s.type("pk git\r")
+        s.wait_for("Esc to close", timeout=20)
+        time.sleep(0.5)
+        s.press("esc")
+        time.sleep(0.4)
+        s.run("Write-Output 'after-pk-git'", "after-pk-git", timeout=15)
+
+
 def test_exit(p):
     with PickleSession(p) as s:
         s.wait_for_prompt()

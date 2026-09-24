@@ -300,7 +300,7 @@ public static class ConfigSchema
             var property = FindProperty(type, key);
             if (property is null)
             {
-                var hint = Fuzzy.Suggest(path, AllPaths(), 1) is [var best] ? $" Did you mean '{best}'?" : string.Empty;
+                var hint = DidYouMean.Suggest(path, AllPaths(), 1) is [var best] ? $" Did you mean '{best}'?" : string.Empty;
                 problems.Add(new ConfigProblem(ConfigProblemSeverity.Warning, source, path, $"Unknown setting '{path}' is ignored.{hint}"));
                 continue;
             }
@@ -504,7 +504,7 @@ public static class ConfigSchema
 
     private static ConfigValidationException Unknown(string path)
     {
-        var suggestions = Fuzzy.Suggest(path, AllPaths());
+        var suggestions = DidYouMean.Suggest(path, AllPaths());
         var hint = suggestions.Count > 0 ? $" Did you mean {string.Join(" or ", suggestions.Select(s => $"'{s}'"))}?" : " Run 'pk config' to see all settings.";
         return new ConfigValidationException($"Unknown setting '{path}'.{hint}");
     }

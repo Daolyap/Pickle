@@ -25,6 +25,9 @@ public interface IPickleShell
 
     bool IsInteractive { get; }
 
+    /// <summary>A pipeline is running in the main runspace (e.g. a `pk` command is executing).</summary>
+    bool IsBusy { get; }
+
     Task<ShellResult> InvokeAsync(
         string script,
         IReadOnlyDictionary<string, object?>? parameters = null,
@@ -45,4 +48,10 @@ public interface IPickleShell
 
     /// <summary>Write a line to the terminal scrollback (ANSI allowed). Safe to call from any thread while no panel is open.</summary>
     void WriteLine(string text);
+
+    /// <summary>
+    /// Open <paramref name="panel"/> as soon as the prompt is back (panels run on the REPL thread, never inside a
+    /// running pipeline). Its result is applied to the input line as if it had been opened with a key.
+    /// </summary>
+    void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null);
 }

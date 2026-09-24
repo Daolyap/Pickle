@@ -56,6 +56,20 @@ public sealed class PanelHost : IPanelHost
 
     public PanelResult? Show(PanelDescriptor panel, string? argument = null, string? currentInput = null)
     {
+        // Inside a running pipeline (e.g. `pk git`) the runspace is busy for the panel's whole lifetime, so its
+        // background work could never run: open it when the prompt is back instead.
+        if (_pickle.Shell.IsBusy && !_running)
+        {
+            if (!_pickle.Shell.IsInteractive)
+            {
+                _pickle.Shell.WriteLine($"{panel.Title} needs the interactive shell.");
+                return null;
+            }
+
+            _pickle.Shell.OpenPanelWhenIdle(panel, argument);
+            return null;
+        }
+
         lock (_gate)
         {
             if (_running)

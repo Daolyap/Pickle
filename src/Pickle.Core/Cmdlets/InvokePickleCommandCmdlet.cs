@@ -39,7 +39,7 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
         var command = runtime.CommandRegistry.Get(Name);
         if (command is null)
         {
-            var suggestions = Fuzzy.Suggest(Name, runtime.CommandRegistry.All.Select(c => c.Name));
+            var suggestions = DidYouMean.Suggest(Name, runtime.CommandRegistry.All.Select(c => c.Name));
             var hint = suggestions.Count > 0
                 ? $" Did you mean {string.Join(" or ", suggestions.Select(s => $"'pk {s}'"))}?"
                 : " Run 'pk help' to list commands.";
@@ -162,7 +162,7 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
                 return;
             }
 
-            var suggestions = Fuzzy.Suggest(topic, runtime.CommandRegistry.All.Select(c => c.Name));
+            var suggestions = DidYouMean.Suggest(topic, runtime.CommandRegistry.All.Select(c => c.Name));
             Host.UI.WriteLine(Ansi.Colorize($"No command named '{topic}'.", theme.Ui.Warning)
                 + (suggestions.Count > 0 ? $" Did you mean {string.Join(" or ", suggestions.Select(s => $"'{s}'"))}?" : string.Empty));
         }

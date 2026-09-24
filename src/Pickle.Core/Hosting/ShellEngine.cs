@@ -20,6 +20,7 @@ public sealed record EditorRequest(bool Replace, string Text);
 public sealed class ShellEngine : IPickleShell, IDisposable
 {
     private readonly PickleRuntime _runtime;
+    private static readonly object OpenGate = new();
     private readonly SemaphoreSlim _mainLock = new(1, 1);
     private readonly object _currentGate = new();
     private InitialSessionState? _sessionState;
@@ -44,6 +45,11 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     public ConcurrentQueue<EditorRequest> EditorRequests { get; } = new();
 
     public ConcurrentQueue<string> SubmittedCommands { get; } = new();
+
+    /// <summary>Panels requested while a pipeline was running; the line editor opens them when the prompt is back.</summary>
+    public ConcurrentQueue<(PanelDescriptor Panel, string? Argument)> PendingPanels { get; } = new();
+
+    public bool IsBusy => IsExecuting;
 
     public ExecutionResult? LastResult { get; private set; }
 
@@ -82,7 +88,14 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         _sessionState = iss;
         MainRunspace = RunspaceFactory.CreateRunspace(Host, iss);
         MainRunspace.Name = "Pickle";
-        MainRunspace.Open();
+
+        // PowerShell's first-time provider initialization isn't thread-safe: runspaces opened concurrently in one
+        // process (tests) could come up without the FileSystem provider.
+        lock (OpenGate)
+        {
+            MainRunspace.Open();
+        }
+
         Runspace.DefaultRunspace = MainRunspace;
         MainRunspace.Debugger.DebuggerStop += (_, e) => _runtime.Repl.OnDebuggerStop(e);
 
@@ -274,6 +287,14 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             return Task.FromResult(InvokeNested(script, parameters));
         }
 
+        // Another thread during a `pk` command: the command's pipeline holds the runspace, so hand the work to its pump
+        // instead of waiting for the lock it holds.
+        if (IsExecuting && Commands.PkInvocation.Current is { } invocation
+            && invocation.TryRun(() => InvokeNested(script, parameters)) is { } marshalled)
+        {
+            return marshalled;
+        }
+
         return Task.Run(() => InvokeMain(script, parameters, cancellationToken), cancellationToken);
     }
 
@@ -366,7 +387,8 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             if (_pool is null)
             {
                 var iss = _sessionState ?? InitialSessionState.CreateDefault2();
-                var pool = RunspaceFactory.CreateRunspacePool(1, 4, iss, host: null);
+                var pool = RunspaceFactory.CreateRunspacePool(iss);
+                pool.SetMaxRunspaces(4);
                 pool.Open();
                 _pool = pool;
             }
@@ -393,6 +415,8 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     }
 
     public void WriteLine(string text) => _runtime.Terminal.Write(text + "\n");
+
+    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null) => PendingPanels.Enqueue((panel, argument));
 
     // ───────────── Helpers ─────────────
 

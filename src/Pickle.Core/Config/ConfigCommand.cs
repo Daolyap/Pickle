@@ -315,7 +315,7 @@ public sealed class ConfigCommand(PickleRuntime runtime) : IPickleCommand
     private static int Unknown(PickleCommandContext context, string sub)
     {
         string[] subcommands = ["get", "set", "reset", "list", "edit", "path", "schema"];
-        var hint = Fuzzy.Suggest(sub, subcommands) is [var best, ..] ? $" Did you mean 'pk config {best}'?" : " Run 'pk config --help'.";
+        var hint = DidYouMean.Suggest(sub, subcommands) is [var best, ..] ? $" Did you mean 'pk config {best}'?" : " Run 'pk config --help'.";
         context.WriteError($"Unknown subcommand 'pk config {sub}'.{hint}");
         return 2;
     }

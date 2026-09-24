@@ -43,13 +43,9 @@ public sealed class PickleHost : PSHost, IHostSupportsInteractiveSession
 
     public override void ExitNestedPrompt() => _runtime.Repl.ExitNestedPrompt();
 
-    public override void NotifyBeginApplication()
-    {
-    }
+    public override void NotifyBeginApplication() => _runtime.Terminal.BeginNativeProgram();
 
-    public override void NotifyEndApplication()
-    {
-    }
+    public override void NotifyEndApplication() => _runtime.Terminal.EndNativeProgram();
 
     // IHostSupportsInteractiveSession: enables Enter-PSSession / Exit-PSSession.
     public bool IsRunspacePushed => _pushedRunspaces.Count > 0;

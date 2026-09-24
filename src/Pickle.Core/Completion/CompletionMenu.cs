@@ -101,7 +101,8 @@ public sealed class CompletionMenu : IEditorOverlay
         var start = Math.Clamp(_set.ReplacementIndex, 0, text.Length);
         var cursor = Math.Clamp(buffer.Cursor, start, text.Length);
         var end = Math.Min(text.Length, cursor + _tail);
-        buffer.Replace(string.Concat(text.AsSpan(0, start), item.CompletionText, text.AsSpan(end)), start + item.CompletionText.Length);
+        var (insert, cursorInInsert) = CompletionEngine.Insertion(item);
+        buffer.Replace(string.Concat(text.AsSpan(0, start), insert, text.AsSpan(end)), start + cursorInInsert);
     }
 
     public void OnBufferChanged(IEditorBuffer buffer)

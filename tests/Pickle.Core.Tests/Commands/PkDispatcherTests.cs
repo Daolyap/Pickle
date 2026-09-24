@@ -94,6 +94,19 @@ public class PkDispatcherTests
         Assert.Contains("Show Pickle, PowerShell and .NET versions", t.Terminal.RawOutput, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void HelpGroupsCommandsAndFitsTheTerminalWidth()
+    {
+        using var t = TestPickle.Create(width: 60, height: 80, start: true);
+        t.Run("pk help");
+        var lines = Pickle.Abstractions.TextWidth.StripAnsi(t.Terminal.RawOutput).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n');
+        Assert.All(lines, line => Assert.True(Pickle.Abstractions.TextWidth.VisibleWidth(line) < 60, line));
+        Assert.Contains("Shell", lines);
+        Assert.Contains("Keys", lines);
+        Assert.Contains(lines, l => l.TrimStart().StartsWith("history", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.Contains("Ctrl+R History search", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("cnfig", "pk config")]
     [InlineData("plugins", "pk plugin")]

@@ -45,4 +45,14 @@ public interface ITerminal
 
     /// <summary>Best-effort 0-based column where the next output lands, without a round trip to the terminal.</summary>
     int OutputColumn => GetCursorPosition().Column;
+
+    /// <summary>A native program is about to own the console (PSHost.NotifyBeginApplication); hand it the startup modes.</summary>
+    void BeginNativeProgram()
+    {
+    }
+
+    /// <summary>The native program exited; restore the modes Pickle had before <see cref="BeginNativeProgram"/>.</summary>
+    void EndNativeProgram()
+    {
+    }
 }

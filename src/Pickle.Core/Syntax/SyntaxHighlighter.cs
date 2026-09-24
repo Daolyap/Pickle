@@ -111,7 +111,7 @@ public sealed class SyntaxHighlighter : ISyntaxHighlighter, IRuntimeComponent, I
         var sawCommand = false;
         foreach (var token in tokens)
         {
-            Classify(token, roles, defined, cwd, ref sawCommand);
+            Classify(input, token, roles, defined, cwd, ref sawCommand);
         }
 
         if (sawCommand && _commands?.IsReady != true)
@@ -143,13 +143,13 @@ public sealed class SyntaxHighlighter : ISyntaxHighlighter, IRuntimeComponent, I
         return ToSpans(roles, errorMask, theme);
     }
 
-    private void Classify(Token token, Role[] roles, HashSet<string>? defined, string cwd, ref bool sawCommand)
+    private void Classify(string input, Token token, Role[] roles, HashSet<string>? defined, string cwd, ref bool sawCommand)
     {
         var role = RoleOf(token);
         if (role == Role.Command)
         {
             sawCommand = true;
-            if (!IsKnownCommand(token, defined, cwd))
+            if (!IsKnownCommand(token, defined, cwd) && !IsTranslatedCommand(input, token, cwd))
             {
                 role = Role.UnknownCommand;
             }
@@ -164,7 +164,7 @@ public sealed class SyntaxHighlighter : ISyntaxHighlighter, IRuntimeComponent, I
         {
             foreach (var inner in nested)
             {
-                Classify(inner, roles, defined, cwd, ref sawCommand);
+                Classify(input, inner, roles, defined, cwd, ref sawCommand);
             }
         }
     }
@@ -242,6 +242,27 @@ public sealed class SyntaxHighlighter : ISyntaxHighlighter, IRuntimeComponent, I
         }
 
         return _commands is null || _commands.IsKnown(name, cwd);
+    }
+
+    /// <summary>`apt install x`, `sudo x`, `export A=1`, `A=1 cmd`: the rewriters replace the command word itself.</summary>
+    private bool IsTranslatedCommand(string input, Token token, string cwd)
+    {
+        var start = token.Extent.StartOffset;
+        if (start < 0 || start >= input.Length)
+        {
+            return false;
+        }
+
+        try
+        {
+            var outcome = _runtime.Translation.Translate(input[start..], cwd);
+            return outcome.Changed && !outcome.Command.StartsWith(token.Text, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (InvalidOperationException)
+        {
+            // History changed while a lazy (background) highlight enumerated it.
+            return false;
+        }
     }
 
     private static HashSet<string>? FunctionsDefinedIn(Token[] tokens)

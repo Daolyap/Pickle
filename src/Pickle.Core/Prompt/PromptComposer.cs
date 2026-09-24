@@ -9,7 +9,7 @@ namespace Pickle.Core.Prompt;
 /// <summary>Turns a theme + context into prompt text using a segment lookup and a <see cref="SegmentCache"/>.</summary>
 internal sealed class PromptComposer(Func<string, IPromptSegment?> lookup, SegmentCache cache, CancellationToken lifetime)
 {
-    private static readonly string[] ProtectedTypes = ["cwd", "admin", "status"];
+    private static readonly string[] ProtectedTypes = ["cwd", "admin", "status", "text"];
 
     public PromptRender Compose(PromptContext context, Theme theme, int timeoutMs)
     {
@@ -100,7 +100,7 @@ internal sealed class PromptComposer(Func<string, IPromptSegment?> lookup, Segme
         return segments + gap + promptChar + " ";
     }
 
-    /// <summary>On narrow terminals, drop the last segment that is not the directory, elevation or failure marker.</summary>
+    /// <summary>On narrow terminals, drop the last informational segment (never the directory, static text, elevation or failure marker).</summary>
     private static bool DropOne(List<(SegmentStyle Style, RenderedSegment Segment)> left)
     {
         for (var i = left.Count - 1; i >= 0; i--)

@@ -1,0 +1,46 @@
+{
+  "profiles": [
+    {
+      "guid": "{b502e694-4c43-5dac-8920-383ec6adaf5e}",
+      "name": "Pickle",
+      "commandline": "\"C:\\Program Files\\Pickle\\pickle.exe\"",
+      "hidden": false,
+      "colorScheme": "Pickle",
+      "font": {
+        "face": "Cascadia Code NF",
+        "size": 12
+      },
+      "opacity": 95,
+      "useAcrylic": false,
+      "cursorShape": "bar",
+      "padding": "8",
+      "backgroundImage": "C:\\Users\\me\\Pictures\\jar.png",
+      "backgroundImageOpacity": 0.25
+    }
+  ],
+  "schemes": [
+    {
+      "name": "Pickle",
+      "background": "#1B1F1A",
+      "foreground": "#DDE5D6",
+      "cursorColor": "#A6E22E",
+      "selectionBackground": "#3A4A32",
+      "black": "#1B1F1A",
+      "red": "#E0605A",
+      "green": "#8FC34A",
+      "yellow": "#E5C07B",
+      "blue": "#61AFEF",
+      "purple": "#C678DD",
+      "cyan": "#56B6C2",
+      "white": "#DDE5D6",
+      "brightBlack": "#5C6A55",
+      "brightRed": "#FF7A72",
+      "brightGreen": "#B5E36B",
+      "brightYellow": "#F2D68F",
+      "brightBlue": "#82C4FF",
+      "brightPurple": "#DA9BEF",
+      "brightCyan": "#7FD4DE",
+      "brightWhite": "#FFFFFF"
+    }
+  ]
+}

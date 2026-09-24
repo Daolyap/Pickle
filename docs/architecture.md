@@ -83,6 +83,7 @@ graph LR
 | `pk` dispatcher | `Core/Commands/`, `Cmdlets/InvokePickleCommandCmdlet.cs` |
 | Panels | `Tui/Panels/<Feature>/` (Palette, Files, Settings, Jobs, Git, Windows, Wizard, ListPanel) |
 | Git | `Core/Git/` (`GitService` over the git CLI) + `Tui/Panels/Git/` |
+| Processes, network, disks (Alt+P/N/D, `pk top/net/disks`) | `Core/System/` (monitors: `/proc` on Linux, Process API + Win32 on Windows, disk usage scanner) + `Tui/Panels/System/` |
 | winget, Windows Update, Task Scheduler | `Windows/Winget/`, `Windows/WindowsUpdate/`, `Windows/TaskScheduler/`, `Windows/Commands/` |
 | Elevation | `Windows/Elevation/` (named-pipe broker, `--elevated-helper`, allowlisted operations) |
 | Windows Terminal profile | `Windows/Terminal/` (fragment, `pk terminal`, `--write-terminal-fragment`) |

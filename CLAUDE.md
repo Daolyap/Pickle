@@ -2,7 +2,7 @@
 
 Pickle is a Windows-first shell that hosts the **real PowerShell 7 engine** (Microsoft.PowerShell.SDK, in-process,
 custom `PSHost`) and replaces the interactive experience: its own line editor (syntax highlighting, autosuggestions,
-completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, winget, Windows Update,
+completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, processes, network, disks, winget, Windows Update,
 Task Scheduler, settings, command wizards), a plugin system, Linux-syntax translation, aliases and sync.
 C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product, binary (`pickle`) and namespaces are **Pickle**.
 
@@ -16,7 +16,8 @@ C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product,
 | Real-terminal end-to-end tests (pty + pyte) | `scripts/check.sh --e2e` or `python3 tests/Pickle.E2E/run_e2e.py -k vim` |
 | Run the shell | `dotnet run --project src/Pickle` (or `src/Pickle/bin/Debug/net10.0/pickle`) |
 | Run one command | `pickle -c 'Get-Date'` · headless (stdin lines): `pickle --headless` |
-| Single-file binaries | `scripts/publish.sh win-x64 linux-x64` → `artifacts/publish/<rid>/` |
+| Single-file binaries | `scripts/publish.sh win-x64 linux-x64` → `artifacts/publish/<rid>/` (Fedora RPM: `packaging/rpm/build-rpm.sh`) |
+| Code knowledge graph ([graphify](https://github.com/Graphify-Labs/graphify)) | `scripts/graph.sh`, then `graphify query "…"` / `graphify explain X` / `graphify path A B` |
 
 .NET lives in `~/.dotnet` in cloud sessions (the SessionStart hook installs it and sets `PATH`/`DOTNET_ROOT`).
 Tests use xunit.v3 on Microsoft.Testing.Platform: `dotnet test --solution Pickle.slnx`, filters go after `--`
@@ -24,7 +25,9 @@ Tests use xunit.v3 on Microsoft.Testing.Platform: `dotnet test --solution Pickle
 
 ## Layout
 
-Diagrams (projects, data flow, trust boundaries, feature → folder): `docs/architecture.md`.
+Diagrams (projects, data flow, trust boundaries, feature → folder): `docs/architecture.md`. Hubs, communities and
+cross-file links from graphify: `docs/graph-report.md` (the full `graphify-out/graph.json` is git-ignored; rebuild it
+with `scripts/graph.sh` in ~10 s and query it instead of grepping when you need "what calls/uses X").
 
 ```
 src/Pickle.Abstractions  Contracts only (plugins, registries, services, theme/config models, KeyChord, Ansi, TextWidth).
@@ -38,6 +41,7 @@ src/Pickle.Core          The shell engine. Key folders:
   Prompt/                ThemeProvider, PromptEngine, segments
   Aliases/ Translation/ Profile/   alias functions, Linux-syntax rewriters + shims, profile loading
   Config/ Plugins/ Sync/ Git/      config store, plugin host, sync, git CLI service
+  System/                Process, network and disk monitors (/proc on Linux, Win32 on Windows) for the system panels
   Cmdlets/               [Cmdlet] classes (auto-registered). `pk` = Invoke-PickleCommand
   Modules/               Embedded .psm1/.psd1 modules (extracted at startup to DataDir/modules/<hash>)
   Contracts/             Internal seams between Core components (IPromptRenderer, IAutosuggestProvider, ...)

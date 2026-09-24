@@ -373,7 +373,7 @@ public sealed class FrameBuilder
         }
     }
 
-    /// <summary>Column width of one text element; -1 for invalid UTF-16 (a lone surrogate).</summary>
+    /// <summary>Column width of one text element (same rules as <see cref="TextWidth.ElementWidth"/>); -1 for invalid UTF-16.</summary>
     internal static int SafeWidth(string element) =>
-        Rune.DecodeFromUtf16(element, out var rune, out _) == System.Buffers.OperationStatus.Done ? TextWidth.RuneWidth(rune) : -1;
+        Rune.DecodeFromUtf16(element, out _, out _) == System.Buffers.OperationStatus.Done ? TextWidth.ElementWidth(element) : -1;
 }

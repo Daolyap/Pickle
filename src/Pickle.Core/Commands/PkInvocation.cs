@@ -13,15 +13,33 @@ namespace Pickle.Core.Commands;
 public sealed class PkInvocation
 {
     private static readonly AsyncLocal<PkInvocation?> CurrentLocal = new();
-    private readonly BlockingCollection<Action> _queue = new();
+    private readonly BlockingCollection<(Action Run, Action<Exception>? Abandon)> _queue = new();
     private readonly object _gate = new();
     private bool _completed;
 
-    public PkInvocation() => PipelineThreadId = Environment.CurrentManagedThreadId;
+    public PkInvocation()
+    {
+        PipelineThreadId = Environment.CurrentManagedThreadId;
+        Runspace = Runspace.DefaultRunspace;
+    }
 
     public static PkInvocation? Current => CurrentLocal.Value;
 
     public int PipelineThreadId { get; }
+
+    /// <summary>The runspace whose pipeline runs the command (the main one, or a background pool runspace).</summary>
+    public Runspace? Runspace { get; }
+
+    public bool IsCompleted
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _completed;
+            }
+        }
+    }
 
     public bool IsPipelineThread => Environment.CurrentManagedThreadId == PipelineThreadId;
 
@@ -33,7 +51,9 @@ public sealed class PkInvocation
     }
 
     /// <summary>Queue work for the pipeline thread. False once the command has finished.</summary>
-    public bool TryPost(Action action)
+    public bool TryPost(Action action) => TryPost(action, null);
+
+    private bool TryPost(Action action, Action<Exception>? abandon)
     {
         lock (_gate)
         {
@@ -42,7 +62,7 @@ public sealed class PkInvocation
                 return false;
             }
 
-            _queue.Add(action);
+            _queue.Add((action, abandon));
             return true;
         }
     }
@@ -56,28 +76,43 @@ public sealed class PkInvocation
         }
 
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var posted = TryPost(() =>
-        {
-            try
+        var posted = TryPost(
+            () =>
             {
-                tcs.SetResult(func());
-            }
-            catch (Exception ex)
-            {
-                tcs.SetException(ex);
-            }
-        });
+                try
+                {
+                    tcs.SetResult(func());
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            },
+            ex => tcs.TrySetException(new InvalidOperationException("The pk command's pipeline stopped before this could run.", ex)));
         return posted ? tcs.Task : null;
     }
 
-    /// <summary>Process queued work on the pipeline thread until <paramref name="task"/> completes and the queue is drained.</summary>
+    /// <summary>
+    /// Process queued work on the pipeline thread until <paramref name="task"/> completes and the queue is drained. If
+    /// an action throws (the pipeline was stopped, or WriteError under -ErrorAction Stop), the invocation is closed —
+    /// later posts fail and waiting callers get an exception instead of hanging — and the exception propagates.
+    /// </summary>
     public void Pump(Task task)
     {
         while (true)
         {
-            if (_queue.TryTake(out var action, 30))
+            if (_queue.TryTake(out var item, 30))
             {
-                action();
+                try
+                {
+                    item.Run();
+                }
+                catch (Exception ex)
+                {
+                    Abandon(ex);
+                    throw;
+                }
+
                 continue;
             }
 
@@ -92,6 +127,19 @@ public sealed class PkInvocation
                     }
                 }
             }
+        }
+    }
+
+    private void Abandon(Exception reason)
+    {
+        lock (_gate)
+        {
+            _completed = true;
+        }
+
+        while (_queue.TryTake(out var item))
+        {
+            item.Abandon?.Invoke(reason);
         }
     }
 

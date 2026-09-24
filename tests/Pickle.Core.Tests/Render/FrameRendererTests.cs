@@ -43,6 +43,15 @@ public class FrameRendererTests
         Assert.Equal(4, FrameBuilder.MeasureAnsi(Ansi.Colorize("日本", "green")));
     }
 
+    [Theory]
+    [InlineData("x⚙️y")]
+    [InlineData("echo ❤️ done")]
+    [InlineData("日本")]
+    public void BuilderAgreesWithTextWidthOnEmojiPresentation(string text)
+    {
+        Assert.Equal(TextWidth.VisibleWidth(text), FrameBuilder.MeasureAnsi(text));
+    }
+
     [Fact]
     public void GrowingFrameScrollsAtBottomAndShrinkingClears()
     {

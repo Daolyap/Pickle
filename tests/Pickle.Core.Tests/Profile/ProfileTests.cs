@@ -112,7 +112,23 @@ public class PSReadLineShimTests
         Assert.Equal(["None", "123"], t.Run("$o = Get-PSReadLineOption; $o.PredictionSource; $o.MaximumHistoryCount"));
 
         t.Run("Set-PSReadLineOption -PredictionSource HistoryAndPlugin");
-        Assert.True(config.Editor.Autosuggestions);
+        Assert.True(t.Runtime.Config.Current.Editor.Autosuggestions);
+    }
+
+    [Fact]
+    public void SessionOptionsSurviveConfigReloadsUntilSetExplicitly()
+    {
+        using var t = Start();
+        t.Run("Set-PSReadLineOption -PredictionSource None -MaximumHistoryCount 123");
+        t.Runtime.Config.Update(c => c.Editor.ShowTranslatedCommand = !c.Editor.ShowTranslatedCommand);
+        t.Runtime.ConfigStore.Reload();
+        Assert.False(t.Runtime.Config.Current.Editor.Autosuggestions);
+        Assert.Equal(123, t.Runtime.Config.Current.History.MaxEntries);
+        Assert.DoesNotContain("123", File.ReadAllText(t.Paths.ConfigFile), StringComparison.Ordinal);
+
+        t.Runtime.ConfigStore.SetValue("editor.autosuggestions", "true");
+        Assert.True(t.Runtime.Config.Current.Editor.Autosuggestions);
+        Assert.Equal(123, t.Runtime.Config.Current.History.MaxEntries);
     }
 
     [Fact]

@@ -206,6 +206,14 @@ public static class ShellLexer
                 continue;
             }
 
+            if (SkipHereString(s, i) is > 0 and var hereEnd)
+            {
+                hasQuotes = true;
+                plain = false;
+                i = hereEnd;
+                continue;
+            }
+
             if (IsSingleQuote(c))
             {
                 hasQuotes = true;
@@ -307,6 +315,53 @@ public static class ShellLexer
         return s.Length;
     }
 
+    /// <summary>
+    /// If a here-string (<c>@'</c> or <c>@"</c> followed only by spaces up to the line end) opens at <paramref name="at"/>,
+    /// returns the index past its terminator (a line starting with <c>'@</c> / <c>"@</c>) or the input end; otherwise -1.
+    /// </summary>
+    public static int SkipHereString(string s, int at)
+    {
+        if (s[at] != '@' || at + 1 >= s.Length || !(IsSingleQuote(s[at + 1]) || IsDoubleQuote(s[at + 1])))
+        {
+            return -1;
+        }
+
+        var single = IsSingleQuote(s[at + 1]);
+        var j = at + 2;
+        while (j < s.Length && s[j] is ' ' or '\t')
+        {
+            j++;
+        }
+
+        if (j < s.Length && s[j] == '\r')
+        {
+            j++;
+        }
+
+        if (j >= s.Length || s[j] != '\n')
+        {
+            return -1;
+        }
+
+        for (var line = j + 1; line < s.Length;)
+        {
+            if (line + 1 < s.Length && s[line + 1] == '@' && (single ? IsSingleQuote(s[line]) : IsDoubleQuote(s[line])))
+            {
+                return line + 2;
+            }
+
+            var next = s.IndexOf('\n', line);
+            if (next < 0)
+            {
+                break;
+            }
+
+            line = next + 1;
+        }
+
+        return s.Length;
+    }
+
     /// <summary>From an opening '(' or '{', returns the index past its matching close, honoring nested quotes.</summary>
     public static int SkipBalanced(string s, int openIndex)
     {
@@ -318,6 +373,12 @@ public static class ShellLexer
             if (c == '`')
             {
                 i += 2;
+                continue;
+            }
+
+            if (SkipHereString(s, i) is > 0 and var hereEnd)
+            {
+                i = hereEnd;
                 continue;
             }
 

@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using Pickle.Abstractions;
-using Pickle.Core.Commands;
 
 namespace Pickle.Core.Aliases;
 
@@ -183,100 +181,5 @@ public sealed class AliasCommand : IPickleCommand
     {
         context.WriteError(message);
         return 1;
-    }
-}
-
-/// <summary>Opens a file in $VISUAL/$EDITOR, VS Code (--wait), notepad on Windows or nano/vi, and waits for it to close.</summary>
-internal static class EditorProcess
-{
-    public static int Run(string file)
-    {
-        var (exe, args) = Resolve() ?? throw new InvalidOperationException("No editor found. Set $env:EDITOR (or $env:VISUAL).");
-        var psi = new ProcessStartInfo { UseShellExecute = false };
-        if (exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || exe.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))
-        {
-            psi.FileName = ExecutableLocator.SystemProgram("cmd.exe");
-            psi.ArgumentList.Add("/c");
-            psi.ArgumentList.Add(exe);
-        }
-        else
-        {
-            psi.FileName = exe;
-        }
-
-        foreach (var arg in args)
-        {
-            psi.ArgumentList.Add(arg);
-        }
-
-        psi.ArgumentList.Add(file);
-        using var process = Process.Start(psi) ?? throw new InvalidOperationException($"Could not start editor '{exe}'.");
-        process.WaitForExit();
-        return process.ExitCode;
-    }
-
-    private static (string Exe, List<string> Args)? Resolve()
-    {
-        foreach (var variable in new[] { "VISUAL", "EDITOR" })
-        {
-            var value = Environment.GetEnvironmentVariable(variable);
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                var parts = SplitCommandLine(value);
-                if (parts.Count > 0 && ExecutableLocator.Find(parts[0]) is { } exe)
-                {
-                    return (exe, parts.Skip(1).ToList());
-                }
-            }
-        }
-
-        if (ExecutableLocator.Find("code") is { } code)
-        {
-            return (code, ["--wait"]);
-        }
-
-        if (OperatingSystem.IsWindows())
-        {
-            return (ExecutableLocator.SystemProgram("notepad.exe"), []);
-        }
-
-        return (ExecutableLocator.Find("nano") ?? ExecutableLocator.Find("vi")) is { } terminal ? (terminal, []) : null;
-    }
-
-    private static List<string> SplitCommandLine(string value)
-    {
-        var parts = new List<string>();
-        var current = new System.Text.StringBuilder();
-        char? quote = null;
-        foreach (var c in value)
-        {
-            if (quote is null && c is '"' or '\'')
-            {
-                quote = c;
-            }
-            else if (c == quote)
-            {
-                quote = null;
-            }
-            else if (quote is null && char.IsWhiteSpace(c))
-            {
-                if (current.Length > 0)
-                {
-                    parts.Add(current.ToString());
-                    current.Clear();
-                }
-            }
-            else
-            {
-                current.Append(c);
-            }
-        }
-
-        if (current.Length > 0)
-        {
-            parts.Add(current.ToString());
-        }
-
-        return parts.Count == 0 ? [value] : parts;
     }
 }

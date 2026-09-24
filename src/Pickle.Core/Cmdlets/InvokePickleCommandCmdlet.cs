@@ -91,7 +91,17 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
             }
         }
 
-        invocation.Pump(task);
+        try
+        {
+            invocation.Pump(task);
+        }
+        catch
+        {
+            // The pipeline is going away (Ctrl+C, or an error under -ErrorAction Stop): stop the command too.
+            _cts.Cancel();
+            throw;
+        }
+
         try
         {
             return task.GetAwaiter().GetResult();

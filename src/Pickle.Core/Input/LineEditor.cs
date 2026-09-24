@@ -151,6 +151,9 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
                 {
                     DrainRequests();
                     Render();
+
+                    // A key handler that ran a `pk` command may have asked for a panel.
+                    DrainPendingPanels();
                 }
             }
 
@@ -649,7 +652,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
     {
         while (_outcome == Outcome.None && _runtime.Engine.PendingPanels.TryDequeue(out var pending))
         {
-            ShowPanelCore(pending.Panel.Id, host => host.Show(pending.Panel, pending.Argument, _text));
+            ShowPanelCore(pending.Panel.Id, host => host.Show(pending.Panel, pending.Argument, pending.CurrentInput ?? _text));
         }
     }
 

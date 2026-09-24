@@ -196,6 +196,53 @@ public class JsonlHistoryStoreTests
     }
 
     [Fact]
+    public void PicksUpARewriteThatKeepsTheFirstLine()
+    {
+        using var t = TestPickle.Create();
+        using var store = new JsonlHistoryStore(t.Runtime);
+        foreach (var command in new[] { "first", "third" })
+        {
+            store.Add(Entry(command));
+            store.CompleteLast(true, 1);
+        }
+
+        Assert.Equal(["first", "third"], store.Entries.Select(e => e.CommandLine));
+
+        // What `pk sync pull` does: merge in an older remote command, keeping timestamp order (same first line, longer file).
+        var lines = File.ReadAllLines(t.Paths.HistoryFile).ToList();
+        var remote = JsonSerializer.Serialize(new { commandLine = "second (remote)", timestamp = DateTimeOffset.Now, sessionId = "remote" });
+        lines.Insert(1, remote);
+        File.WriteAllLines(t.Paths.HistoryFile, lines);
+
+        Assert.Equal(["first", "second (remote)", "third"], store.Entries.Select(e => e.CommandLine));
+    }
+
+    [Fact]
+    public void SyncMergeKeepsLinesAppendedMeanwhileAndTheNewestMaxEntries()
+    {
+        using var t = TestPickle.Create();
+        using var store = new JsonlHistoryStore(t.Runtime);
+        store.Add(Entry("local"));
+        store.CompleteLast(true, 1);
+        var remoteRoot = Directory.CreateTempSubdirectory("pickle-sync-remote").FullName;
+        try
+        {
+            var older = DateTimeOffset.Now.AddDays(-1);
+            File.WriteAllLines(Path.Combine(remoteRoot, "history.jsonl"), Enumerable.Range(0, 3).Select(i =>
+                JsonSerializer.Serialize(new { commandLine = $"remote {i}", timestamp = older.AddMinutes(i), sessionId = "remote" })));
+
+            var engine = new Pickle.Core.Sync.SyncEngine(t.Paths.ConfigDir, remoteRoot);
+            var result = engine.Run(new Pickle.Core.Sync.SyncState(), new Pickle.Core.Sync.SyncOptions(Pickle.Core.Sync.SyncDirection.Pull, HistoryMaxEntries: 3));
+            Assert.True(result.LocalChanged);
+            Assert.Equal(["remote 1", "remote 2", "local"], store.Entries.Select(e => e.CommandLine));
+        }
+        finally
+        {
+            Directory.Delete(remoteRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public void PicksUpAClearFromAnotherSession()
     {
         using var t = TestPickle.Create();

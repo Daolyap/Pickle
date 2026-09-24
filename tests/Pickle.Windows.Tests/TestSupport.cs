@@ -30,7 +30,7 @@ internal sealed class NullShell : IPickleShell
 
     public bool IsBusy => false;
 
-    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null)
+    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null, string? currentInput = null)
     {
     }
 

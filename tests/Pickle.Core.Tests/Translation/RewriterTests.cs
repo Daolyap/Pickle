@@ -12,11 +12,11 @@ public class RewriterTests
         rewriter.Rewrite(input, context ?? NoHistory)?.Rewritten;
 
     [Theory]
-    [InlineData("FOO=bar ./run.sh", "$__saved_FOO = $env:FOO; try { $env:FOO = 'bar'; ./run.sh } finally { $env:FOO = $__saved_FOO; Remove-Variable __saved_FOO }")]
-    [InlineData("A=1 B='x y' cmd arg", "$__saved_A = $env:A; $__saved_B = $env:B; try { $env:A = '1'; $env:B = 'x y'; cmd arg } finally { $env:A = $__saved_A; $env:B = $__saved_B; Remove-Variable __saved_A, __saved_B }")]
-    [InlineData("DEBUG=1 npm start | grep x", "$__saved_DEBUG = $env:DEBUG; try { $env:DEBUG = '1'; npm start | grep x } finally { $env:DEBUG = $__saved_DEBUG; Remove-Variable __saved_DEBUG }")]
-    [InlineData("A=\"$HOME/x\" cmd; echo done", "$__saved_A = $env:A; try { $env:A = \"$HOME/x\"; cmd } finally { $env:A = $__saved_A; Remove-Variable __saved_A }; echo done")]
-    [InlineData("X=$Y cmd", "$__saved_X = $env:X; try { $env:X = $env:Y; cmd } finally { $env:X = $__saved_X; Remove-Variable __saved_X }")]
+    [InlineData("FOO=bar ./run.sh", "$__saved_FOO = $env:FOO; try { $env:FOO = 'bar'; ./run.sh } finally { $__pickle_ok = $?; $env:FOO = $__saved_FOO; Remove-Variable __saved_FOO }; if ($__pickle_ok) { Remove-Variable __pickle_ok } else { Remove-Variable __pickle_ok; Write-Error 'failed' -ErrorAction Ignore }")]
+    [InlineData("A=1 B='x y' cmd arg", "$__saved_A = $env:A; $__saved_B = $env:B; try { $env:A = '1'; $env:B = 'x y'; cmd arg } finally { $__pickle_ok = $?; $env:A = $__saved_A; $env:B = $__saved_B; Remove-Variable __saved_A, __saved_B }; if ($__pickle_ok) { Remove-Variable __pickle_ok } else { Remove-Variable __pickle_ok; Write-Error 'failed' -ErrorAction Ignore }")]
+    [InlineData("DEBUG=1 npm start | grep x", "$__saved_DEBUG = $env:DEBUG; try { $env:DEBUG = '1'; npm start | grep x } finally { $__pickle_ok = $?; $env:DEBUG = $__saved_DEBUG; Remove-Variable __saved_DEBUG }; if ($__pickle_ok) { Remove-Variable __pickle_ok } else { Remove-Variable __pickle_ok; Write-Error 'failed' -ErrorAction Ignore }")]
+    [InlineData("A=\"$HOME/x\" cmd; echo done", "$__saved_A = $env:A; try { $env:A = \"$HOME/x\"; cmd } finally { $__pickle_ok = $?; $env:A = $__saved_A; Remove-Variable __saved_A }; if ($__pickle_ok) { Remove-Variable __pickle_ok } else { Remove-Variable __pickle_ok; Write-Error 'failed' -ErrorAction Ignore }; echo done")]
+    [InlineData("X=$Y cmd", "$__saved_X = $env:X; try { $env:X = $env:Y; cmd } finally { $__pickle_ok = $?; $env:X = $__saved_X; Remove-Variable __saved_X }; if ($__pickle_ok) { Remove-Variable __pickle_ok } else { Remove-Variable __pickle_ok; Write-Error 'failed' -ErrorAction Ignore }")]
     public void EnvPrefix(string input, string expected) => Assert.Equal(expected, Apply(new EnvPrefixRewriter(isWindows: false), input));
 
     [Theory]
@@ -27,6 +27,7 @@ public class RewriterTests
     [InlineData("$a=1")]
     [InlineData("Get-Process | Where-Object { $_.X -eq 'A=1 cmd' }")]
     [InlineData("git config user.name=x")]
+    [InlineData("$m = @\"\nsay \"hi\nFOO=1 make\n\"@")]
     public void EnvPrefixNoOps(string input) => Assert.Null(Apply(new EnvPrefixRewriter(isWindows: false), input));
 
     [Theory]
@@ -45,6 +46,7 @@ public class RewriterTests
     [InlineData("export A=1; make", "$env:A = '1'; make")]
     [InlineData("export B=~/bin", "$env:B = \"$HOME/bin\"")]
     [InlineData("export Q='it''s'", "$env:Q = 'it''s'")]
+    [InlineData("$t = @'\nit's\n'@\nexport A=1", "$t = @'\nit's\n'@\n$env:A = '1'")]
     public void Export(string input, string expected) => Assert.Equal(expected, Apply(new ExportRewriter(isWindows: false), input));
 
     [Theory]
@@ -60,6 +62,8 @@ public class RewriterTests
     [InlineData("export -n A")]
     [InlineData("exporter A=1")]
     [InlineData("source")]
+    [InlineData("$msg = @'\ndon't touch\nexport A=1\n'@")]
+    [InlineData("$msg = @'\r\nit's\r\nexport A=1\r\n'@; Write-Output $msg")]
     public void ExportNoOps(string input) => Assert.Null(Apply(new ExportRewriter(isWindows: false), input));
 
     [Theory]
@@ -80,6 +84,7 @@ public class RewriterTests
     [InlineData("cp /dev/null file")]
     [InlineData("& { cmd 2>/dev/null }")]
     [InlineData("cat file")]
+    [InlineData("@'\nit's >/dev/null\n'@ | Set-Content x")]
     public void DevNullNoOps(string input) => Assert.Null(Apply(new DevNullRewriter(), input));
 
     [Theory]

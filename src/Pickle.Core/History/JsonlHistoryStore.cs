@@ -31,6 +31,9 @@ public sealed class JsonlHistoryStore : IHistoryStore, IRuntimeComponent, IDispo
     private int _fileLines;
     private byte[] _fileHead = [];
 
+    // Last bytes read before _fileOffset: a rewrite that keeps the head (sync merge) still shows up here.
+    private byte[] _fileTail = [];
+
     public JsonlHistoryStore(PickleRuntime runtime) => _runtime = runtime;
 
     public string SessionId { get; } = Guid.NewGuid().ToString("N")[..12];
@@ -162,6 +165,7 @@ public sealed class JsonlHistoryStore : IHistoryStore, IRuntimeComponent, IDispo
             _fileOffset = 0;
             _fileLines = 0;
             _fileHead = [];
+            _fileTail = [];
             try
             {
                 File.Delete(FilePath);
@@ -287,6 +291,7 @@ public sealed class JsonlHistoryStore : IHistoryStore, IRuntimeComponent, IDispo
         _fileOffset = 0;
         _fileLines = 0;
         _fileHead = [];
+        _fileTail = [];
         ReadNewLines(includeOwnSession: true);
         _entries.AddRange(keep);
         _snapshot = null;
@@ -311,9 +316,24 @@ public sealed class JsonlHistoryStore : IHistoryStore, IRuntimeComponent, IDispo
             }
 
             var length = stream.Length;
-            if (length <= _fileOffset)
+            if (length < _fileOffset)
             {
-                return length == _fileOffset;
+                return false;
+            }
+
+            if (_fileTail.Length > 0)
+            {
+                var tail = new byte[_fileTail.Length];
+                stream.Position = _fileOffset - tail.Length;
+                if (stream.ReadAtLeast(tail, tail.Length, throwOnEndOfStream: false) < tail.Length || !tail.AsSpan().SequenceEqual(_fileTail))
+                {
+                    return false;
+                }
+            }
+
+            if (length == _fileOffset)
+            {
+                return true;
             }
 
             count = (int)Math.Min(length - _fileOffset, int.MaxValue);
@@ -379,6 +399,8 @@ public sealed class JsonlHistoryStore : IHistoryStore, IRuntimeComponent, IDispo
             _entries.Add(entry);
         }
 
+        var read = data[..consumed];
+        _fileTail = read.Length >= HeadLength ? read[^HeadLength..].ToArray() : [.. _fileTail.Concat(read.ToArray()).TakeLast(HeadLength)];
         _fileOffset += consumed;
         return true;
     }

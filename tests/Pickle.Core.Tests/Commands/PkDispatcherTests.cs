@@ -40,6 +40,37 @@ public class PkDispatcherTests
         }
     }
 
+    /// <summary>Like <see cref="BackgroundThenRunspaceCommand"/> but through the public <see cref="IPickleShell"/>.</summary>
+    private sealed class ShellFromWorkerCommand : IPickleCommand
+    {
+        public string Name => "shell-worker";
+
+        public string Description => "Test";
+
+        public string Usage => "pk shell-worker";
+
+        public async ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
+        {
+            await Task.Run(() => Thread.Sleep(20), cancellationToken).ConfigureAwait(false);
+            Assert.True(context.Pickle.Shell.IsBusy);
+            var result = await context.Pickle.Shell.InvokeAsync("6 * 7", cancellationToken: cancellationToken).ConfigureAwait(false);
+            context.WriteObject(result.Output[0].BaseObject);
+            return 0;
+        }
+    }
+
+    [Fact]
+    public async Task CommandsRunByScriptsCanUseTheShellFromOtherThreads()
+    {
+        // Not typed at the prompt (a key handler or hook runs it through InvokeAsync), so IsExecuting is false.
+        using var t = TestPickle.Create(start: true);
+        t.Runtime.CommandRegistry.Register(new ShellFromWorkerCommand());
+        var result = await t.Runtime.Shell.InvokeAsync("pk shell-worker", cancellationToken: TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        Assert.Empty(result.Errors);
+        Assert.Equal(42, Assert.Single(result.Output).BaseObject);
+        Assert.False(t.Runtime.Shell.IsBusy);
+    }
+
     [Fact]
     public void PkAloneAndPkHelpListCommands()
     {

@@ -10,6 +10,26 @@ public class AliasTests
     private static AliasManager Manager(TestPickle t) => (AliasManager)t.Runtime.Aliases;
 
     [Fact]
+    public void AddingAnIdenticalAliasAgainChangesNothing()
+    {
+        using var t = TestPickle.Create(start: true);
+        t.Run("pk alias add ll 'Get-ChildItem -Force'");
+        var first = Manager(t).Get("ll")!.UpdatedAt;
+        var written = File.GetLastWriteTimeUtc(t.Paths.AliasesFile);
+        var changes = 0;
+        Manager(t).Changed += (_, _) => changes++;
+
+        t.Run("pk alias add ll 'Get-ChildItem -Force'");
+        Assert.Equal(first, Manager(t).Get("ll")!.UpdatedAt);
+        Assert.Equal(written, File.GetLastWriteTimeUtc(t.Paths.AliasesFile));
+        Assert.Equal(0, changes);
+
+        t.Run("pk alias add ll 'Get-ChildItem -Force -Name'");
+        Assert.Equal("Get-ChildItem -Force -Name", Manager(t).Get("ll")!.Body);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
     public void SimpleAliasAppendsArguments()
     {
         using var t = TestPickle.Create(start: true);

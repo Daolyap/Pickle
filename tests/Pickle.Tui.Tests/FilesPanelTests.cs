@@ -121,6 +121,9 @@ public sealed class FilesPanelTests : IDisposable
     [InlineData(@"C:\Users\me\src", @"C:\Users\me\src")]
     [InlineData("sub dir/gamma.cs", "'sub dir/gamma.cs'")]
     [InlineData("-rf", "'-rf'")]
+    [InlineData("1kb", "'1kb'")]
+    [InlineData("0x10", "'0x10'")]
+    [InlineData("1e3", "'1e3'")]
     [InlineData("x’;Write-Output INJECTED;’", "'x’’;Write-Output INJECTED;’’'")]
     [InlineData("a‘b‚c‛d", "'a‘‘b‚‚c‛‛d'")]
     public void QuotedPathsParseBackAsOneLiteralArgument(string path, string expected)

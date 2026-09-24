@@ -7,6 +7,19 @@ public static class EditorLauncher
 {
     private static readonly string[] GuiEditors = ["code", "code-insiders", "cursor", "codium", "notepad", "notepad++", "subl", "gedit", "kate", "zed"];
 
+    // How to make a GUI editor block until the file is closed.
+    private static readonly Dictionary<string, string> WaitFlags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["code"] = "--wait",
+        ["code-insiders"] = "--wait",
+        ["cursor"] = "--wait",
+        ["codium"] = "--wait",
+        ["subl"] = "--wait",
+        ["zed"] = "--wait",
+        ["gedit"] = "--wait",
+        ["kate"] = "--block",
+    };
+
     public sealed record EditorCommand(string FileName, IReadOnlyList<string> Arguments, bool Wait);
 
     public static EditorCommand? Resolve(Func<string, string?> getEnv, Func<string, string?> findOnPath, bool isWindows)
@@ -56,24 +69,7 @@ public static class EditorLauncher
 
         try
         {
-            var isScript = OperatingSystem.IsWindows() && Path.GetExtension(editor.FileName).ToLowerInvariant() is ".cmd" or ".bat";
-            var psi = new ProcessStartInfo(editor.FileName) { UseShellExecute = isScript };
-            if (isScript)
-            {
-                // .cmd shims (code.cmd) can't take ArgumentList; the only argument is our own config path.
-                psi.Arguments = string.Join(' ', editor.Arguments.Append(file).Select(a => "\"" + a.Replace("\"", string.Empty, StringComparison.Ordinal) + "\""));
-            }
-            else
-            {
-                foreach (var argument in editor.Arguments)
-                {
-                    psi.ArgumentList.Add(argument);
-                }
-
-                psi.ArgumentList.Add(file);
-            }
-
-            using var process = Process.Start(psi);
+            using var process = Start(editor, file);
             if (editor.Wait)
             {
                 process?.WaitForExit();
@@ -87,6 +83,43 @@ public static class EditorLauncher
             message = $"Could not start {editor.FileName}: {ex.Message}. File: {file}";
             return false;
         }
+    }
+
+    /// <summary>Open <paramref name="file"/> and wait until it is closed (GUI editors get their wait flag); returns the exit code.</summary>
+    public static int RunAndWait(string file)
+    {
+        var editor = Resolve(Environment.GetEnvironmentVariable, FindOnPath, OperatingSystem.IsWindows())
+            ?? throw new InvalidOperationException("No editor found. Set $env:EDITOR (or $env:VISUAL).");
+        if (!editor.Wait && WaitFlags.TryGetValue(Path.GetFileNameWithoutExtension(editor.FileName), out var flag))
+        {
+            editor = editor with { Arguments = [.. editor.Arguments, flag], Wait = true };
+        }
+
+        using var process = Start(editor, file) ?? throw new InvalidOperationException($"Could not start editor '{editor.FileName}'.");
+        process.WaitForExit();
+        return process.ExitCode;
+    }
+
+    private static Process? Start(EditorCommand editor, string file)
+    {
+        var isScript = OperatingSystem.IsWindows() && Path.GetExtension(editor.FileName).ToLowerInvariant() is ".cmd" or ".bat";
+        var psi = new ProcessStartInfo(editor.FileName) { UseShellExecute = isScript };
+        if (isScript)
+        {
+            // .cmd shims (code.cmd) can't take ArgumentList; ShellExecute keeps the quoting cmd.exe /c would mangle.
+            psi.Arguments = string.Join(' ', editor.Arguments.Append(file).Select(a => "\"" + a.Replace("\"", string.Empty, StringComparison.Ordinal) + "\""));
+        }
+        else
+        {
+            foreach (var argument in editor.Arguments)
+            {
+                psi.ArgumentList.Add(argument);
+            }
+
+            psi.ArgumentList.Add(file);
+        }
+
+        return Process.Start(psi);
     }
 
     public static string? FindOnPath(string name) => ExecutableLocator.Find(name);

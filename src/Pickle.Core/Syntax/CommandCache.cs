@@ -231,6 +231,11 @@ internal sealed class CommandCache : IDisposable
     internal static HashSet<string> ScanPath(out string? pathValue)
     {
         pathValue = Environment.GetEnvironmentVariable("PATH");
+        return ScanPath(pathValue);
+    }
+
+    internal static HashSet<string> ScanPath(string? pathValue)
+    {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var extensions = OperatingSystem.IsWindows()
             ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD")
@@ -264,7 +269,7 @@ internal sealed class CommandCache : IDisposable
                         names.Add(fileName);
                         names.Add(Path.GetFileNameWithoutExtension(fileName));
                     }
-                    else if (IsExecutable(file))
+                    else if (Commands.ExecutableLocator.IsExecutableFile(file))
                     {
                         names.Add(fileName);
                     }
@@ -276,17 +281,6 @@ internal sealed class CommandCache : IDisposable
         }
 
         return names;
-    }
-
-    private static bool IsExecutable(string file)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return true;
-        }
-
-        const UnixFileMode anyExecute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-        return (File.GetUnixFileMode(file) & anyExecute) != 0;
     }
 
     private static bool LooksLikePath(string name) =>

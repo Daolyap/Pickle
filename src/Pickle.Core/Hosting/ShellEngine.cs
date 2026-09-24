@@ -47,9 +47,9 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     public ConcurrentQueue<string> SubmittedCommands { get; } = new();
 
     /// <summary>Panels requested while a pipeline was running; the line editor opens them when the prompt is back.</summary>
-    public ConcurrentQueue<(PanelDescriptor Panel, string? Argument)> PendingPanels { get; } = new();
+    public ConcurrentQueue<(PanelDescriptor Panel, string? Argument, string? CurrentInput)> PendingPanels { get; } = new();
 
-    public bool IsBusy => IsExecuting;
+    public bool IsBusy => IsExecuting || IsOnPipelineThread || RunningMainPkInvocation() is not null;
 
     public ExecutionResult? LastResult { get; private set; }
 
@@ -287,10 +287,9 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             return Task.FromResult(InvokeNested(script, parameters));
         }
 
-        // Another thread during a `pk` command: the command's pipeline holds the runspace, so hand the work to its pump
-        // instead of waiting for the lock it holds.
-        if (IsExecuting && Commands.PkInvocation.Current is { } invocation
-            && invocation.TryRun(() => InvokeNested(script, parameters)) is { } marshalled)
+        // Another thread during a `pk` command (typed, or run by a key handler/hook): the command's pipeline holds the
+        // runspace, so hand the work to its pump instead of waiting for the lock it holds.
+        if (RunningMainPkInvocation() is { } invocation && invocation.TryRun(() => InvokeNested(script, parameters)) is { } marshalled)
         {
             return marshalled;
         }
@@ -302,6 +301,11 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     /// The calling thread is running a pipeline in the main runspace (interactive or InvokeAsync). Work from here must
     /// nest: waiting for the runspace lock would wait on ourselves.
     /// </summary>
+    private Commands.PkInvocation? RunningMainPkInvocation() =>
+        Commands.PkInvocation.Current is { IsCompleted: false } invocation && MainRunspace is not null && ReferenceEquals(invocation.Runspace, MainRunspace)
+            ? invocation
+            : null;
+
     private bool IsOnPipelineThread =>
         MainRunspace is not null && Runspace.DefaultRunspace == MainRunspace && Runspace.CanUseDefaultRunspace;
 
@@ -423,7 +427,8 @@ public sealed class ShellEngine : IPickleShell, IDisposable
 
     public void WriteLine(string text) => _runtime.Terminal.Write(text + "\n");
 
-    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null) => PendingPanels.Enqueue((panel, argument));
+    public void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null, string? currentInput = null) =>
+        PendingPanels.Enqueue((panel, argument, currentInput));
 
     // ───────────── Helpers ─────────────
 

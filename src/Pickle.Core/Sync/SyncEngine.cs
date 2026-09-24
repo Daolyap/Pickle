@@ -47,7 +47,8 @@ public sealed class SyncState
     }
 }
 
-public sealed record SyncOptions(SyncDirection Direction, bool SyncHistory = true, bool DryRun = false, bool PreferRemoteOnConflict = false);
+/// <param name="HistoryMaxEntries">Merged history keeps at most this many newest commands (0 = all).</param>
+public sealed record SyncOptions(SyncDirection Direction, bool SyncHistory = true, bool DryRun = false, bool PreferRemoteOnConflict = false, int HistoryMaxEntries = 0);
 
 public sealed class SyncResult
 {
@@ -520,19 +521,8 @@ public sealed class SyncEngine
     {
         var localFile = Path.Combine(_localRoot, HistoryFile);
         var remoteFile = Path.Combine(_remoteRoot, HistoryFile);
-        var localLines = ReadLines(localFile);
         var remoteLines = ReadLines(remoteFile);
-        var merged = new Dictionary<string, (DateTimeOffset Time, string Line)>(StringComparer.Ordinal);
-        foreach (var line in localLines.Concat(remoteLines))
-        {
-            var (key, time) = HistoryKey(line);
-            merged.TryAdd(key, (time, line));
-        }
-
-        var ordered = merged.Values.OrderBy(v => v.Time).Select(v => v.Line).ToList();
-        var localMissing = ordered.Count - localLines.Distinct(StringComparer.Ordinal).Count();
-        var remoteMissing = ordered.Count - remoteLines.Distinct(StringComparer.Ordinal).Count();
-        var text = string.Concat(ordered.Select(l => l + "\n"));
+        var (merged, localMissing, remoteMissing) = MergeHistoryLines(ReadLines(localFile), remoteLines, options.HistoryMaxEntries);
 
         void Write(string file, int missing, bool local)
         {
@@ -554,19 +544,104 @@ public sealed class SyncEngine
                 return;
             }
 
-            SyncFiles.WriteText(file, text);
             if (local)
             {
+                ReplaceLiveHistory(file, remoteLines, options.HistoryMaxEntries);
                 result.LocalChanged = true;
             }
             else
             {
+                SyncFiles.WriteText(file, string.Concat(merged.Select(l => l + "\n")));
                 result.RemoteChanged = true;
             }
         }
 
         Write(localFile, localMissing, local: true);
         Write(remoteFile, remoteMissing, local: false);
+    }
+
+    /// <summary>Union by (timestamp, command), oldest first, newest <paramref name="maxEntries"/> kept; counts what each side lacks.</summary>
+    internal static (List<string> Lines, int LocalMissing, int RemoteMissing) MergeHistoryLines(IReadOnlyList<string> local, IReadOnlyList<string> remote, int maxEntries)
+    {
+        var localKeyed = local.Select(l => (Line: l, Key: HistoryKey(l))).ToList();
+        var remoteKeyed = remote.Select(l => (Line: l, Key: HistoryKey(l))).ToList();
+        var merged = new Dictionary<string, (DateTimeOffset Time, string Line)>(StringComparer.Ordinal);
+        foreach (var (line, (key, time)) in localKeyed.Concat(remoteKeyed))
+        {
+            merged.TryAdd(key, (time, line));
+        }
+
+        var ordered = merged.OrderBy(p => p.Value.Time).ToList();
+        if (maxEntries > 0 && ordered.Count > maxEntries)
+        {
+            ordered = ordered[^maxEntries..];
+        }
+
+        var localKeys = localKeyed.Select(k => k.Key.Key).ToHashSet(StringComparer.Ordinal);
+        var remoteKeys = remoteKeyed.Select(k => k.Key.Key).ToHashSet(StringComparer.Ordinal);
+        return ([.. ordered.Select(p => p.Value.Line)], ordered.Count(p => !localKeys.Contains(p.Key)), ordered.Count(p => !remoteKeys.Contains(p.Key)));
+    }
+
+    /// <summary>
+    /// Rewrites the live history file the way JsonlHistoryStore trims it: under its lock file, from a fresh read, and
+    /// keeping lines other sessions append meanwhile (they never take the lock).
+    /// </summary>
+    private static void ReplaceLiveHistory(string file, IReadOnlyList<string> remote, int maxEntries)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        using var gate = AcquireLock(file + ".lock");
+        var content = ReadShared(file, 0);
+        var complete = content.AsSpan(0, content.AsSpan().LastIndexOf((byte)'\n') + 1).ToArray();
+        var local = Encoding.UTF8.GetString(complete).TrimStart('\uFEFF').Split('\n')
+            .Select(l => l.TrimEnd('\r'))
+            .Where(l => !string.IsNullOrWhiteSpace(l))
+            .ToList();
+        var merged = MergeHistoryLines(local, remote, maxEntries).Lines;
+        var temp = file + ".sync.tmp";
+        using (var output = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            output.Write(Encoding.UTF8.GetBytes(string.Concat(merged.Select(l => l + "\n"))));
+            var tail = ReadShared(file, complete.Length);
+            output.Write(tail.AsSpan(0, tail.AsSpan().LastIndexOf((byte)'\n') + 1));
+        }
+
+        File.Move(temp, file, overwrite: true);
+    }
+
+    private static FileStream AcquireLock(string path)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
+            }
+            catch (IOException) when (attempt < 40)
+            {
+                Thread.Sleep(25);
+            }
+        }
+    }
+
+    private static byte[] ReadShared(string path, long offset)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (stream.Length <= offset)
+            {
+                return [];
+            }
+
+            var buffer = new byte[stream.Length - offset];
+            stream.Position = offset;
+            var read = stream.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false);
+            return read == buffer.Length ? buffer : buffer[..read];
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return [];
+        }
     }
 
     private static (string Key, DateTimeOffset Time) HistoryKey(string line)

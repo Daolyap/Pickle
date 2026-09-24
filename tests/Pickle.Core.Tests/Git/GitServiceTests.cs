@@ -576,6 +576,29 @@ public class GitServiceTests
     }
 
     [Fact]
+    public void SubmoduleConfigCommandsNeverRunFromStatus()
+    {
+        using var repo = TempRepo.Create();
+        var inner = Path.Combine(repo.BaseDirectory, "inner");
+        Directory.CreateDirectory(inner);
+        repo.RunIn(inner, "init", "--initial-branch=main");
+        File.WriteAllText(Path.Combine(inner, "f.txt"), "x\n");
+        File.WriteAllText(Path.Combine(inner, ".gitattributes"), "* filter=evil\n");
+        repo.RunIn(inner, "add", "-A");
+        repo.RunIn(inner, "commit", "-q", "-m", "inner");
+        repo.Run("-c", "protocol.file.allow=always", "submodule", "add", "-q", inner.Replace('\\', '/'), "sub");
+        repo.Run("commit", "-q", "-m", "sub");
+
+        var sub = Path.Combine(repo.Root, "sub");
+        var marker = Path.Combine(repo.BaseDirectory, "marker").Replace('\\', '/');
+        repo.RunIn(sub, "config", "filter.evil.clean", $"echo clean >> '{marker}'; cat");
+        File.SetLastWriteTimeUtc(Path.Combine(sub, "f.txt"), DateTime.UtcNow.AddDays(-1));
+
+        Assert.Empty(repo.Status().Entries);
+        Assert.False(File.Exists(marker), File.Exists(marker) ? File.ReadAllText(marker) : null);
+    }
+
+    [Fact]
     public async Task FilterDriversThatCannotBeOverriddenSkipStatus()
     {
         using var repo = TempRepo.Create();

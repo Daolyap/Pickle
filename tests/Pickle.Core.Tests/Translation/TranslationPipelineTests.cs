@@ -83,6 +83,17 @@ public class TranslationPipelineTests
     }
 
     [Fact]
+    public void EnvPrefixKeepsTheCommandsSuccessStatus()
+    {
+        using var t = TestPickle.Create(start: true);
+        t.Runtime.Repl.ExecuteLine("PICKLE_T=1 Get-Item -LiteralPath /definitely/not/here", echo: false);
+        Assert.False(t.Runtime.Engine.LastResult?.Success);
+        t.Runtime.Repl.ExecuteLine("PICKLE_T=1 Write-Output $env:PICKLE_T", echo: false);
+        Assert.True(t.Runtime.Engine.LastResult?.Success);
+        Assert.Equal(["", "False"], t.Run("[string]$env:PICKLE_T; [bool](Get-Variable __pickle_ok -ErrorAction Ignore)"));
+    }
+
+    [Fact]
     public void PkTranslateStatusListAndToggle()
     {
         using var t = TestPickle.Create(start: true);

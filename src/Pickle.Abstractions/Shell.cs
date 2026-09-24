@@ -25,7 +25,10 @@ public interface IPickleShell
 
     bool IsInteractive { get; }
 
-    /// <summary>A pipeline is running in the main runspace (e.g. a `pk` command is executing).</summary>
+    /// <summary>
+    /// The caller is inside a pipeline that holds the main runspace (e.g. a `pk` command, typed or run by a key
+    /// handler): work that needs the runspace from another thread can't run until it returns.
+    /// </summary>
     bool IsBusy { get; }
 
     Task<ShellResult> InvokeAsync(
@@ -52,6 +55,7 @@ public interface IPickleShell
     /// <summary>
     /// Open <paramref name="panel"/> as soon as the prompt is back (panels run on the REPL thread, never inside a
     /// running pipeline). Its result is applied to the input line as if it had been opened with a key.
+    /// <paramref name="currentInput"/> is what the panel sees as the input line (default: the new prompt's text).
     /// </summary>
-    void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null);
+    void OpenPanelWhenIdle(PanelDescriptor panel, string? argument = null, string? currentInput = null);
 }

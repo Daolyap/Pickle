@@ -139,7 +139,7 @@ public sealed class ReadLineCompat
 
     public void SetOption(IDictionary parameters, Action<string> warn)
     {
-        var config = _runtime.Config.Current;
+        var store = _runtime.ConfigStore;
         foreach (DictionaryEntry entry in parameters)
         {
             var name = entry.Key?.ToString() ?? string.Empty;
@@ -154,7 +154,8 @@ public sealed class ReadLineCompat
 
                     break;
                 case "predictionsource":
-                    config.Editor.Autosuggestions = !string.Equals(value?.ToString(), "None", StringComparison.OrdinalIgnoreCase);
+                    var suggest = !string.Equals(value?.ToString(), "None", StringComparison.OrdinalIgnoreCase);
+                    store.SetSessionValue("editor.autosuggestions", c => c.Editor.Autosuggestions = suggest);
                     break;
                 case "predictionviewstyle":
                     if (string.Equals(value?.ToString(), "ListView", StringComparison.OrdinalIgnoreCase))
@@ -164,13 +165,16 @@ public sealed class ReadLineCompat
 
                     break;
                 case "historynoduplicates":
-                    config.History.IgnoreDuplicates = LanguagePrimitives.IsTrue(value);
+                    var noDuplicates = LanguagePrimitives.IsTrue(value);
+                    store.SetSessionValue("history.ignoreDuplicates", c => c.History.IgnoreDuplicates = noDuplicates);
                     break;
                 case "maximumhistorycount":
-                    config.History.MaxEntries = Convert.ToInt32(value, CultureInfo.InvariantCulture);
+                    var max = Convert.ToInt32(value, CultureInfo.InvariantCulture);
+                    store.SetSessionValue("history.maxEntries", c => c.History.MaxEntries = max);
                     break;
                 case "bellstyle":
-                    config.Editor.BellStyle = (value?.ToString() ?? "none").ToLowerInvariant();
+                    var bell = (value?.ToString() ?? "none").ToLowerInvariant();
+                    store.SetSessionValue("editor.bellStyle", c => c.Editor.BellStyle = bell);
                     break;
                 case "colors":
                     if (value is IDictionary colors)

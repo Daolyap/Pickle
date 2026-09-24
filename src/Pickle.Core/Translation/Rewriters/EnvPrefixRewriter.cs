@@ -77,13 +77,17 @@ public sealed class EnvPrefixRewriter : IInputRewriter
             sb.Append("$env:").Append(name).Append(" = ").Append(expression).Append("; ");
         }
 
-        sb.Append(body).Append(" } finally { ");
+        // $? at the start of finally is the command's status; the trailing if hands it back (a try statement alone always
+        // leaves $? true), so the prompt, history and scripts see a failure. Write-Error -ErrorAction Ignore sets $? to
+        // false without output or an $Error entry.
+        sb.Append(body).Append(" } finally { $__pickle_ok = $?; ");
         foreach (var (name, _) in assignments)
         {
             sb.Append("$env:").Append(name).Append(" = $__saved_").Append(name).Append("; ");
         }
 
-        sb.Append("Remove-Variable ").Append(string.Join(", ", assignments.Select(a => "__saved_" + a.Name))).Append(" }");
+        sb.Append("Remove-Variable ").Append(string.Join(", ", assignments.Select(a => "__saved_" + a.Name))).Append(" }; ");
+        sb.Append("if ($__pickle_ok) { Remove-Variable __pickle_ok } else { Remove-Variable __pickle_ok; Write-Error 'failed' -ErrorAction Ignore }");
         return sb.ToString();
     }
 }

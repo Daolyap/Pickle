@@ -34,6 +34,10 @@ public sealed class JsonConfigStore : IConfigStore, IDisposable
     private readonly PicklePaths _paths;
     private readonly IPickleLogger _log;
     private readonly object _gate = new();
+
+    // Session-only values by config path (Set-PSReadLineOption): applied on every rebuild, never saved, dropped when
+    // that setting is changed explicitly.
+    private readonly Dictionary<string, Action<PickleConfig>> _sessionValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string?> _knownText = new(StringComparer.Ordinal);
     private JsonObject _base = [];
     private JsonObject _local = [];
@@ -102,6 +106,11 @@ public sealed class JsonConfigStore : IConfigStore, IDisposable
                 return;
             }
 
+            foreach (var path in changed)
+            {
+                _sessionValues.Remove(path);
+            }
+
             _base = updated;
             Rebuild();
             SaveLayer(_paths.ConfigFile, _base, _baseParseError);
@@ -147,6 +156,7 @@ public sealed class JsonConfigStore : IConfigStore, IDisposable
                 _base = layer;
             }
 
+            _sessionValues.Remove(info.Path);
             Rebuild();
             SaveLayer(local ? _paths.LocalConfigFile : _paths.ConfigFile, layer, null);
             snapshot = _current;
@@ -154,6 +164,20 @@ public sealed class JsonConfigStore : IConfigStore, IDisposable
 
         Changed?.Invoke(this, new ConfigChangedEventArgs(snapshot, info.Path));
         return true;
+    }
+
+    /// <summary>Set a value for this session only (never saved); it survives reloads until the setting is changed explicitly.</summary>
+    public void SetSessionValue(string path, Action<PickleConfig> apply)
+    {
+        PickleConfig snapshot;
+        lock (_gate)
+        {
+            _sessionValues[path] = apply;
+            Rebuild();
+            snapshot = _current;
+        }
+
+        Changed?.Invoke(this, new ConfigChangedEventArgs(snapshot, path));
     }
 
     public void Reload()
@@ -370,6 +394,7 @@ public sealed class JsonConfigStore : IConfigStore, IDisposable
                 _base = layer;
             }
 
+            _sessionValues.Remove(info.Path);
             Rebuild();
             SaveLayer(local ? _paths.LocalConfigFile : _paths.ConfigFile, layer, null);
             snapshot = _current;
@@ -420,6 +445,11 @@ public sealed class JsonConfigStore : IConfigStore, IDisposable
         foreach (var problem in problems)
         {
             _log.Warn("config", problem.ToString());
+        }
+
+        foreach (var apply in _sessionValues.Values)
+        {
+            apply(config);
         }
 
         _current = config;

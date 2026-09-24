@@ -66,7 +66,7 @@ public sealed class PanelHost : IPanelHost
                 return null;
             }
 
-            _pickle.Shell.OpenPanelWhenIdle(panel, argument);
+            _pickle.Shell.OpenPanelWhenIdle(panel, argument, currentInput);
             return null;
         }
 

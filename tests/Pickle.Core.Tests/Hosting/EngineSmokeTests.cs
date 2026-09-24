@@ -64,9 +64,10 @@ public class EngineSmokeTests
         using var t = TestPickle.Create(start: true);
         var panel = new Pickle.Abstractions.PanelDescriptor { Id = "p", Title = "P", Description = "d", CreateView = _ => new object() };
         Assert.False(t.Runtime.Shell.IsBusy);
-        t.Runtime.Shell.OpenPanelWhenIdle(panel, "arg");
+        t.Runtime.Shell.OpenPanelWhenIdle(panel, "arg", "curl -s x");
         Assert.True(t.Runtime.Engine.PendingPanels.TryDequeue(out var pending));
         Assert.Same(panel, pending.Panel);
         Assert.Equal("arg", pending.Argument);
+        Assert.Equal("curl -s x", pending.CurrentInput);
     }
 }

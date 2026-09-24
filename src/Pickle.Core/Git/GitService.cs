@@ -19,7 +19,10 @@ public sealed class GitService(IPickleLogger log) : IGitService
     private const string Category = "git";
     private const string NotFoundMessage = "git was not found. Install Git and make sure it is on PATH.";
 
+    internal static readonly TimeSpan FilterScanLifetime = TimeSpan.FromSeconds(30);
+
     private readonly Lazy<string?> _located = new(() => GitProcess.Locate());
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Stamp, long At, IReadOnlyList<string> Overrides)> _filterScans = new(StringComparer.Ordinal);
     private string? _gitPathOverride;
 
     /// <summary>Extra environment variables for every git process (null removes one); tests use it to isolate config.</summary>
@@ -51,7 +54,7 @@ public sealed class GitService(IPickleLogger log) : IGitService
 
         var result = await ExecAsync(
             root,
-            [.. overrides, "--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash", "-z"],
+            [.. overrides, "--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash", "--ignore-submodules=dirty", "-z"],
             StatusTimeout,
             cancellationToken).ConfigureAwait(false);
         if (!result.Success)
@@ -81,7 +84,7 @@ public sealed class GitService(IPickleLogger log) : IGitService
         }
 
         // Fixed prefixes keep patches appliable whatever diff.noprefix / diff.mnemonicPrefix say.
-        args.AddRange(["--no-color", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/"]);
+        args.AddRange(["--no-color", "--no-ext-diff", "--no-textconv", "--ignore-submodules=dirty", "--src-prefix=a/", "--dst-prefix=b/"]);
         if (file is not null)
         {
             args.Add("--");
@@ -396,10 +399,10 @@ public sealed class GitService(IPickleLogger log) : IGitService
             return Task.FromResult(new GitProcessResult(-1, string.Empty, NotFoundMessage, false));
         }
 
-        // quotepath=off: UTF-8 paths verbatim. fsmonitor=false: a repository's config can name a program that
-        // status/diff would run (the prompt runs status in any directory). literal-pathspecs (only where paths
+        // quotepath=off: UTF-8 paths verbatim. fsmonitor=false, log.showSignature=false: a repository's config can
+        // name programs (fsmonitor hook, gpg.program) that status/log would run (the prompt runs status anywhere). literal-pathspecs (only where paths
         // follow "--"; it breaks `stash push -u`): file names like ":x" or "a[1]" are never pathspec magic or globs.
-        List<string> argv = ["-c", "core.quotepath=off", "-c", "color.ui=false", "-c", "core.fsmonitor=false"];
+        List<string> argv = ["-c", "core.quotepath=off", "-c", "color.ui=false", "-c", "core.fsmonitor=false", "-c", "log.showSignature=false"];
         if (literalPathspecs ?? args.Contains("--"))
         {
             argv.Add("--literal-pathspecs");
@@ -416,15 +419,39 @@ public sealed class GitService(IPickleLogger log) : IGitService
     /// <c>-c filter.&lt;driver&gt;.clean=</c> (etc.) for every filter command set in the repository's own config.
     /// `git status`/`git diff` run clean filters on files whose stat data changed, and the prompt runs status on every
     /// cd, so a .git/config shipped in an archive would otherwise run its commands. Global/system config (git-lfs) is
-    /// the user's and stays active. Null when the config can't be read safely (the caller then skips the command).
+    /// the user's and stays active. Submodules (whose own config would apply) are kept out with
+    /// --ignore-submodules=dirty. Null when the config can't be read safely (the caller then skips the command).
+    /// Cached per repository while its config files are unchanged (and at most <see cref="FilterScanLifetime"/>).
     /// </summary>
     internal async Task<IReadOnlyList<string>?> RepositoryFilterOverridesAsync(string root, CancellationToken cancellationToken)
     {
-        var result = await ExecAsync(
-            root,
-            ["config", "--includes", "--show-scope", "--name-only", "--get-regexp", @"^filter\..+\.(clean|smudge|process)$"],
-            StatusTimeout,
-            cancellationToken).ConfigureAwait(false);
+        var stamp = ConfigStamp(root);
+        if (_filterScans.TryGetValue(root, out var cached) && cached.Stamp == stamp && Environment.TickCount64 - cached.At < FilterScanLifetime.TotalMilliseconds)
+        {
+            return cached.Overrides;
+        }
+
+        var overrides = await ScanRepositoryFiltersAsync(root, cancellationToken).ConfigureAwait(false);
+        if (overrides is not null)
+        {
+            _filterScans[root] = (stamp, Environment.TickCount64, overrides);
+        }
+
+        return overrides;
+    }
+
+    private async Task<IReadOnlyList<string>?> ScanRepositoryFiltersAsync(string root, CancellationToken cancellationToken)
+    {
+        const string pattern = @"^filter\..+\.(clean|smudge|process)$";
+        var result = await ExecAsync(root, ["config", "--includes", "--show-scope", "--name-only", "--get-regexp", pattern], StatusTimeout, cancellationToken).ConfigureAwait(false);
+        var scoped = true;
+        if (result.ExitCode == 129 && !result.TimedOut)
+        {
+            // git < 2.26 has no --show-scope: read the repository's own files only.
+            result = await ExecAsync(root, ["config", "--local", "--includes", "--name-only", "--get-regexp", pattern], StatusTimeout, cancellationToken).ConfigureAwait(false);
+            scoped = false;
+        }
+
         if (result.ExitCode == 1 && !result.TimedOut && result.Output.Length == 0)
         {
             return [];
@@ -440,7 +467,7 @@ public sealed class GitService(IPickleLogger log) : IGitService
         var drivers = new HashSet<string>(StringComparer.Ordinal);
         foreach (var line in result.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var parts = line.Split('\t', 2);
+            var parts = scoped ? line.Split('\t', 2) : ["local", line];
             if (parts.Length != 2 || parts[1].Contains('=', StringComparison.Ordinal))
             {
                 // `-c` splits at the first '=', so such a driver name can't be overridden.
@@ -464,6 +491,33 @@ public sealed class GitService(IPickleLogger log) : IGitService
         }
 
         return overrides;
+    }
+
+    private static string ConfigStamp(string root)
+    {
+        if (GitStatusParser.ResolveGitDir(root) is not { } gitDir)
+        {
+            return string.Empty;
+        }
+
+        var common = gitDir;
+        try
+        {
+            var commonFile = Path.Combine(gitDir, "commondir");
+            if (File.Exists(commonFile))
+            {
+                common = Path.GetFullPath(Path.Combine(gitDir, File.ReadAllText(commonFile).Trim()));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+        }
+
+        return string.Join('|', new[] { Path.Combine(common, "config"), Path.Combine(gitDir, "config.worktree") }.Select(path =>
+        {
+            var info = new FileInfo(path);
+            return info.Exists ? info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture) + ":" + info.Length.ToString(CultureInfo.InvariantCulture) : "-";
+        }));
     }
 
     private static string RootOf(string repo) => GitStatusParser.FindRoot(repo) ?? repo;

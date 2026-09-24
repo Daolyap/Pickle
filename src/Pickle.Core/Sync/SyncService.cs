@@ -270,7 +270,7 @@ public sealed class SyncService : ISyncService, IRuntimeComponent, IDisposable
                     remoteRoot,
                     _runtime.ConfigStore.GetBaseLayer,
                     _runtime.ConfigStore.ReplaceBaseLayer);
-                var options = new SyncOptions(direction, settings.SyncHistory, dryRun, PreferRemoteOnConflict: state.LastSync is null);
+                var options = new SyncOptions(direction, settings.SyncHistory, dryRun, PreferRemoteOnConflict: state.LastSync is null, HistoryMaxEntries: _runtime.Config.Current.History.MaxEntries);
                 var result = engine.Run(state, options);
                 if (dryRun)
                 {

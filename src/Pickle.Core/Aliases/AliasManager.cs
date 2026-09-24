@@ -46,7 +46,7 @@ public sealed class AliasManager : IAliasRegistry, IAliasMaterializer, IRuntimeC
     public event EventHandler? Changed;
 
     /// <summary>Launches an editor on a file and waits (replaceable in tests).</summary>
-    internal Func<string, int> EditorLauncher { get; set; } = EditorProcess.Run;
+    internal Func<string, int> EditorLauncher { get; set; } = Commands.EditorLauncher.RunAndWait;
 
     public IReadOnlyList<AliasDefinition> All
     {
@@ -67,6 +67,14 @@ public sealed class AliasManager : IAliasRegistry, IAliasMaterializer, IRuntimeC
         lock (_gate)
         {
             var list = Load();
+
+            // Profiles re-run `pk alias add` on every start: an identical definition must not bump UpdatedAt (and so
+            // look changed to sync on every machine).
+            if (list.Find(a => string.Equals(a.Name, alias.Name, StringComparison.OrdinalIgnoreCase)) is { } existing && SameDefinition(existing, alias))
+            {
+                return;
+            }
+
             list.RemoveAll(a => string.Equals(a.Name, alias.Name, StringComparison.OrdinalIgnoreCase));
             alias.UpdatedAt = DateTimeOffset.UtcNow;
             list.Add(alias);
@@ -76,6 +84,10 @@ public sealed class AliasManager : IAliasRegistry, IAliasMaterializer, IRuntimeC
 
         OnChanged();
     }
+
+    private static bool SameDefinition(AliasDefinition a, AliasDefinition b) =>
+        a.Name == b.Name && a.Kind == b.Kind && a.Body == b.Body && a.Description == b.Description
+        && a.DirectoryScope == b.DirectoryScope && a.MachineScope == b.MachineScope;
 
     /// <summary>
     /// <see cref="Set"/> for user-facing commands: refuses to shadow cmdlets, PowerShell aliases and other functions

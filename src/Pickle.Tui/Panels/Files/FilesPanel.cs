@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Management.Automation.Language;
 using Pickle.Abstractions;
 using Pickle.Tui.Widgets;
 using Terminal.Gui.Input;
@@ -110,12 +109,8 @@ public sealed class FilesPanel : PanelWindow
         return string.Equals(full, baseDir, comparison) ? "." : full;
     }
 
-    /// <summary>Bare when every character is plainly safe; otherwise single-quoted (escaping ‘ ’ ‚ ‛ too).</summary>
-    public static string Quote(string path)
-    {
-        var bare = path.Length > 0 && path[0] != '-' && path.All(c => char.IsLetterOrDigit(c) || "._-/\\:~+".Contains(c));
-        return bare ? path : "'" + CodeGeneration.EscapeSingleQuotedStringContent(path) + "'";
-    }
+    /// <summary>Bare only when PowerShell reads it back as the same single string (not 1kb → 1024); otherwise single-quoted.</summary>
+    public static string Quote(string path) => global::Pickle.Wizards.PowerShellQuoting.FormatArgument(path);
 
     protected override void OnOpened() => Rescan(Options);
 

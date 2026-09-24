@@ -1,8 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pickle.Core\Pickle.Core.csproj" />
+    <!-- Built first, then its DLL is copied to fixtures-dotnet/ for the .NET plugin tests (not referenced). -->
+    <ProjectReference Include="..\fixtures\SampleDotnetPlugin\SampleDotnetPlugin.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\fixtures\**\*" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\fixtures\**\*" Exclude="..\fixtures\**\bin\**;..\fixtures\**\obj\**;..\fixtures\**\*.cs;..\fixtures\**\*.csproj" LinkBase="fixtures" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="CopySampleDotnetPlugin" AfterTargets="Build">
+    <MSBuild Projects="..\fixtures\SampleDotnetPlugin\SampleDotnetPlugin.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="_SampleDotnetPluginDll" />
+    </MSBuild>
+    <Copy SourceFiles="@(_SampleDotnetPluginDll)" DestinationFolder="$(OutDir)fixtures-dotnet" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

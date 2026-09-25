@@ -12,13 +12,15 @@ graph TD
     tui["Pickle.Tui (~8k)<br/>Terminal.Gui v2 panels"]
     win["Pickle.Windows (~6k)<br/>winget · WUA · Task Scheduler · elevation · Windows Terminal"]
     wiz["Pickle.Wizards (~2.5k)<br/>wizard engine + 18 JSON definitions"]
+    net["Pickle.Network (~2k)<br/>scan · sweep · DNS · trace · whois · cert · subnet · http · WoL"]
     abs["Pickle.Abstractions (~2.6k)<br/>contracts only"]
     sdk[("Microsoft.PowerShell.SDK 7.6")]
     tg[("Terminal.Gui 2.5")]
 
-    exe --> core & tui & win & wiz
+    exe --> core & tui & win & wiz & net
     core --> abs
-    tui --> abs & wiz
+    tui --> abs & wiz & net
+    net --> abs
     win --> abs
     wiz --> abs
     abs --> sdk
@@ -81,10 +83,14 @@ graph LR
 | Sync | `Core/Sync/` (folder and git backends) |
 | Profiles, PSReadLine shim | `Core/Profile/`, `Core/Modules/PSReadLine/` |
 | `pk` dispatcher | `Core/Commands/`, `Cmdlets/InvokePickleCommandCmdlet.cs` |
-| Panels | `Tui/Panels/<Feature>/` (Palette, Files, Settings, Jobs, Git, Windows, Wizard, ListPanel) |
+| Panels | `Tui/Panels/<Feature>/` (Palette, Files, Settings, Jobs, Git, Windows, Wizard, ListPanel, NetTools, System) |
+| `pk` command helpers for plugins | `Abstractions/PickleCommandBase.cs` (+ `CommandOutput`), `CommandArgs.cs`, `Display.cs` |
 | Git | `Core/Git/` (`GitService` over the git CLI) + `Tui/Panels/Git/` |
 | Processes, network, disks (Alt+P/N/D, `pk top/net/disks`) | `Core/System/` (monitors: `/proc` on Linux, Process API + Win32 on Windows, disk usage scanner) + `Tui/Panels/System/` |
 | winget, Windows Update, Task Scheduler | `Windows/Winget/`, `Windows/WindowsUpdate/`, `Windows/TaskScheduler/`, `Windows/Commands/` |
+| Network tools (Alt+T, `pk scan/sweep/dns/trace/whois/cert/subnet/http/wol/ip`) | `Network/` (engines + `Commands/`, table views in `Formats/`) + `Tui/Panels/NetTools/` |
+| Missing-tool install prompt, `pk tool` | `Core/Hosting/MissingToolPrompt.cs` (before a line runs), `Abstractions/Services/Tools.cs` (`ToolCatalog`), `Windows/Tools/` (winget install, PATH fix-up) |
+| Windows Sandbox (Alt+X, `pk sandbox`) | `Windows/Sandbox/` (.wsb + logon setup script, presets), `Tui/Panels/Windows/SandboxPanel.cs` |
 | Elevation | `Windows/Elevation/` (named-pipe broker, `--elevated-helper`, allowlisted operations) |
 | Windows Terminal profile | `Windows/Terminal/` (fragment, `pk terminal`, `--write-terminal-fragment`) |
 | Command wizards | `Wizards/` (engine, parser, `Definitions/*.json`) + `Tui/Panels/Wizard/` |
@@ -106,8 +112,8 @@ graph LR
 - Programs are never started by bare name, because Windows and .NET would look in the current directory first.
 - The prompt runs `git status` wherever you `cd`. `GitService` turns off `core.fsmonitor` and repo-local filter commands,
   and diffs use `--no-textconv`/`--no-ext-diff`.
-- The elevated helper validates every request again and runs only winget from WindowsApps, PowerShell from
-  System32, WUA COM, or Task Scheduler.
+- The elevated helper validates every request again and runs only winget from WindowsApps, PowerShell or dism.exe
+  (turning on Windows Sandbox) from System32, WUA COM, or Task Scheduler.
 
 ## Tests
 
@@ -118,4 +124,5 @@ graph LR
 | `tests/Pickle.Tui.Tests` | panels headless (`TuiHarness.InitApp()`: virtual time, ANSI driver, 80×25) |
 | `tests/Pickle.Windows.Tests` | parsers, elevation protocol/session, commands on fakes; real-system tests on Windows only |
 | `tests/Pickle.Wizards.Tests` | every definition's presets and parse-back round trips |
+| `tests/Pickle.Network.Tests` | target/port/subnet parsing, DNS wire format; scanner, DNS (UDP→TCP), TLS and HTTP against loopback listeners |
 | `tests/Pickle.E2E` | real pty + pyte: prompt, highlighting, translation, panels, vim round trip |

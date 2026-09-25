@@ -2,8 +2,9 @@
 
 Pickle is a Windows-first shell that hosts the **real PowerShell 7 engine** (Microsoft.PowerShell.SDK, in-process,
 custom `PSHost`) and replaces the interactive experience: its own line editor (syntax highlighting, autosuggestions,
-completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, processes, network, disks, winget, Windows Update,
-Task Scheduler, settings, command wizards), a plugin system, Linux-syntax translation, aliases and sync.
+completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, processes, network, network tools, disks, winget, Windows Update,
+Task Scheduler, Windows Sandbox, settings, command wizards), built-in network tools, on-demand tool installs, a plugin system,
+Linux-syntax translation, aliases and sync.
 C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product, binary (`pickle`) and namespaces are **Pickle**.
 
 ## Commands
@@ -50,6 +51,7 @@ src/Pickle.Core          The shell engine. Key folders:
 src/Pickle.Tui           Terminal.Gui v2 panels. PanelHost (IPanelHost), TuiPlugin, Panels/<Feature>/
 src/Pickle.Windows       Windows services (winget, WUA, Task Scheduler, elevation broker, Windows Terminal fragment)
 src/Pickle.Wizards       Wizard schema engine + Definitions/*.json (embedded)
+src/Pickle.Network       Network tools engines (scan, sweep, DNS client, trace, whois, cert, subnet, http, WoL) + pk commands
 src/Pickle               pickle.exe: Program.cs (arg modes) + BuiltInPlugins.cs (the list of built-in plugins)
 tests/Pickle.Testing     VirtualTerminal, TestPickle, Snapshot, Fakes/ — shared test doubles
 tests/*.Tests            xunit.v3 per project · tests/Pickle.E2E pty harness (Python)
@@ -89,7 +91,9 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   go through `GitService`, which also disables repo-configured fsmonitor/filters/textconv.
 - Package versions live only in `Directory.Packages.props`. Don't add packages without need.
 - New config setting: add a property with a default in `Abstractions/Config.cs` (and the JSON schema).
-- New `pk` subcommand: implement `IPickleCommand`, register it in your plugin's/component's `Initialize`.
+- New `pk` subcommand: derive from `PickleCommandBase` (Abstractions: `CommandArgs`, `CommandOutput`, `Display.Columns`)
+  or implement `IPickleCommand`; register it in your plugin's/component's `Initialize`. Plugin authoring guide:
+  `docs/plugins.md` (keep it in sync when plugin-facing APIs change).
 - New cmdlet: `[Cmdlet]` class deriving `PickleCmdlet` in `Pickle.Core/Cmdlets` — registration is automatic.
 - New key action: `KeyBindings.RegisterAction(name, ...)`; default chord goes in `Input/DefaultKeyBindings.cs`.
 - Comments: only for non-obvious *why*. No multi-paragraph docstrings.

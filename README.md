@@ -15,12 +15,15 @@ first-class Windows tooling on top.
 | ✨ **Editor** | Live syntax highlighting, fish-style autosuggestions, multi-line editing, undo/redo, selection & clipboard |
 | 🔎 **Search** | Fuzzy history (Ctrl+R) scoped to all / this directory / this session; fuzzy completion menu with descriptions |
 | 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, venv, node…), 5 themes, drives `$PSStyle` and your Windows Terminal colors |
-| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), disks (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), settings (Alt+,) |
+| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), disks (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), Windows Sandbox (Alt+X), settings (Alt+,) |
+| 🛰️ **Network tools** | Built in, nothing to install: port scan (`pk scan 10.0.0.0/24 -p top100`), host discovery with MACs (`pk sweep`), DNS lookups against any server (`pk dns`), `pk trace`, `pk whois`, TLS certificate checks (`pk cert`), `pk http` timings, `pk subnet`, Wake-on-LAN, `pk ip` |
+| 📥 **Missing tools** | Type `7z …` or `nmap …` without them installed and Pickle offers to install first — just for you, all users or this session only, added to PATH — instead of a broken command (`pk tool install <name>`) |
+| 🧪 **Windows Sandbox** | Throwaway Windows in one key: presets (safe browsing, test an installer, offline analysis…), shared folders, networking and device switches, winget packages and Pickle itself inside (`pk sandbox run`) |
 | 📦 **winget** | Browse, search, install and upgrade packages interactively; `pk upgrade` updates apps *and* Windows; one-click (UAC) winget source repair |
 | 🧙 **Command wizards** | F2 on a command opens a guided builder with live preview: curl, nmap, ffmpeg, git, docker, ssh/scp, openssl, robocopy, tar, 7z, kubectl, Get-WinEvent, netsh, certutil, adb, yt-dlp, rsync |
 | 🐧 **Linux muscle memory** | `ls -la`, `grep -rn`, `rm -rf`, `export X=1`, `VAR=x cmd`, `2>/dev/null`, `!!`, `sudo`, `apt install` → sensible Windows equivalents (shown dimmed) |
 | 🔗 **Aliases** | Permanent aliases, including parameterized (`gco {branch}`), script, directory- and machine-scoped |
-| 🔌 **Plugins** | Any PowerShell module can be a plugin (`Register-PicklePanel`, `-Command`, `-PromptSegment`, `-Hook`…); .NET plugins for deeper integration |
+| 🔌 **Plugins** | Any PowerShell module can be a plugin (`Register-PicklePanel`, `-Wizard`, `-Command`, `-PromptSegment`, `-Hook`…); .NET plugins add full panels and services — see the [plugin guide](docs/plugins.md) |
 | ☁️ **Sync** | Sync config, aliases, themes and history across machines through a folder (OneDrive…) or a git repo |
 | ⏰ **Scheduler** | `pk schedule add "every 30m" <command>` and a Task Scheduler panel |
 
@@ -50,11 +53,17 @@ pk update check              # Windows Update
 pk schedule add "daily 09:00" pk upgrade --name morning-upgrade
 pk sync init "$env:OneDrive\Pickle"
 pk config                    # or press Alt+, for the settings panel
+pk scan 192.168.1.0/24 -p web      # port scan (Alt+T opens all the network tools)
+pk dns example.com all             # every record type
+pk tool install jq --temp          # a tool for this session only
+pk sandbox run "Test an installer" # throwaway Windows with Downloads shared read-only
+pk plugin new MyTools              # start a plugin (docs/plugins.md)
 ```
 
 Keys: **F1** palette · **Ctrl+R** history · **Tab** completion · **→** accept suggestion · **Ctrl+T** files ·
 **F2** wizard · **Alt+G** git · **Alt+W** winget · **Alt+U** updates · **Alt+J** jobs · **Alt+S** scheduler · **Alt+,** settings ·
-**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+D** disks (`pk disks [folder]`).
+**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) ·
+**Alt+X** Windows Sandbox (`pk sandbox`).
 
 ## Configuration
 

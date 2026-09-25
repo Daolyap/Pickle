@@ -7,7 +7,8 @@ after installing a build.
 ## Install
 
 - [ ] **MSI**: `pickle-<ver>-win-x64.msi` installs without errors; `pickle --version` works in a *new* terminal
-      (PATH updated); Start menu has "Pickle".
+      (PATH updated); Start menu has "Pickle" with the pickle icon; Apps & features shows the pickle icon.
+- [ ] `pickle.exe` shows the pickle icon in Explorer and on the taskbar; `pk help` starts with the pickle logo.
 - [ ] **Portable**: `pickle.exe` runs from any folder; the first interactive start asks "Add a Pickle profile to Windows
       Terminal? [Y/n]" (only if Terminal is installed and the MSI's profile isn't); Y adds it, and it isn't asked again.
 - [ ] Startup banner: pickle art with a short shine; pressing a key during it skips the animation and the key is typed.
@@ -17,7 +18,8 @@ after installing a build.
 
 ## Windows Terminal
 
-- [ ] Windows Terminal shows a **Pickle** profile (Settings → Profiles) with the Pickle color scheme.
+- [ ] Windows Terminal shows a **Pickle** profile (Settings → Profiles) with the Pickle color scheme and the pickle
+      icon in the tab and the new-tab menu (both the MSI's profile and one added by the portable exe).
 - [ ] `pk terminal set font "Cascadia Code NF"` / `pk terminal set opacity 80` update the profile live.
 - [ ] `pk theme set powerline` changes the prompt *and* the Terminal color scheme.
 - [ ] `pk terminal default` makes Pickle the default profile (a `settings.json` backup is created).
@@ -101,14 +103,38 @@ after installing a build.
       `apt install jq` (→ winget) behave sensibly; the translated command is shown dimmed.
 - [ ] Unknown `ffmpeg` suggests `pk winget install Gyan.FFmpeg`.
 
+## Missing tools, network tools, sandbox
+
+- [ ] With 7-Zip not installed, `7z a test.7z somefile` asks first ("'7z' isn't installed…"). `P` toggles "add to
+      PATH"; Enter installs just for you, then the command runs and `7z` still works in a new Pickle window.
+- [ ] Same with `T` (this session only): the tool works now; after `exit` Pickle removes it ("Removing temporary
+      tools…") and it's gone from Apps & features. `N` runs the command anyway and doesn't ask again; Esc cancels.
+- [ ] `pk tool install jq --temp`, `pk tool install nmap --machine` (UAC), `pk tool list zip`.
+- [ ] The wizard's "Install 7z" button asks for scope and PATH in a dialog.
+- [ ] `pk scan 127.0.0.1 -p top100 --banner` lists open ports as a table; `pk scan <your subnet>/24 -p 445,3389` finishes
+      in seconds; `pk sweep <your subnet>/24` shows hosts with names and MAC addresses (router, printers…).
+- [ ] `pk dns example.com all`, `pk dns 8.8.8.8`, `pk dns example.com MX --server 1.1.1.1`, `pk trace 1.1.1.1`,
+      `pk whois example.com`, `pk cert github.com --chain`, `pk http https://github.com --headers`,
+      `pk subnet 10.1.2.3/22 --split /24`, `pk ip --public`.
+- [ ] Alt+T opens Network tools: each tool runs from its form (Enter or F5), results stream in, F6 stops a long scan,
+      F8 puts the `pk` command on the prompt.
+- [ ] Alt+X opens Windows Sandbox. If the feature is off, F9 turns it on (UAC, then restart). Launch "Safe browsing"
+      (Edge opens), "Test an installer" (Downloads is on the sandbox desktop, read-only, no network) and "Pickle
+      inside" (Pickle starts in the sandbox). Edit a preset, F2 saves it under a new name, F3 exports a `.wsb` you can
+      double-click, F4 previews the `.wsb` and setup script.
+- [ ] `pk sandbox run "Try apps with winget" --winget Git.Git` installs winget and Git inside the sandbox
+      (`pickle-setup.log` on its desktop shows each step).
+
 ## Wizards, aliases, plugins, sync
 
-- [ ] Type `curl ` then F2: the curl wizard opens; text fields show │ … │ outlines; presets fill fields; preview
-      updates; Run executes.
+- [ ] Type `curl ` then F2: the curl wizard opens; every text field is a full rounded box; presets fill fields;
+      preview updates; Run executes.
 - [ ] `pk wizard ffmpeg`, `pk wizard nmap`, `pk wizard robocopy` open and build valid commands (nmap: host discovery,
       timing, evasion and output sections; 18 presets).
 - [ ] `pk alias add gco 'git checkout {branch}' --kind param` then `gco main` works; persists after restart.
 - [ ] `pk plugin new hello` → install it → `pk hello` works; `pk plugin disable` removes it next start.
+- [ ] The examples in `docs/plugins.md` (a `Register-PicklePanel` with `-Preview`, `-RefreshSeconds` and `-Command`; a
+      `Register-PickleWizard` for your own function) work when pasted into a plugin.
 - [ ] `pk sync init <OneDrive folder>`; `pk sync push` on one PC, `pk sync pull` on another brings aliases/theme.
 
 ## Compatibility

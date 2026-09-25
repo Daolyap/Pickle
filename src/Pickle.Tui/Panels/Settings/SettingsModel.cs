@@ -33,6 +33,7 @@ public static class SettingsModel
         ["editor.bellStyle"] = ["none", "audible", "visual"],
         ["terminal.cursorShape"] = ["bar", "vintage", "underscore", "filledBox", "emptyBox", "doubleUnderscore"],
         ["sync.backend"] = ["none", "folder", "git"],
+        ["shell.bannerStyle"] = ["animated", "art", "line"],
     };
 
     /// <summary>Theme, the config sections in declaration order, then key bindings.</summary>

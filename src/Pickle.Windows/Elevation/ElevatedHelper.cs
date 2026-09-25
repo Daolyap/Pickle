@@ -170,7 +170,7 @@ public static class ElevatedHelper
                 {
                     Type = ElevationMessageType.Response,
                     Id = id,
-                    Response = response with { Message = ElevationProtocol.Truncate(response.Message) },
+                    Response = ElevationProtocol.Fit(id, response),
                 }).ConfigureAwait(false);
             }
         }

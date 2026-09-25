@@ -30,6 +30,7 @@ public sealed class UpdatesPanel : WindowsPanelBase
 
         AddHint(Key.F5, "Check", _updates.Check);
         AddHint(Key.F9, "Install selected", _updates.InstallSelected);
+        AddHint(Key.F7, "Install KB…", () => _updates.InstallKb());
         AddHint(Key.F6, "History", _history.Start);
     }
 

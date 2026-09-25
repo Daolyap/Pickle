@@ -3,6 +3,7 @@ using Pickle.Tui.Widgets;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Panels.Settings;
@@ -14,8 +15,8 @@ internal static class ChordDialog
     {
         using var dialog = new Dialog { Title = "New key binding" };
         var label = new Label { Text = "Press a key combination, or type one like Ctrl+Shift+K:", X = 1, Y = 0 };
-        var field = new TextField { X = 1, Y = 1, Width = 40 };
-        var error = new Label { X = 1, Y = 2, Width = 40, Text = string.Empty };
+        var field = InputBox.Boxed(new TextField { X = 1, Y = 1, Width = 40 });
+        var error = new Label { X = 1, Y = Pos.Bottom(field), Width = 40, Text = string.Empty };
         dialog.Add(label, field, error);
         dialog.AddButton(new Button { Title = "_Cancel" });
         dialog.AddButton(new Button { Title = "_OK" });

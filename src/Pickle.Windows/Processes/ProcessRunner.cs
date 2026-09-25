@@ -10,7 +10,14 @@ internal sealed record ProcessResult(int ExitCode, string Output, bool TimedOut 
 internal interface IProcessRunner
 {
     /// <param name="onSegment">Receives output split on CR and LF as it arrives (progress bars overwrite with CR).</param>
-    Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, Action<string>? onSegment, TimeSpan timeout, CancellationToken cancellationToken);
+    /// <param name="environment">Variables to set for the child (null value: remove it).</param>
+    Task<ProcessResult> RunAsync(
+        string fileName,
+        IReadOnlyList<string> arguments,
+        Action<string>? onSegment,
+        TimeSpan timeout,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string?>? environment = null);
 }
 
 internal sealed class ProcessRunner(IPickleLogger log) : IProcessRunner
@@ -20,7 +27,8 @@ internal sealed class ProcessRunner(IPickleLogger log) : IProcessRunner
         IReadOnlyList<string> arguments,
         Action<string>? onSegment,
         TimeSpan timeout,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -37,7 +45,19 @@ internal sealed class ProcessRunner(IPickleLogger log) : IProcessRunner
             psi.ArgumentList.Add(argument);
         }
 
-        log.Info("process", $"start {fileName} [{string.Join(", ", arguments)}]");
+        foreach (var (name, value) in environment ?? new Dictionary<string, string?>())
+        {
+            if (value is null)
+            {
+                psi.Environment.Remove(name);
+            }
+            else
+            {
+                psi.Environment[name] = value;
+            }
+        }
+
+        log.Info("process", $"start {fileName} [{string.Join(", ", arguments.Select(a => a.Length > 120 ? a[..40] + "…" : a))}]");
         using var process = new Process { StartInfo = psi };
         process.Start();
         process.StandardInput.Close();

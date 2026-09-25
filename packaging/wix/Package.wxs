@@ -17,14 +17,19 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
-    <Property Id="ARPURLINFOABOUT" Value="https://github.com/daolyap/milkshell" />
-    <Property Id="ARPHELPLINK" Value="https://github.com/daolyap/milkshell/issues" />
+    <Icon Id="PickleIcon" SourceFile="$(var.AssetsDir)\pickle.ico" />
+    <Property Id="ARPPRODUCTICON" Value="PickleIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Daolyap/Pickle" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Daolyap/Pickle/issues" />
     <Property Id="ARPCOMMENTS" Value="A PowerShell 7 shell with superpowers" />
 
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="Pickle">
         <Component Id="PickleExe">
           <File Id="PickleExeFile" Source="$(var.PublishDir)\pickle.exe" KeyPath="yes" />
+        </Component>
+        <Component Id="PickleTerminalIcon" Guid="3C1B9C1E-6F0A-4C57-9B7E-2F4D8A1E5B63">
+          <File Id="PickleTerminalIconFile" Source="$(var.AssetsDir)\pickle-terminal.png" Name="pickle.png" KeyPath="yes" />
         </Component>
         <Component Id="PickleOnPath" Guid="85050476-7241-4273-9831-481EA44095FF">
           <Environment Id="PickleOnPathEnv" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
@@ -52,13 +57,15 @@
         <Shortcut Id="PickleStartMenu"
                   Name="Pickle"
                   Description="A PowerShell 7 shell with superpowers"
-                  Target="[INSTALLFOLDER]pickle.exe" />
+                  Target="[INSTALLFOLDER]pickle.exe"
+                  Icon="PickleIcon" />
         <RegistryValue Root="HKLM" Key="Software\Pickle" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </StandardDirectory>
 
     <Feature Id="Main" Title="Pickle" Level="1">
       <ComponentRef Id="PickleExe" />
+      <ComponentRef Id="PickleTerminalIcon" />
       <ComponentRef Id="PickleOnPath" />
       <ComponentRef Id="TerminalFragment" />
       <ComponentRef Id="StartMenuShortcut" />

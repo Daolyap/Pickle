@@ -1,5 +1,6 @@
 """W2 end-to-end: Tab completion, the completion menu and Ctrl+R history search in a real terminal."""
 
+import os
 import time
 
 from pty_harness import PickleSession
@@ -60,3 +61,25 @@ def test_w2_ctrl_r_finds_previous_command(p):
         time.sleep(0.3)
         s.press("enter")
         s.wait_for_count(marker, 4, timeout=10)
+
+
+def test_tab_keeps_completing_inside_a_quoted_directory(p):
+    with PickleSession(p) as s:
+        os.makedirs(os.path.join(s.home, "My Folder", "Sub Dir"), exist_ok=True)
+        s.wait_for_prompt()
+        # Warm the completion engine first: a retried Tab would complete one level too deep.
+        s.type("Get-ChildI")
+        _tab_until(s, "Get-ChildItem")
+        s.press("ctrl+c")
+        s.run(f"Set-Location -LiteralPath '{s.home}'; Write-Output ('in' + '-home')", "in-home")
+        # A relative path keeps the line short enough not to wrap behind a long prompt. The pauses keep Tab out of
+        # the typed burst (a burst is treated as a paste, where Tab is inserted literally).
+        s.type("Get-ChildItem './My Fo")
+        time.sleep(0.3)
+        s.press("tab")
+        s.wait_for("My Folder/'", timeout=20)
+        time.sleep(0.3)
+        s.press("tab")
+        s.wait_for("My Folder/Sub Dir/'", timeout=20)
+        s.press("ctrl+c")
+        s.run("Write-Output ('quoted' + '-ok')", "quoted-ok")

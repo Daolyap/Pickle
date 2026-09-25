@@ -265,6 +265,47 @@ public class CompletionEngineTests
         Assert.Null(buffer.Overlay);
     }
 
+    [Theory]
+    [InlineData("'/tmp/My Folder'", "'/tmp/My Folder/'", 16)]
+    [InlineData("\"/tmp/My Folder\"", "\"/tmp/My Folder/\"", 16)]
+    [InlineData("'/tmp/it''s'", "'/tmp/it''s/'", 12)]
+    [InlineData("/tmp/src", "/tmp/src/", 9)]
+    [InlineData("/tmp/src/", "/tmp/src/", 9)]
+    [InlineData("'/tmp/open", "'/tmp/open/", 11)]
+    public void DirectoriesKeepTheCursorInsideTheQuotes(string completion, string inserted, int cursor)
+    {
+        var (text, at) = CompletionEngine.Insertion(new CompletionItem(completion, completion, CompletionKind.Directory));
+        Assert.Equal(inserted, text);
+        Assert.Equal(cursor, at);
+    }
+
+    [Fact]
+    public void FilesAreInsertedAsIs()
+    {
+        Assert.Equal(("'/tmp/a b.txt'", 14), CompletionEngine.Insertion(new CompletionItem("'/tmp/a b.txt'", "a b.txt", CompletionKind.File)));
+    }
+
+    [Fact]
+    public async Task TabKeepsCompletingInsideAQuotedDirectory()
+    {
+        using var t = Started();
+        var root = Directory.CreateTempSubdirectory("pickle-quoted").FullName;
+        Directory.CreateDirectory(Path.Combine(root, "My Folder", "Sub Dir"));
+        var complete = Action(t, EditorActionNames.Complete);
+
+        var buffer = new FakeEditorBuffer($"Get-ChildItem '{Path.Combine(root, "My Fo")}");
+        await complete(buffer, CancellationToken.None);
+        var sep = Path.DirectorySeparatorChar;
+        var first = $"Get-ChildItem '{Path.Combine(root, "My Folder")}{sep}'";
+        Assert.Equal(first, buffer.Text);
+        Assert.Equal(first.Length - 1, buffer.Cursor);
+
+        await complete(buffer, CancellationToken.None);
+        var second = $"Get-ChildItem '{Path.Combine(root, "My Folder", "Sub Dir")}{sep}'";
+        Assert.Equal(second, buffer.Text);
+        Assert.Equal(second.Length - 1, buffer.Cursor);
+    }
+
     private static TestPickle Started(Action<PickleConfig>? configure = null) => TestPickle.Create(start: true, configure: configure);
 
     private static Task<CompletionSet> Complete(TestPickle t, string input) =>

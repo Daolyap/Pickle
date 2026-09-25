@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/daolyap/milkshell/config.schema.json",
+  "$id": "https://github.com/Daolyap/Pickle/config.schema.json",
   "title": "Pickle configuration",
   "description": "Pickle settings (config.json, synced) and machine-only overrides (config.local.json, never synced). Every setting is optional; missing values use the defaults shown here.",
   "type": "object",
@@ -175,10 +175,26 @@
           "default": true,
           "description": "Offer to install a missing tool with winget."
         },
+        "askToInstallMissingTools": {
+          "type": "boolean",
+          "default": true,
+          "description": "Before running a line whose program is missing but installable (7z, nmap, ...), ask to install it first: for you, all users or this session only."
+        },
+        "addInstalledToolsToPath": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default of the 'add to PATH' choice when installing a missing tool."
+        },
         "showStartupBanner": {
           "type": "boolean",
           "default": true,
           "description": "Print the Pickle banner when the shell starts."
+        },
+        "bannerStyle": {
+          "type": "string",
+          "default": "animated",
+          "enum": ["animated", "art", "line"],
+          "description": "Startup banner: ASCII art with a short shine animation (any key skips it), static art, or one line."
         },
         "firstRunCompleted": {
           "type": "boolean",

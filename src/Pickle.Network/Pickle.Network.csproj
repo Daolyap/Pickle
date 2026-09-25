@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Built-in network tools: port scan, host discovery, DNS, traceroute, whois, TLS certificates, subnets, Wake-on-LAN, HTTP timing.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Formats\Pickle.Network.format.ps1xml" LogicalName="Pickle.Network.format.ps1xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickle.Network.Tests" />
+  </ItemGroup>
+</Project>

@@ -29,7 +29,11 @@ public sealed record WingetSource(string Name, string Argument, string Type);
 
 public sealed record WingetProgress(string Stage, double? Percent = null, string? Message = null);
 
-public sealed record WingetOperationResult(bool Success, string Message, int? ExitCode = null, bool RebootRequired = false);
+public sealed record WingetOperationResult(bool Success, string Message, int? ExitCode = null, bool RebootRequired = false)
+{
+    /// <summary>The operation's full text output (winget/installer/PowerShell), for a details pane or <c>--verbose</c>.</summary>
+    public string? Output { get; init; }
+}
 
 public enum WingetScope
 {
@@ -44,7 +48,8 @@ public sealed record WingetInstallOptions(
     bool Silent = true,
     bool Force = false,
     bool AcceptAgreements = true,
-    bool IncludeUnknown = false);
+    bool IncludeUnknown = false,
+    string? Location = null);
 
 public enum WingetBackend
 {
@@ -80,12 +85,20 @@ public interface IWingetService
 
     Task<WingetOperationResult> UninstallAsync(string id, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Uninstalls <paramref name="ids"/> with administrator rights (one UAC prompt for all of them, through the elevation
+    /// broker) — for machine-wide packages whose uninstaller fails without elevation.
+    /// </summary>
+    Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new WingetOperationResult(false, "Uninstalling with administrator rights is not supported by this winget service.", 1));
+
     Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Re-registers the winget source package via
-    /// <c>Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix'</c>. When <paramref name="elevated"/>
-    /// is true this runs through the elevation broker (fixes winget sources for admin sessions).
+    /// <c>Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix'</c> for the current user. When
+    /// <paramref name="elevated"/> is true this runs through the elevation broker, i.e. for the account elevated sessions
+    /// run as. <see cref="WingetOperationResult.Output"/> carries the full PowerShell output.
     /// </summary>
     Task<WingetOperationResult> RepairSourceAsync(bool elevated, CancellationToken cancellationToken = default);
 }

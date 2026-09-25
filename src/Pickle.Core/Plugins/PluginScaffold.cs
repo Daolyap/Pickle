@@ -91,7 +91,7 @@ public static partial class PluginScaffold
         yield return ("README.md", $$"""
             # {{name}}
 
-            A [Pickle](https://github.com/daolyap/milkshell) plugin.
+            A [Pickle](https://github.com/Daolyap/Pickle) plugin.
 
             Try it: `pk plugin install ./{{name}}`, then `pk {{id}}`.
             Publish it: `Publish-PSResource -Path ./{{name}}` (the `Pickle` key in `PrivateData` makes Pickle load it).
@@ -167,7 +167,7 @@ public static partial class PluginScaffold
         yield return ("README.md", $$"""
             # {{name}}
 
-            A .NET plugin for [Pickle](https://github.com/daolyap/milkshell).
+            A .NET plugin for [Pickle](https://github.com/Daolyap/Pickle).
 
                 dotnet publish -c Release -o out
                 cp plugin.json out/

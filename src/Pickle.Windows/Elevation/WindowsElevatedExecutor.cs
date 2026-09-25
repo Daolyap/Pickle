@@ -21,16 +21,32 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
 
     public async Task<ElevatedResponse> RepairWingetSourceAsync(IProgress<string> progress, CancellationToken cancellationToken)
     {
-        progress.Report("Re-registering the winget source package for all users…");
+        progress.Report($"Re-registering the winget source package for {Environment.UserDomainName}\\{Environment.UserName} (elevated)…");
         var result = await _runner.RunAsync(
             WingetService.WindowsPowerShellPath,
-            ["-NoProfile", "-NonInteractive", "-Command", WingetService.RepairSourceCommand],
+            WingetSourceRepair.Arguments(),
             null,
             ElevatedOperations.TimeoutFor(ElevatedOperationKind.WingetRepairSource),
-            cancellationToken).ConfigureAwait(false);
-        return result.ExitCode == 0
-            ? new ElevatedResponse(true, "The winget source was repaired (elevated).")
-            : new ElevatedResponse(false, "Repairing the winget source failed: " + (WingetCliParser.LastMessage(result.Output) ?? "unknown error"), result.ExitCode);
+            cancellationToken,
+            WingetSourceRepair.Environment()).ConfigureAwait(false);
+        var outcome = WingetSourceRepair.Interpret(result.ExitCode, result.Output, result.TimedOut, "for the elevated account");
+        return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0, outcome.Output);
+    }
+
+    public async Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken)
+    {
+        progress.Report("Turning on Windows Sandbox (this can take a few minutes)…");
+        var dism = Path.Combine(Environment.SystemDirectory, "dism.exe");
+        var result = await _runner.RunAsync(dism, ElevatedOperations.EnableSandboxArguments, null, ElevatedOperations.TimeoutFor(ElevatedOperationKind.EnableWindowsSandbox), cancellationToken).ConfigureAwait(false);
+
+        // 3010 = ERROR_SUCCESS_REBOOT_REQUIRED.
+        return result.ExitCode switch
+        {
+            0 => new ElevatedResponse(true, "Windows Sandbox is turned on.", 0, result.Output),
+            3010 => new ElevatedResponse(true, "Windows Sandbox is turned on. Restart your PC to finish.", 3010, result.Output),
+            _ when result.TimedOut => new ElevatedResponse(false, "Turning on Windows Sandbox timed out.", 1460, result.Output),
+            var code => new ElevatedResponse(false, $"dism failed ({code}). Windows Sandbox needs Windows Pro, Enterprise or Education and virtualization enabled in the firmware.", code, result.Output),
+        };
     }
 
     public async Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken)
@@ -47,7 +63,7 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
         var idIndex = arguments.ToList().IndexOf("--id");
         var target = idIndex >= 0 && idIndex + 1 < arguments.Count ? arguments[idIndex + 1] : "all packages";
         var outcome = WingetErrors.FromExitCode(result.TimedOut ? -1 : result.ExitCode, result.Output, arguments[0], target);
-        return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0);
+        return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0, WingetCliParser.Transcript(result.Output));
     }
 
     public async Task<ElevatedResponse> InstallWindowsUpdatesAsync(IReadOnlyList<string> updateIds, IProgress<string> progress, CancellationToken cancellationToken)

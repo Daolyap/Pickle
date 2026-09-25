@@ -56,6 +56,30 @@ public class SyntaxHighlighterTests(HighlightFixture fixture) : IClassFixture<Hi
     }
 
     [Fact]
+    public void PackageManagersTranslatedToWingetAreNotShownAsUnknown()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "apt/brew/zypper are only translated on Windows");
+        var theme = fixture.Pickle.Runtime.Themes.Current;
+        Assert.Equal(Ansi.Style(theme.Syntax.Command), fixture.Highlighter.Highlight("zypper install git")[0].Style);
+    }
+
+    [Theory]
+    [InlineData("export PICKLE_HL_TEST=1")]
+    [InlineData("PICKLE_HL_TEST=1 Get-Date")]
+    public void CommandsTheTranslatorRewritesAreNotShownAsUnknown(string input)
+    {
+        var theme = fixture.Pickle.Runtime.Themes.Current;
+        Assert.Equal(Ansi.Style(theme.Syntax.Command), fixture.Highlighter.Highlight(input)[0].Style);
+    }
+
+    [Fact]
+    public void RewritingOnlyTheArgumentsKeepsAnUnknownCommandRed()
+    {
+        var theme = fixture.Pickle.Runtime.Themes.Current;
+        Assert.Equal(Ansi.Style(theme.Syntax.UnknownCommand), fixture.Highlighter.Highlight("no-such-cmd-xyz 2>/dev/null")[0].Style);
+    }
+
+    [Fact]
     public void FunctionsDefinedAtRuntimeBecomeKnownAfterCommand()
     {
         var runtime = fixture.Pickle.Runtime;

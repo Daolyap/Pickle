@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Management.Automation;
 using System.Management.Automation.Host;
+using System.Text;
 using Pickle.Abstractions;
 using Pickle.Core.Commands;
+using Pickle.Core.Hosting;
 
 namespace Pickle.Core.Cmdlets;
 
@@ -177,15 +179,126 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
                 + (suggestions.Count > 0 ? $" Did you mean {string.Join(" or ", suggestions.Select(s => $"'{s}'"))}?" : string.Empty));
         }
 
-        Host.UI.WriteLine(Ansi.Colorize("Pickle commands", theme.Ui.Accent, bold: true) + Ansi.Colorize("  (pk <command> --help for details)", theme.Ui.Muted));
-        var commands = runtime.CommandRegistry.All.ToList();
-        var width = commands.Count == 0 ? 8 : Math.Min(16, commands.Max(c => c.Name.Length) + 2);
-        foreach (var c in commands)
+        var width = Math.Max(40, runtime.Terminal.Width - 1);
+        if (topic is null && StartupBanner.Logo(theme, width) is { } logo)
         {
-            Host.UI.WriteLine("  " + Ansi.Colorize(c.Name.PadRight(width), theme.Ui.Accent) + c.Description);
+            foreach (var line in logo)
+            {
+                Host.UI.WriteLine(line);
+            }
+
+            Host.UI.WriteLine(string.Empty);
+        }
+
+        Host.UI.WriteLine(Ansi.Colorize("Pickle commands", theme.Ui.Accent, bold: true)
+            + Ansi.Colorize($"  v{PickleRuntime.Version}  ·  pk <command> --help for details", theme.Ui.Muted));
+        var commands = runtime.CommandRegistry.All.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        var nameWidth = commands.Count == 0 ? 8 : Math.Min(14, commands.Max(c => c.Name.Length)) + 2;
+        var descriptionWidth = Math.Max(20, width - 2 - nameWidth);
+        foreach (var (section, members) in HelpSections)
+        {
+            var inSection = commands.Where(c => members.Length == 0
+                ? !HelpSections.Any(s => s.Members.Contains(c.Name, StringComparer.OrdinalIgnoreCase))
+                : members.Contains(c.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+            if (inSection.Count == 0)
+            {
+                continue;
+            }
+
+            Host.UI.WriteLine(string.Empty);
+            Host.UI.WriteLine(Ansi.Colorize(section, theme.Ui.Muted, bold: true));
+            foreach (var c in inSection)
+            {
+                var lines = WrapWords(c.Description, descriptionWidth);
+                Host.UI.WriteLine("  " + Ansi.Colorize(TextWidth.PadRight(c.Name, nameWidth), theme.Ui.Accent) + lines[0]);
+                foreach (var more in lines.Skip(1))
+                {
+                    Host.UI.WriteLine(new string(' ', 2 + nameWidth) + more);
+                }
+            }
+        }
+
+        var keys = KeyHints(runtime);
+        if (keys.Count == 0)
+        {
+            return;
         }
 
         Host.UI.WriteLine(string.Empty);
-        Host.UI.WriteLine(Ansi.Colorize("Keys: ", theme.Ui.Muted) + "F1 palette · Ctrl+R history · Ctrl+T files · F2 wizard · Alt+G git · Alt+W winget · Alt+U updates · Alt+J jobs · Alt+S scheduler · Alt+, settings");
+        Host.UI.WriteLine(Ansi.Colorize("Keys", theme.Ui.Muted, bold: true));
+        var chordWidth = keys.Max(k => k.Chord.Length) + 1;
+        var cellWidth = chordWidth + keys.Max(k => TextWidth.VisibleWidth(k.Label)) + 3;
+        var columns = Math.Max(1, (width - 2) / cellWidth);
+        for (var i = 0; i < keys.Count; i += columns)
+        {
+            var row = keys.Skip(i).Take(columns)
+                .Select(k => Ansi.Colorize(k.Chord.PadRight(chordWidth), theme.Ui.Accent) + TextWidth.PadRight(k.Label, cellWidth - chordWidth));
+            Host.UI.WriteLine("  " + string.Concat(row).TrimEnd());
+        }
+    }
+
+    private static readonly (string Section, string[] Members)[] HelpSections =
+    [
+        ("Shell", ["history", "translate", "wizard", "git", "alias", "theme", "config", "reload"]),
+        ("Windows", ["winget", "tool", "upgrade", "update", "schedule", "sandbox", "terminal"]),
+        ("System", ["top", "net", "disks"]),
+        ("Network tools", ["tools", "scan", "sweep", "dns", "trace", "whois", "cert", "subnet", "http", "wol", "ip"]),
+        ("Setup", ["plugin", "sync", "paths", "doctor", "version"]),
+        ("More", []),
+    ];
+
+    private static readonly (string Action, string Label)[] HintActions =
+    [
+        (EditorActionNames.CommandPalette, "Command palette"),
+        (EditorActionNames.HistorySearch, "History search"),
+        (EditorActionNames.FilePickerInsert, "Insert a path"),
+        (EditorActionNames.FilePickerCd, "Change directory"),
+        (EditorActionNames.OpenWizard, "Command wizard"),
+    ];
+
+    private static List<(string Chord, string Label)> KeyHints(PickleRuntime runtime)
+    {
+        var registry = runtime.KeyBindingRegistry;
+        var hints = new List<(string Chord, string Label, int Order)>();
+        foreach (var (chord, action) in registry.Bindings)
+        {
+            var order = Array.FindIndex(HintActions, h => h.Action == action);
+            if (order < 0 && !action.StartsWith("panel.", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var label = order >= 0 ? HintActions[order].Label : registry.GetAction(action)?.Description ?? action;
+            label = label.StartsWith("Open ", StringComparison.Ordinal) ? label[5..] : label;
+            hints.Add((chord, label, order < 0 ? HintActions.Length : order));
+        }
+
+        // One chord per action (F1 over Ctrl+P): the shortest, then alphabetical.
+        return hints
+            .GroupBy(h => h.Label, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderBy(h => h.Chord.Length).ThenBy(h => h.Chord, StringComparer.Ordinal).First())
+            .OrderBy(h => h.Order)
+            .ThenBy(h => h.Label, StringComparer.OrdinalIgnoreCase)
+            .Select(h => (h.Chord, h.Label))
+            .ToList();
+    }
+
+    private static List<string> WrapWords(string text, int width)
+    {
+        var lines = new List<string>();
+        var line = new StringBuilder();
+        foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.Length > 0 && TextWidth.VisibleWidth(line.ToString()) + 1 + TextWidth.VisibleWidth(word) > width)
+            {
+                lines.Add(line.ToString());
+                line.Clear();
+            }
+
+            line.Append(line.Length > 0 ? " " : string.Empty).Append(word);
+        }
+
+        lines.Add(line.ToString());
+        return lines;
     }
 }

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Pickle logo. Edit here, then run assets/logo/render.py to regenerate the PNG and ICO files. -->
+  <defs>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B5E36B"/>
+      <stop offset="0.5" stop-color="#74B63C"/>
+      <stop offset="1" stop-color="#3B7A20"/>
+    </linearGradient>
+  </defs>
+  <g transform="rotate(-38 128 128)">
+    <path d="M58 80 C104 66 168 68 208 82 C244 96 246 154 211 170 C170 188 102 192 55 178 C12 164 12 94 58 80 Z"
+          fill="url(#skin)" stroke="#1F4A16" stroke-width="10" stroke-linejoin="round"/>
+    <g fill="#DDF5AE">
+      <ellipse cx="62" cy="104" rx="7" ry="5"/>
+      <ellipse cx="204" cy="106" rx="7" ry="5"/>
+      <ellipse cx="194" cy="152" rx="6" ry="4.5"/>
+      <ellipse cx="58" cy="152" rx="6" ry="4.5"/>
+      <ellipse cx="168" cy="90" rx="5.5" ry="4"/>
+      <ellipse cx="94" cy="168" rx="5.5" ry="4"/>
+      <ellipse cx="150" cy="172" rx="5" ry="3.5"/>
+    </g>
+    <path d="M80 92 C114 82 162 82 192 90" stroke="#FFFFFF" stroke-opacity="0.6" stroke-width="9" fill="none" stroke-linecap="round"/>
+  </g>
+  <path d="M94 104 L124 128 L94 152" stroke="#15300C" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M134 152 H164" stroke="#15300C" stroke-width="15" stroke-linecap="round"/>
+</svg>

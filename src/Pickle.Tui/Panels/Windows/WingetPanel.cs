@@ -7,37 +7,36 @@ using Terminal.Gui.Views;
 
 namespace Pickle.Tui.Panels.Windows;
 
-internal sealed class UpgradeRow(WingetPackage package)
-{
-    public WingetPackage Package { get; } = package;
-
-    public bool Selected { get; set; } = true;
-}
-
 /// <summary>
-/// winget dashboard (Alt+W): Installed (filterable, upgradable highlighted), Upgrades (multi-select), Search (details,
-/// install with version and scope), Sources (repair) and Windows Updates.
+/// winget dashboard (Alt+W): Installed (filterable, multi-select, upgradable highlighted), Upgrades (ticked list),
+/// Search (keyboard install with version and scope), Sources (repair with its output) and Windows Updates.
 /// </summary>
 public sealed class WingetPanel : WindowsPanelBase
 {
+    private const string SelectionHelp = "Space/click tick · Shift+click or Shift+↑↓ range · Ctrl+A all";
     private static readonly string[] ScopeLabels = ["Any", "User", "Machine"];
 
     private readonly IWingetService? _winget;
     private readonly Label _backend;
     private readonly Button _installModule;
+    private readonly Tabs? _tabs;
+    private readonly View _installedTab = new() { Title = "Installed", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
+    private readonly View _upgradesTab = new() { Title = "Upgrades", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
     private readonly TextField _filter = new() { X = 8, Y = 0, Width = Dim.Fill() };
-    private readonly TableView _installedTable = new() { Y = 1, Width = Dim.Fill(), Height = Dim.Fill(), FullRowSelect = true };
-    private readonly TableView _upgradesTable = new() { Y = 1, Width = Dim.Fill(), Height = Dim.Fill(8), FullRowSelect = true };
-    private readonly TextPane _upgradeLog = MakeText("Progress");
+    private readonly SelectionTable<WingetPackage> _installedTable;
+    private readonly SelectionTable<WingetPackage> _upgradesTable;
+    private readonly TextPane _installedLog = MakeText("Progress · " + SelectionHelp);
+    private readonly TextPane _upgradeLog = MakeText("Progress · " + SelectionHelp);
     private readonly TextField _query = new() { X = 8, Y = 0, Width = Dim.Fill(12) };
-    private readonly TableView _searchTable = new() { Y = 1, Width = Dim.Percent(55), Height = Dim.Fill(), FullRowSelect = true };
+    private readonly TableView _searchTable = new() { Y = 2, Width = Dim.Percent(55), Height = Dim.Fill(), FullRowSelect = true };
     private readonly TextPane _searchDetails = MakeText("Details");
     private readonly TextField _version = new() { Width = 18 };
     private readonly OptionSelector _scope = new() { Labels = ScopeLabels, Orientation = Orientation.Horizontal, Value = 0 };
-    private readonly TableView _sourcesTable = new() { Y = 2, Width = Dim.Fill(), Height = Dim.Fill(), FullRowSelect = true };
+    private readonly TableView _sourcesTable = new() { Y = 2, Width = Dim.Fill(), Height = Dim.Percent(40), FullRowSelect = true };
+    private readonly TextPane _repairOutput = MakeText("Repair output");
     private readonly UpdatesView? _updates;
     private List<WingetPackage> _installed = [];
-    private List<UpgradeRow> _upgrades = [];
+    private List<WingetPackage> _upgrades = [];
     private List<WingetPackage> _results = [];
     private WingetPackageDetails? _details;
 
@@ -45,6 +44,23 @@ public sealed class WingetPanel : WindowsPanelBase
         : base(context, "winget")
     {
         _winget = Service<IWingetService>();
+        _installedTable = new SelectionTable<WingetPackage>(
+            p => p.Id,
+            _ => false,
+            ("Name", p => p.Name),
+            ("Version", p => p.InstalledVersion),
+            ("Available", p => p.AvailableVersion),
+            ("Id", p => p.Id),
+            ("Source", p => p.Source))
+        { Y = 1, Width = Dim.Fill(), Height = Dim.Fill(6) };
+        _upgradesTable = new SelectionTable<WingetPackage>(
+            p => p.Id,
+            _ => true,
+            ("Name", p => p.Name),
+            ("Installed", p => p.InstalledVersion),
+            ("Available", p => p.AvailableVersion),
+            ("Id", p => p.Id))
+        { Y = 1, Width = Dim.Fill(), Height = Dim.Fill(6) };
         _backend = new Label { X = 0, Y = 0, Text = "Backend: detecting…" };
         _installModule = MakeButton("Install Microsoft.WinGet._Client", InstallModule);
         _installModule.X = Pos.Right(_backend) + 2;
@@ -56,22 +72,33 @@ public sealed class WingetPanel : WindowsPanelBase
             return;
         }
 
-        var tabs = new Tabs { Y = 1, Width = Dim.Fill(), Height = Dim.Fill() };
-        tabs.Add(BuildInstalledTab(), BuildUpgradesTab(), BuildSearchTab(), BuildSourcesTab());
+        _tabs = new Tabs { Y = 1, Width = Dim.Fill(), Height = Dim.Fill() };
+        _tabs.Add(BuildInstalledTab(), BuildUpgradesTab(), BuildSearchTab(), BuildSourcesTab());
         if (Service<IWindowsUpdateService>() is { IsSupported: true } wu)
         {
             _updates = new UpdatesView(this, wu) { Title = "Windows Updates" };
-            tabs.Add(_updates);
+            _tabs.Add(_updates);
         }
 
-        Body.Add(_backend, _installModule, tabs);
+        Body.Add(_backend, _installModule, _tabs);
         AddHint(Key.F5, "Refresh", Refresh);
-        AddHint(Key.F9, "Upgrade selected", () => UpgradeSelected());
+        AddHint(Key.F8, "Uninstall selected", UninstallSelected);
+        AddHint(Key.F9, "Upgrade selected", () =>
+        {
+            if (_updates is not null && ReferenceEquals(_tabs.Value, _updates))
+            {
+                _updates.InstallSelected();
+            }
+            else
+            {
+                UpgradeSelected();
+            }
+        });
     }
 
     internal IReadOnlyList<WingetPackage> InstalledRows => _installed;
 
-    internal IReadOnlyList<UpgradeRow> UpgradeRows => _upgrades;
+    internal IReadOnlyList<WingetPackage> UpgradeRows => _upgrades;
 
     internal IReadOnlyList<WingetPackage> SearchResults => _results;
 
@@ -81,9 +108,19 @@ public sealed class WingetPanel : WindowsPanelBase
 
     internal string UpgradeLog => _upgradeLog.Content;
 
+    internal string InstalledLog => _installedLog.Content;
+
     internal string DetailsText => _searchDetails.Content;
 
-    internal TableView InstalledTable => _installedTable;
+    internal string RepairOutput => _repairOutput.Content;
+
+    internal SelectionTable<WingetPackage> InstalledTable => _installedTable;
+
+    internal SelectionTable<WingetPackage> UpgradesTable => _upgradesTable;
+
+    internal TableView SearchTable => _searchTable;
+
+    internal TextField QueryField => _query;
 
     internal UpdatesView? Updates => _updates;
 
@@ -114,6 +151,19 @@ public sealed class WingetPanel : WindowsPanelBase
             _ => WingetScope.Any,
         };
         set => _scope.Value = (int)value;
+    }
+
+    /// <summary>The visible tab: "Installed", "Upgrades", "Search", "Sources" or "Windows Updates".</summary>
+    internal string ActiveTab
+    {
+        get => _tabs?.Value?.Title ?? string.Empty;
+        set
+        {
+            if (_tabs?.TabCollection.FirstOrDefault(t => t.Title == value) is { } tab)
+            {
+                _tabs.Value = tab;
+            }
+        }
     }
 
     protected override void Opened()
@@ -159,16 +209,8 @@ public sealed class WingetPanel : WindowsPanelBase
 
     internal void ApplyUpgrades(IReadOnlyList<WingetPackage> packages)
     {
-        _upgrades = [.. packages.Select(p => new UpgradeRow(p))];
-        var source = new EnumerableTableSource<UpgradeRow>(_upgrades, new Dictionary<string, Func<UpgradeRow, object>>
-        {
-            ["Name"] = r => r.Package.Name,
-            ["Id"] = r => r.Package.Id,
-            ["Installed"] = r => r.Package.InstalledVersion ?? string.Empty,
-            ["Available"] = r => r.Package.AvailableVersion ?? string.Empty,
-        });
-        _upgradesTable.Table = new CheckBoxTableSourceWrapperByObject<UpgradeRow>(_upgradesTable, source, r => r.Selected, (r, v) => r.Selected = v);
-        _upgradesTable.Update();
+        _upgrades = [.. packages];
+        _upgradesTable.SetItems(_upgrades);
     }
 
     internal void ApplySources(IReadOnlyList<WingetSource> sources)
@@ -185,24 +227,39 @@ public sealed class WingetPanel : WindowsPanelBase
     internal void ApplyFilter()
     {
         var filter = _filter.Text.Trim();
-        var rows = filter.Length == 0
+        List<WingetPackage> rows = filter.Length == 0
             ? _installed
             : [.. _installed.Where(p => p.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) || p.Id.Contains(filter, StringComparison.OrdinalIgnoreCase))];
-        _installedTable.Table = new EnumerableTableSource<WingetPackage>(rows, new Dictionary<string, Func<WingetPackage, object>>
-        {
-            ["Name"] = p => p.Name,
-            ["Id"] = p => p.Id,
-            ["Version"] = p => p.InstalledVersion ?? string.Empty,
-            ["Available"] = p => p.AvailableVersion ?? string.Empty,
-            ["Source"] = p => p.Source ?? string.Empty,
-        });
+        _installedTable.SetItems(rows);
         var highlight = HighlightScheme();
         _installedTable.Style.RowColorGetter = args => args.RowIndex < rows.Count && rows[args.RowIndex].IsUpgradable ? highlight : null;
-        _installedTable.Update();
         FilteredCount = rows.Count;
     }
 
     internal int FilteredCount { get; private set; }
+
+    /// <summary>
+    /// What "Upgrade selected" upgrades: packages ticked in the Installed list while it is the visible tab (those
+    /// with an upgrade), otherwise the ticked rows of the Upgrades list.
+    /// </summary>
+    internal (IReadOnlyList<WingetPackage> Packages, string From, int Skipped) UpgradeTargets(bool all = false)
+    {
+        if (all)
+        {
+            return (_upgrades, "all upgrades", 0);
+        }
+
+        if (ActiveTab == _installedTab.Title && _installedTable.Marked is { Count: > 0 } marked)
+        {
+            var upgradable = marked
+                .Select(p => _upgrades.FirstOrDefault(u => SameId(u.Id, p.Id)) ?? (p.IsUpgradable ? p : null))
+                .OfType<WingetPackage>()
+                .ToList();
+            return (upgradable, "selected in Installed", marked.Count - upgradable.Count);
+        }
+
+        return (_upgradesTable.Marked, "ticked in Upgrades", 0);
+    }
 
     internal void UpgradeSelected(bool all = false)
     {
@@ -211,14 +268,16 @@ public sealed class WingetPanel : WindowsPanelBase
             return;
         }
 
-        var targets = _upgrades.Where(r => all || r.Selected).Select(r => r.Package).Where(p => IsPlainId(p.Id)).ToList();
+        var (packages, from, skipped) = UpgradeTargets(all);
+        var targets = packages.Where(p => IsPlainId(p.Id)).ToList();
         if (targets.Count == 0)
         {
-            Tell("winget", "No upgrades selected.");
+            Tell("winget", skipped > 0 ? "None of the selected packages has an upgrade." : "No upgrades selected.");
             return;
         }
 
-        if (!Ask("Upgrade packages", $"Upgrade {targets.Count} package(s)?\n\n{string.Join("\n", targets.Take(12).Select(p => $"{p.Name}  {p.InstalledVersion} → {p.AvailableVersion}"))}{(targets.Count > 12 ? "\n…" : string.Empty)}"))
+        var note = skipped > 0 ? $"\n\n{skipped} selected package(s) have no upgrade and are skipped." : string.Empty;
+        if (!Ask("Upgrade packages", $"Upgrade {targets.Count} package(s) {from}?\n\n{PackageList(targets, p => $"{p.Name}  {p.InstalledVersion} → {p.AvailableVersion}")}{note}"))
         {
             return;
         }
@@ -231,8 +290,8 @@ public sealed class WingetPanel : WindowsPanelBase
                 var results = new List<WingetOperationResult>();
                 foreach (var package in targets)
                 {
-                    Ui(() => AppendUpgradeLog($"→ {package.Name} ({package.Id})"));
-                    var progress = new UiProgress<WingetProgress>(this, p => AppendUpgradeLog($"   {p.Stage}{(p.Percent is { } pct ? $" {pct:0}%" : string.Empty)}"));
+                    Ui(() => AppendLog(_upgradeLog, $"→ {package.Name} ({package.Id})"));
+                    var progress = new UiProgress<WingetProgress>(this, p => AppendLog(_upgradeLog, $"   {p.Stage}{(p.Percent is { } pct ? $" {pct:0}%" : string.Empty)}"));
                     results.Add(await _winget.UpgradeAsync(package.Id, new WingetInstallOptions(IncludeUnknown: includeUnknown), progress, ct).ConfigureAwait(false));
                 }
 
@@ -242,12 +301,95 @@ public sealed class WingetPanel : WindowsPanelBase
             {
                 foreach (var result in results)
                 {
-                    AppendUpgradeLog((result.Success ? "✓ " : "✗ ") + result.Message);
+                    AppendResult(_upgradeLog, result);
                 }
 
                 Refresh();
             },
             "upgrading…");
+    }
+
+    /// <summary>Ticked Installed rows; else the cursor row of the visible package list.</summary>
+    internal IReadOnlyList<WingetPackage> UninstallTargets()
+    {
+        if (_installedTable.Marked is { Count: > 0 } marked)
+        {
+            return marked;
+        }
+
+        var current = ActiveTab == _upgradesTab.Title ? _upgradesTable.Current : _installedTable.Current;
+        return current is null ? [] : [current];
+    }
+
+    internal void UninstallSelected()
+    {
+        if (_winget is null)
+        {
+            return;
+        }
+
+        var targets = UninstallTargets().Where(p => IsPlainId(p.Id)).ToList();
+        if (targets.Count == 0)
+        {
+            Tell("winget", "Tick the packages to uninstall in the Installed tab first.");
+            return;
+        }
+
+        var choice = Choose(
+            "Uninstall packages",
+            $"Uninstall {targets.Count} package(s)?\n\n{PackageList(targets, p => $"{p.Name}  {p.InstalledVersion}  [{p.Id}]")}\n\n" +
+            "Machine-wide packages may need administrator rights (one UAC prompt for all).",
+            "_Uninstall",
+            "As _administrator",
+            "_Cancel");
+        if (choice is not (0 or 1))
+        {
+            return;
+        }
+
+        var elevated = choice == 1;
+        _installedLog.Content = string.Empty;
+        ActiveTab = _installedTab.Title;
+        var ids = targets.Select(p => p.Id).ToList();
+        Load(
+            async ct =>
+            {
+                var progress = new UiProgress<WingetProgress>(this, p => AppendLog(_installedLog, $"   {p.Stage}{(p.Percent is { } pct ? $" {pct:0}%" : string.Empty)}{(p.Stage is "Elevating" or "Elevated" && p.Message is { } m ? ": " + m : string.Empty)}"));
+                if (elevated)
+                {
+                    Ui(() => AppendLog(_installedLog, $"→ {string.Join(", ", ids)} (administrator)"));
+                    return (IReadOnlyList<WingetOperationResult>)[await _winget.UninstallElevatedAsync(ids, progress, ct).ConfigureAwait(false)];
+                }
+
+                var results = new List<WingetOperationResult>();
+                foreach (var package in targets)
+                {
+                    Ui(() => AppendLog(_installedLog, $"→ {package.Name} ({package.Id})"));
+                    results.Add(await _winget.UninstallAsync(package.Id, progress, ct).ConfigureAwait(false));
+                }
+
+                return results;
+            },
+            results =>
+            {
+                foreach (var result in results)
+                {
+                    AppendResult(_installedLog, result);
+                }
+
+                if (!elevated && results.Any(r => !r.Success))
+                {
+                    AppendLog(_installedLog, "Some uninstalls failed. Machine-wide packages may need F8 → As administrator.");
+                }
+
+                if (results.All(r => r.Success))
+                {
+                    _installedTable.Forget(ids);
+                }
+
+                Refresh();
+            },
+            "uninstalling…");
     }
 
     internal void Search()
@@ -273,6 +415,16 @@ public sealed class WingetPanel : WindowsPanelBase
         });
         _searchTable.Update();
         _searchDetails.Content = _results.Count == 0 ? "No results." : "Select a package to see its details.";
+        if (_results.Count > 0)
+        {
+            // Keyboard flow: Enter in the search box, then ↑↓ and Enter (or i) to install.
+            if (_query.HasFocus)
+            {
+                _searchTable.SetFocus();
+            }
+
+            ShowDetails(0);
+        }
     }
 
     internal void ShowDetails(int row)
@@ -288,6 +440,11 @@ public sealed class WingetPanel : WindowsPanelBase
 
     internal void ApplyDetails(WingetPackageDetails? details)
     {
+        if (details is not null && SelectedResult() is { } selected && !SameId(selected.Id, details.Id))
+        {
+            return;
+        }
+
         _details = details;
         if (details is null)
         {
@@ -315,19 +472,22 @@ public sealed class WingetPanel : WindowsPanelBase
         _version.Text = details.LatestVersion ?? string.Empty;
     }
 
+    /// <summary>Installs the highlighted search result (Enter, i, or the Install button).</summary>
     internal void InstallSelected()
     {
-        if (_winget is null || _details is null)
+        if (_winget is null || SelectedResult() is not { } package || !IsPlainId(package.Id))
         {
             Tell("winget", "Search for a package and select it first.");
             return;
         }
 
-        var id = _details.Id;
-        var version = string.IsNullOrWhiteSpace(_version.Text) || _version.Text == _details.LatestVersion ? null : _version.Text.Trim();
+        var id = package.Id;
+        var details = _details is { } d && SameId(d.Id, id) ? d : null;
+        var typed = _version.Text.Trim();
+        var version = details is null || typed.Length == 0 || typed == details.LatestVersion ? null : typed;
         var scope = Scope;
         var note = scope == WingetScope.Machine ? "\n\nMachine-wide installs need administrator rights (UAC prompt)." : string.Empty;
-        if (!Ask("Install package", $"Install {_details.Name} [{id}]{(version is null ? string.Empty : " " + version)} ({scope.ToString().ToLowerInvariant()} scope)?{note}"))
+        if (!Ask("Install package", $"Install {package.Name} [{id}]{(version is null ? string.Empty : " " + version)} ({scope.ToString().ToLowerInvariant()} scope)?{note}"))
         {
             return;
         }
@@ -337,30 +497,49 @@ public sealed class WingetPanel : WindowsPanelBase
             ct => _winget.InstallAsync(id, new WingetInstallOptions(version, scope), progress, ct),
             result =>
             {
-                _searchDetails.Content = (result.Success ? "✓ " : "✗ ") + result.Message;
+                _searchDetails.Content = (result.Success ? "✓ " : "✗ ") + result.Message + (result.Success || string.IsNullOrWhiteSpace(result.Output) ? string.Empty : "\n\n" + result.Output);
                 Refresh();
             },
             "installing…");
     }
 
-    internal void RepairSource()
+    /// <summary>
+    /// Re-registers the winget source. Current user by default (no UAC; Add-AppxPackage registers per user), or for
+    /// the administrator account elevated sessions run as.
+    /// </summary>
+    internal void RepairSource(bool elevated = false)
     {
         if (_winget is null)
         {
             return;
         }
 
-        const string message =
-            "Re-register the winget source package for administrator sessions?\n\n" +
-            "This fixes 'failed when searching source' errors in elevated shells by running\n" +
-            "Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix'\n" +
-            "in an elevated helper. Windows will show a UAC prompt.";
+        var message = elevated
+            ? "Re-register the winget source package for the administrator account?\n\n" +
+              "Only needed when elevated shells run as a different account. This runs\n" +
+              "Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix'\n" +
+              "in an elevated helper; Windows will show a UAC prompt."
+            : "Re-register the winget source package for your account?\n\n" +
+              "This fixes 'failed when searching source' errors by running\n" +
+              "Add-AppxPackage -Path 'https://cdn.winget.microsoft.com/cache/source.msix'\n" +
+              "(no administrator rights needed).";
         if (!Ask("Repair winget source", message))
         {
             return;
         }
 
-        Load(ct => _winget.RepairSourceAsync(true, ct), result => Tell("winget", result.Message), "repairing source…");
+        _repairOutput.Content = elevated ? "Waiting for the administrator (UAC) prompt…" : "Re-registering the winget source…";
+        Load(
+            ct => _winget.RepairSourceAsync(elevated, ct),
+            result =>
+            {
+                _repairOutput.Content = (result.Success ? "✓ " : "✗ ") + result.Message + (string.IsNullOrWhiteSpace(result.Output) ? string.Empty : "\n\n" + result.Output);
+                if (result.Success)
+                {
+                    Refresh();
+                }
+            },
+            "repairing source…");
     }
 
     internal void InstallModule() => InstallModule(askFirst: true);
@@ -390,27 +569,53 @@ public sealed class WingetPanel : WindowsPanelBase
     private static bool IsPlainId(string id) =>
         id.Length is > 0 and <= 128 && char.IsAsciiLetterOrDigit(id[0]) && id.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or '_' or '+');
 
-    private void AppendUpgradeLog(string line) =>
-        _upgradeLog.Content = string.IsNullOrEmpty(_upgradeLog.Content) ? line : _upgradeLog.Content + "\n" + line;
+    private static bool SameId(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+    private static string PackageList(IReadOnlyList<WingetPackage> packages, Func<WingetPackage, string> line) =>
+        string.Join("\n", packages.Take(12).Select(line)) + (packages.Count > 12 ? $"\n… and {packages.Count - 12} more" : string.Empty);
+
+    private static void AppendLog(TextPane pane, string line) =>
+        pane.Content = string.IsNullOrEmpty(pane.Content) ? line : pane.Content + "\n" + line;
+
+    private static void AppendResult(TextPane pane, WingetOperationResult result)
+    {
+        AppendLog(pane, (result.Success ? "✓ " : "✗ ") + result.Message);
+        if (!result.Success && !string.IsNullOrWhiteSpace(result.Output))
+        {
+            AppendLog(pane, string.Join("\n", result.Output.Split('\n').TakeLast(20).Select(l => "   │ " + l.TrimEnd())));
+        }
+    }
+
+    private WingetPackage? SelectedResult()
+    {
+        var row = SelectedRow(_searchTable);
+        return row >= 0 && row < _results.Count ? _results[row] : null;
+    }
 
     private View BuildInstalledTab()
     {
-        var tab = new View { Title = "Installed", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
         _filter.ValueChanged += (_, _) => ApplyFilter();
-        tab.Add(new Label { Text = "Filter:", X = 0, Y = 0 }, _filter, _installedTable);
-        return tab;
+        var uninstall = MakeButton("_Uninstall", UninstallSelected);
+        uninstall.Y = Pos.AnchorEnd(6);
+        var upgrade = MakeButton("Up_grade", () => UpgradeSelected());
+        upgrade.X = Pos.Right(uninstall) + 1;
+        upgrade.Y = Pos.AnchorEnd(6);
+        var help = new Label { X = Pos.Right(upgrade) + 2, Y = Pos.AnchorEnd(6), Text = "ticked packages, or the highlighted one" };
+        _installedLog.Y = Pos.AnchorEnd(5);
+        _installedLog.Height = 5;
+        _installedTab.Add(new Label { Text = "Filter:", X = 0, Y = 0 }, _filter, _installedTable, uninstall, upgrade, help, _installedLog);
+        return _installedTab;
     }
 
     private View BuildUpgradesTab()
     {
-        var tab = new View { Title = "Upgrades", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
         var selected = MakeButton("_Upgrade selected", () => UpgradeSelected());
         var all = MakeButton("Upgrade _all", () => UpgradeSelected(all: true));
         all.X = Pos.Right(selected) + 1;
-        _upgradeLog.Y = Pos.AnchorEnd(8);
-        _upgradeLog.Height = 8;
-        tab.Add(selected, all, _upgradesTable, _upgradeLog);
-        return tab;
+        _upgradeLog.Y = Pos.AnchorEnd(6);
+        _upgradeLog.Height = 6;
+        _upgradesTab.Add(selected, all, _upgradesTable, _upgradeLog);
+        return _upgradesTab;
     }
 
     private View BuildSearchTab()
@@ -423,26 +628,50 @@ public sealed class WingetPanel : WindowsPanelBase
         };
         var go = MakeButton("_Find", Search);
         go.X = Pos.Right(_query) + 1;
+        var help = new Label { X = 0, Y = 1, Text = "Enter search · ↑↓ details · Enter/i install · / new search" };
         _searchTable.ValueChanged += (_, _) => ShowDetails(SelectedRow(_searchTable));
-        var right = new View { X = Pos.Right(_searchTable), Y = 1, Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
+        _searchTable.Accepting += (_, e) =>
+        {
+            InstallSelected();
+            e.Handled = true;
+        };
+        _searchTable.KeyDown += (_, key) =>
+        {
+            if (key == Key.I || key == Key.I.WithShift)
+            {
+                InstallSelected();
+                key.Handled = true;
+            }
+            else if (key == new Key('/'))
+            {
+                _query.SetFocus();
+                key.Handled = true;
+            }
+        };
+        var right = new View { X = Pos.Right(_searchTable), Y = 2, Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
         var versionLabel = new Label { Text = "Version:", Y = 0 };
         _version.X = Pos.Right(versionLabel) + 1;
         _scope.Y = 1;
-        var install = MakeButton("_Install", InstallSelected);
+        var install = MakeButton("_Install (i)", InstallSelected);
         install.Y = 2;
         _searchDetails.Y = 3;
         _searchDetails.Height = Dim.Fill();
         right.Add(versionLabel, _version, _scope, install, _searchDetails);
-        tab.Add(new Label { Text = "Search:", X = 0, Y = 0 }, _query, go, _searchTable, right);
+        tab.Add(new Label { Text = "Search:", X = 0, Y = 0 }, _query, go, help, _searchTable, right);
         return tab;
     }
 
     private View BuildSourcesTab()
     {
         var tab = new View { Title = "Sources", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
-        var repair = MakeButton("_Repair source (admin)", RepairSource);
-        var note = new Label { X = Pos.Right(repair) + 2, Text = "fixes winget source errors in elevated sessions" };
-        tab.Add(repair, note, _sourcesTable);
+        var repair = MakeButton("_Repair source", () => RepairSource());
+        var admin = MakeButton("Repair as _admin", () => RepairSource(elevated: true));
+        admin.X = Pos.Right(repair) + 1;
+        var note = new Label { X = Pos.Right(admin) + 2, Text = "fixes source errors" };
+        _repairOutput.Y = Pos.Bottom(_sourcesTable);
+        _repairOutput.Height = Dim.Fill();
+        _repairOutput.Content = "Repair re-registers source.msix for your account; the full output appears here.";
+        tab.Add(repair, admin, note, _sourcesTable, _repairOutput);
         return tab;
     }
 }

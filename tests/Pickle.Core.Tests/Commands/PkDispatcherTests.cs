@@ -94,6 +94,43 @@ public class PkDispatcherTests
         Assert.Contains("Show Pickle, PowerShell and .NET versions", t.Terminal.RawOutput, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void HelpGroupsCommandsAndFitsTheTerminalWidth()
+    {
+        using var t = TestPickle.Create(width: 60, height: 80, start: true);
+        t.Run("pk help");
+        var lines = Pickle.Abstractions.TextWidth.StripAnsi(t.Terminal.RawOutput).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n');
+        Assert.All(lines, line => Assert.True(Pickle.Abstractions.TextWidth.VisibleWidth(line) < 60, line));
+        Assert.Contains("Shell", lines);
+        Assert.Contains("Keys", lines);
+        Assert.Contains(lines, l => l.TrimStart().StartsWith("history", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.Contains("Ctrl+R History search", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void HelpStartsWithTheLogoOnlyWhenListingCommands()
+    {
+        using var t = TestPickle.Create(width: 100, height: 80, start: true);
+        t.Run("pk help");
+        var lines = Pickle.Abstractions.TextWidth.StripAnsi(t.Terminal.RawOutput).Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n');
+        var logo = Array.FindIndex(lines, l => l.Contains("██████╗", StringComparison.Ordinal));
+        var header = Array.FindIndex(lines, l => l.StartsWith("Pickle commands", StringComparison.Ordinal));
+        Assert.InRange(logo, 0, header - 1);
+
+        t.Terminal.ClearRawOutput();
+        t.Run("pk help sync");
+        Assert.DoesNotContain("██████╗", t.Terminal.RawOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HelpSkipsTheLogoWhenTheTerminalIsTooNarrow()
+    {
+        using var t = TestPickle.Create(width: 50, height: 80, start: true);
+        t.Run("pk help");
+        Assert.DoesNotContain("██████╗", t.Terminal.RawOutput, StringComparison.Ordinal);
+        Assert.Contains("Pickle commands", t.Terminal.RawOutput, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("cnfig", "pk config")]
     [InlineData("plugins", "pk plugin")]

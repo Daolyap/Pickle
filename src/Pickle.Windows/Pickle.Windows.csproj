@@ -9,6 +9,9 @@
     <PackageReference Include="TaskScheduler" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\logo\pickle-terminal.png" LogicalName="Pickle.Windows.pickle-terminal.png" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Pickle.Windows.Tests" />
   </ItemGroup>
 </Project>

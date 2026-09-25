@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+    <ProjectReference Include="..\Pickle.Network\Pickle.Network.csproj" />
     <ProjectReference Include="..\Pickle.Wizards\Pickle.Wizards.csproj" />
   </ItemGroup>
   <ItemGroup>

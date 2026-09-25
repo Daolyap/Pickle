@@ -12,10 +12,15 @@ namespace Pickle.Core.Hosting;
 public sealed class Repl
 {
     private readonly PickleRuntime _runtime;
+    private readonly MissingToolPrompt _missingTools;
     private int _nestedDepth;
     private int _exitNestedRequested;
 
-    public Repl(PickleRuntime runtime) => _runtime = runtime;
+    public Repl(PickleRuntime runtime)
+    {
+        _runtime = runtime;
+        _missingTools = new MissingToolPrompt(runtime);
+    }
 
     public int Run(CancellationToken cancellationToken = default)
     {
@@ -61,6 +66,7 @@ public sealed class Repl
         finally
         {
             Console.CancelKeyPress -= OnCancelKeyPress;
+            _missingTools.RemoveTemporary();
             RaiseHook(new HookEvent(HookKind.Exit, Cwd: _runtime.Engine.CurrentDirectory));
         }
 
@@ -90,6 +96,12 @@ public sealed class Repl
             cwdBefore,
             SessionId: _runtime.History.SessionId,
             Machine: Environment.MachineName));
+
+        if (!_missingTools.BeforeExecute(outcome.Command))
+        {
+            _runtime.History.CompleteLast(false, 0);
+            return new ExecutionResult(false, null, TimeSpan.Zero, Interrupted: true);
+        }
 
         RaiseHook(new HookEvent(HookKind.PreExecute, line, cwdBefore));
         var result = _runtime.Engine.ExecuteInteractive(outcome.Command);
@@ -225,15 +237,13 @@ public sealed class Repl
 
     private void OnCancelKeyPress(object? sender, ConsoleCancelEventArgs e)
     {
-        if (_runtime.Engine.StopCurrent())
+        // Cancels a tool install or stops the pipeline; never lets Ctrl+C kill the shell.
+        if (!_missingTools.CancelInstall())
         {
-            e.Cancel = true;
+            _runtime.Engine.StopCurrent();
         }
-        else
-        {
-            // Not running a pipeline: never let Ctrl+C kill the shell.
-            e.Cancel = true;
-        }
+
+        e.Cancel = true;
     }
 
     private void RaiseHook(HookEvent hookEvent)

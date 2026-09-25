@@ -5,6 +5,7 @@
     <RootNamespace>Pickle</RootNamespace>
     <Description>Pickle — a PowerShell 7 shell with superpowers.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\logo\pickle.ico</ApplicationIcon>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>
@@ -23,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pickle.Core\Pickle.Core.csproj" />
+    <ProjectReference Include="..\Pickle.Network\Pickle.Network.csproj" />
     <ProjectReference Include="..\Pickle.Tui\Pickle.Tui.csproj" />
     <ProjectReference Include="..\Pickle.Windows\Pickle.Windows.csproj" />
     <ProjectReference Include="..\Pickle.Wizards\Pickle.Wizards.csproj" />

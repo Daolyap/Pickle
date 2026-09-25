@@ -50,7 +50,8 @@ if (options.WriteTerminalFragment is not null)
     return Pickle.Windows.Terminal.WindowsTerminalProfile.WriteFragment(
         options.WriteTerminalFragment,
         options.FragmentCommandLine ?? Environment.ProcessPath ?? "pickle.exe",
-        Console.Error);
+        Console.Error,
+        options.FragmentIcon);
 }
 
 return PickleApp.Run(options, BuiltInPlugins.Create());

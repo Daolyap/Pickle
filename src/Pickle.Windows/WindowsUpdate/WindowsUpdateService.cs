@@ -20,6 +20,7 @@ public sealed class WindowsUpdateService : IWindowsUpdateService
     private readonly IPickleLogger _log;
     private readonly Func<IElevationBroker?> _broker;
     private readonly IUpdatePolicySource _policy;
+    private readonly SharedSearch<IReadOnlyList<WuaRawUpdate>> _searches = new();
 
     public WindowsUpdateService(IPickleContext context)
         : this(context.Log, () => context.Services.Get<IElevationBroker>(), new RegistryPolicySource())
@@ -42,11 +43,19 @@ public sealed class WindowsUpdateService : IWindowsUpdateService
         return new WindowsUpdateStatus(true, managed, reason, reboot, lastSearch, lastInstall);
     }
 
-    public async Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, CancellationToken cancellationToken = default) =>
+        SearchAsync(query, null, cancellationToken);
+
+    public async Task<IReadOnlyList<WindowsUpdateInfo>> SearchAsync(WindowsUpdateQuery query, IProgress<WindowsUpdateProgress>? progress, CancellationToken cancellationToken = default)
     {
         var criteria = WuaText.BuildCriteria(query);
         _log.Info("wua", "search: " + criteria);
-        var raw = await Wrap(() => WuaClient.RunAsync(() => WuaClient.Search(criteria), SearchTimeout, cancellationToken)).ConfigureAwait(false);
+        var raw = await Wrap(() => _searches.RunAsync(
+            criteria,
+            report => WuaClient.RunAsync(() => WuaClient.Search(criteria, report), Timeout.InfiniteTimeSpan, CancellationToken.None),
+            progress,
+            SearchTimeout,
+            cancellationToken)).ConfigureAwait(false);
         var updates = raw.Select(WuaText.ToInfo).Where(u => WuaText.Matches(u, query)).ToList();
         _log.Info("wua", $"search found {updates.Count} update(s)");
         return updates;

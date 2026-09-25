@@ -13,7 +13,7 @@
     <Product>Pickle</Product>
     <Copyright>Copyright (c) Pickle contributors</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/daolyap/milkshell</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Daolyap/Pickle</RepositoryUrl>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- CS1591: missing XML docs. NU1603/NU1608: PowerShell SDK transitive version ranges. -->
     <NoWarn>$(NoWarn);CS1591;NU1603;NU1608</NoWarn>

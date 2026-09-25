@@ -39,6 +39,36 @@ public class ElevationSessionTests
     }
 
     [Fact]
+    public async Task LongOutputComesBackTrimmedToOneFrame()
+    {
+        var (server, client) = DuplexStream.CreatePair();
+        var nonce = ElevationProtocol.NewNonce();
+        // Non-ASCII is escaped in JSON (up to six bytes per character), so the character count alone can't be trusted.
+        var output = string.Concat(Enumerable.Range(0, 4000).Select(i => $"Zeile {i}: Paket wird bereitgestellt… ✓\n")) + "HRESULT 0x80073D02 at the very end";
+        var executor = new FakeExecutor { Output = output };
+        var helper = Task.Run(() => ElevatedHelper.RunSessionAsync(client, nonce, executor, new ListLogger(), Fast, CancellationToken.None));
+
+        var responses = await ElevationBroker.RunClientSessionAsync(
+            server, nonce, [new ElevatedRequest(ElevatedOperationKind.WingetRepairSource, [])], null, new ListLogger(), Wait, CancellationToken.None).WaitAsync(Wait);
+
+        Assert.Equal(ElevatedHelper.ExitOk, await helper.WaitAsync(Wait));
+        var response = Assert.Single(responses);
+        Assert.True(response.Success);
+        Assert.NotNull(response.Output);
+        Assert.StartsWith("…(earlier output truncated)", response.Output, StringComparison.Ordinal);
+        Assert.EndsWith("HRESULT 0x80073D02 at the very end", response.Output, StringComparison.Ordinal);
+        Assert.True(response.Output.Length < output.Length);
+    }
+
+    [Fact]
+    public void FitKeepsSmallResponsesIntact()
+    {
+        var response = new ElevatedResponse(false, "failed", 5, "line 1\nline 2");
+        Assert.Equal(response, ElevationProtocol.Fit(1, response));
+        Assert.Null(ElevationProtocol.Fit(1, response with { Output = null }).Output);
+    }
+
+    [Fact]
     public async Task BrokerRejectsAHelperWithTheWrongNonce()
     {
         var (server, client) = DuplexStream.CreatePair();

@@ -12,6 +12,9 @@ public sealed class ConsoleTerminal : ITerminal
 {
     private readonly TextWriter _out;
     private readonly bool _stripAnsi;
+    private readonly WindowsConsole.Modes? _startupModes;
+    private WindowsConsole.Modes? _beforeNativeProgram;
+    private int _nativePrograms;
     private string _title = "Pickle";
     private int _outputColumn;
 
@@ -19,13 +22,17 @@ public sealed class ConsoleTerminal : ITerminal
     {
         if (OperatingSystem.IsWindows())
         {
-            WindowsConsole.EnableVirtualTerminal();
+            _startupModes = WindowsConsole.Capture();
+            WindowsConsole.SetOutputMode(_startupModes, editing: false);
         }
 
         try
         {
             Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-            if (!Console.IsInputRedirected)
+
+            // Windows reads keys through ReadConsoleInputW, so the input code page is irrelevant to Pickle; changing
+            // it only alters what native programs (ssh, python's input()) see.
+            if (!OperatingSystem.IsWindows() && !Console.IsInputRedirected)
             {
                 Console.InputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
             }
@@ -196,6 +203,37 @@ public sealed class ConsoleTerminal : ITerminal
         catch (PlatformNotSupportedException)
         {
         }
+
+        if (OperatingSystem.IsWindows() && _startupModes is not null)
+        {
+            WindowsConsole.SetOutputMode(_startupModes, editing);
+        }
+    }
+
+    public void BeginNativeProgram()
+    {
+        if (!OperatingSystem.IsWindows() || _startupModes is null || Interlocked.Increment(ref _nativePrograms) != 1)
+        {
+            return;
+        }
+
+        _beforeNativeProgram = WindowsConsole.Capture();
+        WindowsConsole.Restore(_startupModes with { Output = null, Error = null });
+        WindowsConsole.SetOutputMode(_startupModes, editing: false);
+    }
+
+    public void EndNativeProgram()
+    {
+        if (!OperatingSystem.IsWindows() || _startupModes is null || Interlocked.Decrement(ref _nativePrograms) != 0)
+        {
+            return;
+        }
+
+        if (_beforeNativeProgram is { } saved)
+        {
+            WindowsConsole.Restore(saved);
+            _beforeNativeProgram = null;
+        }
     }
 
     public (int Column, int Row) GetCursorPosition()
@@ -226,28 +264,58 @@ public sealed class ConsoleTerminal : ITerminal
     }
 }
 
+/// <summary>
+/// Console modes are shared by every process on the console, so Pickle keeps its changes to the minimum and hands
+/// native programs the modes the console had at startup, as ConsoleHost does.
+/// </summary>
 [SupportedOSPlatform("windows")]
 internal static partial class WindowsConsole
 {
+    private const int StdInputHandle = -10;
     private const int StdOutputHandle = -11;
     private const int StdErrorHandle = -12;
     private const uint EnableVirtualTerminalProcessing = 0x0004;
+
+    // Makes LF a pure line feed (no carriage return). The editor's renderer always writes CR LF itself and wants
+    // VT-style deferred wrap at the right margin; everything else (PowerShell output, pk commands, native programs)
+    // writes bare LF and would print as a staircase with it set.
     private const uint DisableNewlineAutoReturn = 0x0008;
 
-    public static void EnableVirtualTerminal()
-    {
-        foreach (var id in new[] { StdOutputHandle, StdErrorHandle })
-        {
-            var handle = GetStdHandle(id);
-            if (handle == IntPtr.Zero || handle == new IntPtr(-1))
-            {
-                continue;
-            }
+    internal sealed record Modes(uint? Input, uint? Output, uint? Error);
 
-            if (GetConsoleMode(handle, out var mode))
+    public static Modes Capture() => new(Get(StdInputHandle), Get(StdOutputHandle), Get(StdErrorHandle));
+
+    public static void Restore(Modes modes)
+    {
+        Set(StdInputHandle, modes.Input);
+        Set(StdOutputHandle, modes.Output);
+        Set(StdErrorHandle, modes.Error);
+    }
+
+    public static void SetOutputMode(Modes startup, bool editing)
+    {
+        foreach (var (id, mode) in new[] { (StdOutputHandle, startup.Output), (StdErrorHandle, startup.Error) })
+        {
+            if (mode is { } m)
             {
-                _ = SetConsoleMode(handle, mode | EnableVirtualTerminalProcessing | DisableNewlineAutoReturn);
+                var wanted = m | EnableVirtualTerminalProcessing;
+                Set(id, editing ? wanted | DisableNewlineAutoReturn : wanted & ~DisableNewlineAutoReturn);
             }
+        }
+    }
+
+    private static uint? Get(int id)
+    {
+        var handle = GetStdHandle(id);
+        return handle != IntPtr.Zero && handle != new IntPtr(-1) && GetConsoleMode(handle, out var mode) ? mode : null;
+    }
+
+    private static void Set(int id, uint? mode)
+    {
+        var handle = GetStdHandle(id);
+        if (mode is { } m && handle != IntPtr.Zero && handle != new IntPtr(-1))
+        {
+            _ = SetConsoleMode(handle, m);
         }
     }
 

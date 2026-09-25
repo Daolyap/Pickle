@@ -320,7 +320,7 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
 
         if (set.Items.Count == 1)
         {
-            var (newText, newCursor) = ApplyReplacement(text, set, set.Items[0].CompletionText);
+            var (newText, newCursor) = ApplyItem(text, set, set.Items[0]);
             buffer.Replace(newText, newCursor);
             return;
         }
@@ -347,6 +347,37 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
         var start = Math.Clamp(set.ReplacementIndex, 0, text.Length);
         var end = Math.Clamp(start + set.ReplacementLength, start, text.Length);
         return (string.Concat(text.AsSpan(0, start), replacement, text.AsSpan(end)), start + replacement.Length);
+    }
+
+    internal static (string Text, int Cursor) ApplyItem(string text, CompletionSet set, CompletionItem item)
+    {
+        var (insert, cursorInInsert) = Insertion(item);
+        var (newText, end) = ApplyReplacement(text, set, insert);
+        return (newText, end - insert.Length + cursorInInsert);
+    }
+
+    /// <summary>
+    /// What to insert for an item and where the cursor goes inside it. Directories get a trailing separator and, when
+    /// quoted, the cursor stays before the closing quote so the next Tab completes inside the folder (like PSReadLine).
+    /// </summary>
+    internal static (string Text, int Cursor) Insertion(CompletionItem item)
+    {
+        var text = item.CompletionText;
+        if (item.Kind != CompletionKind.Directory || text.Length == 0)
+        {
+            return (text, text.Length);
+        }
+
+        var quote = text[0] is '\'' or '"' ? text[0] : (char?)null;
+        var closed = quote is { } q && text.Length >= 2 && text[^1] == q;
+        var content = closed ? text[..^1] : text;
+        var separator = content.Contains('/', StringComparison.Ordinal) && !content.Contains('\\', StringComparison.Ordinal) ? '/' : Path.DirectorySeparatorChar;
+        if (content.Length > (quote is null ? 0 : 1) && content[^1] is not ('/' or '\\'))
+        {
+            content += separator;
+        }
+
+        return closed ? (content + quote, content.Length) : (content, content.Length);
     }
 
     /// <summary>The case-insensitive common prefix of all items when it extends what was typed (never for quoted items).</summary>
@@ -385,7 +416,7 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
 
     private static void ApplyCycle(IEditorBuffer buffer, InlineCycle cycle)
     {
-        var (text, cursor) = ApplyReplacement(cycle.OriginalText, cycle.Set, cycle.Set.Items[cycle.Index].CompletionText);
+        var (text, cursor) = ApplyItem(cycle.OriginalText, cycle.Set, cycle.Set.Items[cycle.Index]);
         buffer.Replace(text, cursor);
         cycle.AppliedText = text;
         cycle.AppliedCursor = cursor;

@@ -74,6 +74,17 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.Equal(WindowsTerminalProfile.BuildFragment("\"C:\\Program Files\\Pickle\\pickle.exe\""), File.ReadAllText(path));
         Assert.NotEqual(0xEF, File.ReadAllBytes(path)[0]);
         Assert.Equal(2, WindowsTerminalProfile.WriteFragment(path, " "));
+
+        Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "pickle.exe", icon: "%ProgramFiles%\\Pickle\\pickle.png"));
+        using var withIcon = JsonDocument.Parse(File.ReadAllText(path));
+        Assert.Equal("%ProgramFiles%\\Pickle\\pickle.png", withIcon.RootElement.GetProperty("profiles")[0].GetProperty("icon").GetString());
+    }
+
+    [Fact]
+    public void EmbeddedIconIsAPng()
+    {
+        var png = WindowsTerminalManager.IconPng();
+        Assert.Equal([0x89, (byte)'P', (byte)'N', (byte)'G'], png[..4]);
     }
 
     [Fact]
@@ -87,6 +98,12 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.True(manager.Install(Exe, new TerminalSettings(), new TerminalPalette()));
         Assert.True(File.Exists(Path.Combine(_root, "Microsoft", "Windows Terminal", "Fragments", "Pickle", "pickle.json")));
         Assert.Equal(Exe, manager.InstalledExecutable);
+        Assert.Equal(WindowsTerminalManager.IconPng(), File.ReadAllBytes(locations.IconFile));
+        using (var doc = JsonDocument.Parse(File.ReadAllText(locations.FragmentFile)))
+        {
+            Assert.Equal(locations.IconFile, doc.RootElement.GetProperty("profiles")[0].GetProperty("icon").GetString());
+        }
+
         Assert.False(manager.Install(Exe, new TerminalSettings(), new TerminalPalette()));
 
         Assert.True(manager.Update(new TerminalSettings { FontSize = 15 }, new TerminalPalette()));
@@ -245,6 +262,30 @@ public sealed class WindowsTerminalTests : IDisposable
         (code, _) = await Run(t, command, "uninstall");
         Assert.Equal(0, code);
         Assert.False(File.Exists(locations.FragmentFile));
+    }
+
+    [Fact]
+    public void FirstRunOffersTheProfileWhenTerminalIsPresentAndPickleIsNotInIt()
+    {
+        using var t = TestPickle.Create();
+        var locations = WindowsTerminalLocations.FromLocalAppData(_root) with { MachineFragmentFile = Path.Combine(_root, "machine", "pickle.json") };
+        WindowsTerminalIntegration.Register(t.Runtime, locations, () => Exe);
+        var offer = Assert.Single(t.Runtime.Services.Require<IFirstRunOffers>().All, o => o.Id == "windows-terminal");
+        if (Environment.GetEnvironmentVariable("WT_SESSION") is null)
+        {
+            Assert.False(offer.IsRelevant());
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(locations.SettingsFiles[0])!);
+        Assert.True(offer.IsRelevant());
+        Assert.Contains("Added the 'Pickle' profile", offer.Accept(), StringComparison.Ordinal);
+        Assert.Equal(Exe, new WindowsTerminalManager(locations).InstalledExecutable);
+        Assert.False(offer.IsRelevant());
+
+        File.Delete(locations.FragmentFile);
+        Directory.CreateDirectory(Path.Combine(_root, "machine"));
+        File.WriteAllText(locations.MachineFragmentFile!, "{}");
+        Assert.False(offer.IsRelevant());
     }
 
     [Fact]

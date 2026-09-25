@@ -25,6 +25,15 @@ public class EngineSmokeTests
     }
 
     [Fact]
+    public void NativeProgramsGetTheConsoleHandedOverAndBack()
+    {
+        using var t = TestPickle.Create(start: true);
+        var native = OperatingSystem.IsWindows() ? "cmd.exe /d /c echo hi" : "sh -c 'echo hi'";
+        t.Runtime.Engine.ExecuteInteractive(native);
+        Assert.Equal(["begin", "end"], t.Terminal.NativeProgramEvents);
+    }
+
+    [Fact]
     public void WriteHostGoesThroughHostUi()
     {
         using var t = TestPickle.Create(start: true);

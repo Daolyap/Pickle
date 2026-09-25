@@ -115,8 +115,9 @@ public static class InstalledPlugins
 }
 
 /// <summary>
-/// Isolates a .NET plugin and its dependencies. Pickle's own assemblies and PowerShell are shared with the default
-/// context so plugin types implement the host's <see cref="IPicklePlugin"/> and exchange PSObjects freely.
+/// Isolates a .NET plugin and its dependencies. Pickle's own assemblies, PowerShell and Terminal.Gui are shared with
+/// the default context so plugin types implement the host's <see cref="IPicklePlugin"/>, exchange PSObjects freely and
+/// hand the panel host views it can run (a plugin's own Terminal.Gui copy would be a different, unusable type).
 /// </summary>
 public sealed class PluginLoadContext : AssemblyLoadContext
 {
@@ -138,7 +139,7 @@ public sealed class PluginLoadContext : AssemblyLoadContext
     }
 
     public static bool IsShared(string name) =>
-        name is "Pickle.Abstractions" or "System.Management.Automation"
+        name is "Pickle.Abstractions" or "System.Management.Automation" or "Terminal.Gui"
         || name.StartsWith("Microsoft.PowerShell.", StringComparison.OrdinalIgnoreCase)
         || (name.StartsWith("Pickle.", StringComparison.OrdinalIgnoreCase) && Default.Assemblies.Any(a => a.GetName().Name == name));
 

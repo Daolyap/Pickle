@@ -72,14 +72,14 @@ public static class WindowsTerminalFragment
     public static Guid GenerateProfileGuid(string appName, string profileName) =>
         Uuid5(Uuid5(FragmentNamespace, Encoding.Unicode.GetBytes(appName)), Encoding.Unicode.GetBytes(profileName));
 
-    public static string Build(string executablePath, TerminalSettings settings, TerminalPalette palette) =>
-        BuildForCommandline(QuoteExecutable(executablePath), settings, palette);
+    public static string Build(string executablePath, TerminalSettings settings, TerminalPalette palette, string? icon = null) =>
+        BuildForCommandline(QuoteExecutable(executablePath), settings, palette, icon);
 
     /// <summary>Quotes a path for a profile commandline (paths under Program Files contain spaces).</summary>
     public static string QuoteExecutable(string executablePath) => "\"" + executablePath.Trim().Trim('"') + "\"";
 
     /// <summary>Same as <see cref="Build"/> but with a commandline used verbatim (e.g. one an installer computed).</summary>
-    public static string BuildForCommandline(string commandline, TerminalSettings settings, TerminalPalette palette)
+    public static string BuildForCommandline(string commandline, TerminalSettings settings, TerminalPalette palette, string? icon = null)
     {
         var profile = new JsonObject
         {
@@ -89,6 +89,10 @@ public static class WindowsTerminalFragment
             ["hidden"] = false,
             ["colorScheme"] = SchemeName,
         };
+        if (!string.IsNullOrWhiteSpace(icon))
+        {
+            profile["icon"] = icon.Trim();
+        }
 
         var font = new JsonObject();
         if (!string.IsNullOrWhiteSpace(settings.FontFace))

@@ -2,9 +2,10 @@
 
 Pickle is a Windows-first shell that hosts the **real PowerShell 7 engine** (Microsoft.PowerShell.SDK, in-process,
 custom `PSHost`) and replaces the interactive experience: its own line editor (syntax highlighting, autosuggestions,
-completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, winget, Windows Update,
-Task Scheduler, settings, command wizards), a plugin system, Linux-syntax translation, aliases and sync.
-C# / .NET 10. Repo name is still `milkshell`; the product, binary (`pickle`) and namespaces are **Pickle**.
+completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, processes, network, network tools, disks, winget, Windows Update,
+Task Scheduler, Windows Sandbox, settings, command wizards), built-in network tools, on-demand tool installs, a plugin system,
+Linux-syntax translation, aliases and sync.
+C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product, binary (`pickle`) and namespaces are **Pickle**.
 
 ## Commands
 
@@ -16,7 +17,8 @@ C# / .NET 10. Repo name is still `milkshell`; the product, binary (`pickle`) and
 | Real-terminal end-to-end tests (pty + pyte) | `scripts/check.sh --e2e` or `python3 tests/Pickle.E2E/run_e2e.py -k vim` |
 | Run the shell | `dotnet run --project src/Pickle` (or `src/Pickle/bin/Debug/net10.0/pickle`) |
 | Run one command | `pickle -c 'Get-Date'` · headless (stdin lines): `pickle --headless` |
-| Single-file binaries | `scripts/publish.sh win-x64 linux-x64` → `artifacts/publish/<rid>/` |
+| Single-file binaries | `scripts/publish.sh win-x64 linux-x64` → `artifacts/publish/<rid>/` (Fedora RPM: `packaging/rpm/build-rpm.sh`) |
+| Code knowledge graph ([graphify](https://github.com/Graphify-Labs/graphify)) | `scripts/graph.sh`, then `graphify query "…"` / `graphify explain X` / `graphify path A B` |
 
 .NET lives in `~/.dotnet` in cloud sessions (the SessionStart hook installs it and sets `PATH`/`DOTNET_ROOT`).
 Tests use xunit.v3 on Microsoft.Testing.Platform: `dotnet test --solution Pickle.slnx`, filters go after `--`
@@ -24,7 +26,9 @@ Tests use xunit.v3 on Microsoft.Testing.Platform: `dotnet test --solution Pickle
 
 ## Layout
 
-Diagrams (projects, data flow, trust boundaries, feature → folder): `docs/architecture.md`.
+Diagrams (projects, data flow, trust boundaries, feature → folder): `docs/architecture.md`. Hubs, communities and
+cross-file links from graphify: `docs/graph-report.md` (the full `graphify-out/graph.json` is git-ignored; rebuild it
+with `scripts/graph.sh` in ~10 s and query it instead of grepping when you need "what calls/uses X").
 
 ```
 src/Pickle.Abstractions  Contracts only (plugins, registries, services, theme/config models, KeyChord, Ansi, TextWidth).
@@ -38,6 +42,7 @@ src/Pickle.Core          The shell engine. Key folders:
   Prompt/                ThemeProvider, PromptEngine, segments
   Aliases/ Translation/ Profile/   alias functions, Linux-syntax rewriters + shims, profile loading
   Config/ Plugins/ Sync/ Git/      config store, plugin host, sync, git CLI service
+  System/                Process, network and disk monitors (/proc on Linux, Win32 on Windows) for the system panels
   Cmdlets/               [Cmdlet] classes (auto-registered). `pk` = Invoke-PickleCommand
   Modules/               Embedded .psm1/.psd1 modules (extracted at startup to DataDir/modules/<hash>)
   Contracts/             Internal seams between Core components (IPromptRenderer, IAutosuggestProvider, ...)
@@ -46,6 +51,7 @@ src/Pickle.Core          The shell engine. Key folders:
 src/Pickle.Tui           Terminal.Gui v2 panels. PanelHost (IPanelHost), TuiPlugin, Panels/<Feature>/
 src/Pickle.Windows       Windows services (winget, WUA, Task Scheduler, elevation broker, Windows Terminal fragment)
 src/Pickle.Wizards       Wizard schema engine + Definitions/*.json (embedded)
+src/Pickle.Network       Network tools engines (scan, sweep, DNS client, trace, whois, cert, subnet, http, WoL) + pk commands
 src/Pickle               pickle.exe: Program.cs (arg modes) + BuiltInPlugins.cs (the list of built-in plugins)
 tests/Pickle.Testing     VirtualTerminal, TestPickle, Snapshot, Fakes/ — shared test doubles
 tests/*.Tests            xunit.v3 per project · tests/Pickle.E2E pty harness (Python)
@@ -85,7 +91,9 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   go through `GitService`, which also disables repo-configured fsmonitor/filters/textconv.
 - Package versions live only in `Directory.Packages.props`. Don't add packages without need.
 - New config setting: add a property with a default in `Abstractions/Config.cs` (and the JSON schema).
-- New `pk` subcommand: implement `IPickleCommand`, register it in your plugin's/component's `Initialize`.
+- New `pk` subcommand: derive from `PickleCommandBase` (Abstractions: `CommandArgs`, `CommandOutput`, `Display.Columns`)
+  or implement `IPickleCommand`; register it in your plugin's/component's `Initialize`. Plugin authoring guide:
+  `docs/plugins.md` (keep it in sync when plugin-facing APIs change).
 - New cmdlet: `[Cmdlet]` class deriving `PickleCmdlet` in `Pickle.Core/Cmdlets` — registration is automatic.
 - New key action: `KeyBindings.RegisterAction(name, ...)`; default chord goes in `Input/DefaultKeyBindings.cs`.
 - Comments: only for non-obvious *why*. No multi-paragraph docstrings.

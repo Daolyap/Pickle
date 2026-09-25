@@ -46,6 +46,36 @@ public class SettingsPanelTests
     }
 
     [Fact]
+    public void RightEntersACategoryAndLeftLeavesIt()
+    {
+        var script = new UiScript()
+            .Do("categories focused", app => Assert.Same(Categories(app), Panel(app).MostFocused))
+            .Press(Key.CursorDown)
+            .Do("editor category", app => Assert.Equal("Editor", Panel(app).Category))
+            .Press(Key.CursorRight)
+            .Do("first editor focused", app => Assert.IsType<CheckBox>(Panel(app).MostFocused))
+            .Press(Key.CursorLeft)
+            .Do("back in categories", app => Assert.Same(Categories(app), Panel(app).MostFocused))
+            .Do("focus a text field", app => Panel(app).EditorFor("editor.highlightDebounceThreshold")!.SetFocus())
+            .Do("cursor at end", app => ((TextField)Panel(app).MostFocused!).InsertionPoint = 2)
+            .Press(Key.CursorLeft)
+            .Do("still editing", app => Assert.IsType<TextField>(Panel(app).MostFocused))
+            .Press(Key.CursorLeft)
+            .Press(Key.CursorLeft)
+            .Do("left the field", app => Assert.Same(Categories(app), Panel(app).MostFocused))
+            .Press(Key.Esc);
+        var (t, host) = TuiHarness.Start(script);
+        using var _ = t;
+
+        host.Show(SettingsPanelPlugin.PanelId);
+        script.AssertOk();
+
+        static SettingsPanel Panel(Terminal.Gui.App.IApplication app) => TuiHarness.Top<SettingsPanel>(app);
+        static ListView Categories(Terminal.Gui.App.IApplication app) => Panel(app).SubViews.SelectMany(Descendants).OfType<ListView>().First();
+        static IEnumerable<Terminal.Gui.ViewBase.View> Descendants(Terminal.Gui.ViewBase.View v) => v.SubViews.SelectMany(Descendants).Prepend(v);
+    }
+
+    [Fact]
     public void TextFieldsValidateAndSaveOnEnter()
     {
         var script = new UiScript()

@@ -58,6 +58,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         ByHost[Engine.Host.InstanceId] = this;
         ServiceRegistry.Add<IPickleShell>(Engine);
         ServiceRegistry.Add<IGitService>(new GitService(log));
+        ServiceRegistry.Add<IFirstRunOffers>(FirstRun);
         ServiceRegistry.Add(this);
     }
 
@@ -96,6 +97,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public TranslationRegistry TranslationRegistry { get; } = new();
     public HookRegistry HookRegistry { get; }
     public PickleServices ServiceRegistry { get; } = new();
+    public FirstRun FirstRun { get; } = new();
 
     // Components
     public ShellEngine Engine { get; }

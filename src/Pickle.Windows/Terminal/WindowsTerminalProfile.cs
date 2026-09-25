@@ -70,14 +70,15 @@ public static class WindowsTerminalProfile
     /// verbatim, appearance comes from default <see cref="TerminalSettings"/> and the built-in "pickle" palette unless
     /// given. No files are touched.
     /// </summary>
-    public static string BuildFragment(string commandline, TerminalSettings? settings = null, TerminalPalette? palette = null) =>
+    public static string BuildFragment(string commandline, TerminalSettings? settings = null, TerminalPalette? palette = null, string? icon = null) =>
         WindowsTerminalFragment.BuildForCommandline(
             commandline,
             settings ?? new TerminalSettings(),
-            palette ?? LoadEmbeddedTheme("pickle")?.Terminal ?? new TerminalPalette());
+            palette ?? LoadEmbeddedTheme("pickle")?.Terminal ?? new TerminalPalette(),
+            icon);
 
     /// <summary>Writes <see cref="BuildFragment"/> to <paramref name="path"/> (UTF-8, no BOM), creating its directory. Returns an exit code.</summary>
-    public static int WriteFragment(string path, string commandline, TextWriter? error = null)
+    public static int WriteFragment(string path, string commandline, TextWriter? error = null, string? icon = null)
     {
         if (string.IsNullOrWhiteSpace(commandline))
         {
@@ -93,7 +94,7 @@ public static class WindowsTerminalProfile
                 Directory.CreateDirectory(dir);
             }
 
-            File.WriteAllText(full, BuildFragment(commandline), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.WriteAllText(full, BuildFragment(commandline, icon: icon), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return 0;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)

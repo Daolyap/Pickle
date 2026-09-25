@@ -42,6 +42,9 @@ public sealed class PickleOptions
     /// <summary>Profile commandline for <see cref="WriteTerminalFragment"/> (default: this executable's path).</summary>
     public string? FragmentCommandLine { get; set; }
 
+    /// <summary>Profile icon path for <see cref="WriteTerminalFragment"/> (environment variables allowed).</summary>
+    public string? FragmentIcon { get; set; }
+
     public List<string> Errors { get; } = [];
 
     public static PickleOptions Parse(IReadOnlyList<string> args)
@@ -119,6 +122,9 @@ public sealed class PickleOptions
                     break;
                 case "--fragment-commandline":
                     o.FragmentCommandLine = Next();
+                    break;
+                case "--fragment-icon":
+                    o.FragmentIcon = Next();
                     break;
                 default:
                     if (!a.StartsWith('-') && o.File is null && a.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase))

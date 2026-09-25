@@ -211,6 +211,22 @@ public interface IKeyBindingRegistry
     IReadOnlyCollection<EditorActionInfo> Actions { get; }
 }
 
+// ───────────────────────────── First run ─────────────────────────────
+
+/// <summary>
+/// A yes/no question asked once, at the first interactive start (e.g. "Add Pickle to Windows Terminal?").
+/// <paramref name="Accept"/> does the work and returns a line to show the user.
+/// </summary>
+public sealed record FirstRunOffer(string Id, string Question, Func<bool> IsRelevant, Func<string> Accept);
+
+/// <summary>Register offers from a plugin's Initialize: <c>context.Services.Get&lt;IFirstRunOffers&gt;()?.Add(...)</c>.</summary>
+public interface IFirstRunOffers
+{
+    void Add(FirstRunOffer offer);
+
+    IReadOnlyList<FirstRunOffer> All { get; }
+}
+
 // ───────────────────────────── `pk` commands ─────────────────────────────
 
 public sealed class PickleCommandContext

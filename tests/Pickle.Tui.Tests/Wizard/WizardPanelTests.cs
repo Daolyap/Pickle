@@ -1,7 +1,9 @@
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 using Pickle.Testing;
 using Pickle.Testing.Fakes;
 using Pickle.Tui.Panels.Wizard;
+using Pickle.Tui.Tests.SystemMonitoring;
 using Pickle.Wizards;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
@@ -56,6 +58,54 @@ public sealed class WizardPanelTests : IDisposable
 
         panel.ExtraArgumentsField!.Text = "--ipv4";
         Assert.EndsWith("--ipv4 https://example.com", panel.PreviewText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TextFieldsAreDrawnAsFullBoxes()
+    {
+        var context = new PanelContext { Pickle = _pickle.Runtime, Argument = "curl", CurrentInput = "curl https://example.com" };
+        var panel = new WizardPanel(context, _ => true);
+
+        var lines = SystemPanelRunner.RunAndDraw(panel).Split('\n');
+
+        var url = Array.FindIndex(lines, l => l.Contains("https://example.com", StringComparison.Ordinal) && l.Contains('│'));
+        Assert.True(url > 0, string.Join('\n', lines));
+        var column = lines[url].IndexOf("https://example.com", StringComparison.Ordinal);
+        Assert.Contains('─', lines[url - 1][(column - 2)..(column + 5)]);
+        Assert.Contains('─', lines[url + 1][(column - 2)..(column + 5)]);
+    }
+
+    [Fact]
+    public async Task InstallButtonUsesTheToolInstallerWithTheChosenOptions()
+    {
+        var installer = new FakeToolInstaller();
+        _pickle.Runtime.ServiceRegistry.Add<IToolInstaller>(installer);
+        var (panel, _) = Open("7z", "7z a out.7z src", toolExists: _ => false);
+        panel.AskInstallOptions = _ => new ToolInstallOptions(ToolInstallScope.Temporary, AddToPath: false);
+
+        panel.InstallTool();
+
+        for (var i = 0; i < 100 && installer.Installs.Count == 0; i++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        var (package, options) = Assert.Single(installer.Installs);
+        Assert.Equal("7z", package.Command);
+        Assert.Equal(new ToolInstallOptions(ToolInstallScope.Temporary, AddToPath: false), options);
+    }
+
+    [Fact]
+    public void CancellingTheInstallDialogInstallsNothing()
+    {
+        var installer = new FakeToolInstaller();
+        _pickle.Runtime.ServiceRegistry.Add<IToolInstaller>(installer);
+        var (panel, _) = Open("7z", "7z a out.7z src", toolExists: _ => false);
+        panel.AskInstallOptions = _ => null;
+
+        panel.InstallTool();
+
+        Assert.Empty(installer.Installs);
     }
 
     [Fact]
@@ -152,8 +202,7 @@ public sealed class WizardPanelTests : IDisposable
     [Fact]
     public void OffersInstallWhenTheToolIsMissing()
     {
-        var winget = new FakeWingetService();
-        _pickle.Runtime.Services.Add<Pickle.Abstractions.Services.IWingetService>(winget);
+        _pickle.Runtime.Services.Add<IToolInstaller>(new FakeToolInstaller());
 
         Assert.True(Open("curl", null, toolExists: _ => false).Panel.InstallOffered);
         Assert.False(Open("curl", null, toolExists: _ => true).Panel.InstallOffered);

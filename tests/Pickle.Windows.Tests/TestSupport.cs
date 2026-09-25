@@ -66,11 +66,20 @@ internal sealed class FakeProcessRunner : IProcessRunner
 {
     public List<(string File, IReadOnlyList<string> Args)> Calls { get; } = [];
 
+    public List<IReadOnlyDictionary<string, string?>?> Environments { get; } = [];
+
     public Dictionary<string, ProcessResult> Replies { get; } = [];
 
-    public Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, Action<string>? onSegment, TimeSpan timeout, CancellationToken cancellationToken)
+    public Task<ProcessResult> RunAsync(
+        string fileName,
+        IReadOnlyList<string> arguments,
+        Action<string>? onSegment,
+        TimeSpan timeout,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         Calls.Add((fileName, arguments.ToList()));
+        Environments.Add(environment);
         var key = arguments.Count > 0 ? arguments[0] : string.Empty;
         var reply = Replies.TryGetValue(key, out var r) ? r : new ProcessResult(0, string.Empty);
         if (onSegment is not null)
@@ -91,6 +100,9 @@ internal sealed class FakeExecutor : IElevatedExecutor
 
     public Exception? Throw { get; set; }
 
+    /// <summary>Returned as <see cref="ElevatedResponse.Output"/> by every call.</summary>
+    public string? Output { get; set; }
+
     public Task<ElevatedResponse> RepairWingetSourceAsync(IProgress<string> progress, CancellationToken cancellationToken) => Record("repair");
 
     public Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken)
@@ -105,6 +117,8 @@ internal sealed class FakeExecutor : IElevatedExecutor
     public Task<ElevatedResponse> RegisterTaskAsync(ScheduledTaskDefinition definition, IProgress<string> progress, CancellationToken cancellationToken) =>
         Record($"task {definition.Folder}\\{definition.Name} elevated={definition.RunElevated}");
 
+    public Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken) => Record("enable-sandbox");
+
     private Task<ElevatedResponse> Record(string call)
     {
         lock (Calls)
@@ -112,7 +126,7 @@ internal sealed class FakeExecutor : IElevatedExecutor
             Calls.Add(call);
         }
 
-        return Throw is { } ex ? Task.FromException<ElevatedResponse>(ex) : Task.FromResult(new ElevatedResponse(true, call + " ok"));
+        return Throw is { } ex ? Task.FromException<ElevatedResponse>(ex) : Task.FromResult(new ElevatedResponse(true, call + " ok", 0, Output));
     }
 }
 

@@ -141,6 +141,13 @@ public sealed class VirtualTerminal : ITerminal
 
     public void SetEditMode(bool editing) => EditMode = editing;
 
+    /// <summary>Calls of <see cref="ITerminal.BeginNativeProgram"/> / <see cref="ITerminal.EndNativeProgram"/>, in order.</summary>
+    public List<string> NativeProgramEvents { get; } = [];
+
+    public void BeginNativeProgram() => NativeProgramEvents.Add("begin");
+
+    public void EndNativeProgram() => NativeProgramEvents.Add("end");
+
     public (int Column, int Row) GetCursorPosition() => (CursorColumn, CursorRow);
 
     public void Flush()

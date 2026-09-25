@@ -51,3 +51,18 @@ internal sealed class UnsupportedTaskSchedulerService : ITaskSchedulerService
 
     public TaskTriggerSpec ParseSchedule(string text) => ScheduleParser.Parse(text);
 }
+
+public sealed class UnsupportedToolInstaller : IToolInstaller
+{
+    public bool IsSupported => false;
+
+    public IReadOnlyList<ToolPackage> TemporaryInstalls => [];
+
+    public ToolPackage? Find(string command) => ToolCatalog.Find(command);
+
+    public Task<ToolInstallResult> InstallAsync(ToolPackage package, ToolInstallOptions options, IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ToolInstallResult(false, "Installing tools needs winget (Windows)."));
+
+    public Task<ToolInstallResult> RemoveTemporaryAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ToolInstallResult(true, "No temporary tools to remove."));
+}

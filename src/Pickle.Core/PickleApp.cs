@@ -44,9 +44,10 @@ public static class PickleApp
 
         if (!options.NoLogo && runtime.Config.Current.Shell.ShowStartupBanner)
         {
-            WriteBanner(runtime);
+            StartupBanner.Write(runtime);
         }
 
+        runtime.FirstRun.Run(runtime);
         return runtime.Repl.Run();
     }
 
@@ -77,14 +78,6 @@ public static class PickleApp
         }
 
         return result.Success ? 0 : 1;
-    }
-
-    private static void WriteBanner(PickleRuntime runtime)
-    {
-        var theme = runtime.Themes.Current;
-        var line = Ansi.Colorize("🥒 Pickle " + PickleRuntime.Version, theme.Ui.Accent, bold: true)
-            + Ansi.Colorize($"  ·  PowerShell {PickleRuntime.PowerShellVersion}  ·  F1 commands  ·  pk help", theme.Ui.Muted);
-        runtime.Terminal.Write(line + "\n");
     }
 
     private static string Mode(PickleOptions o) =>

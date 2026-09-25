@@ -242,6 +242,7 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
         ("Shell", ["history", "translate", "wizard", "git", "alias", "theme", "config", "reload"]),
         ("Windows", ["winget", "tool", "upgrade", "update", "schedule", "sandbox", "terminal"]),
         ("System", ["top", "net", "disks"]),
+        ("Network tools", ["tools", "scan", "sweep", "dns", "trace", "whois", "cert", "subnet", "http", "wol", "ip"]),
         ("Setup", ["plugin", "sync", "paths", "doctor", "version"]),
         ("More", []),
     ];

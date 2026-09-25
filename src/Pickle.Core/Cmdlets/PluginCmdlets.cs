@@ -199,7 +199,8 @@ public sealed class RegisterPickleCommandCmdlet : PickleRegistrationCmdlet
 
 /// <summary>
 /// <c>Register-PicklePanel -Id todo -Title 'Todo' -Items { Get-Content ~/todo.txt } -Actions @{ Done = { ... } }</c>:
-/// a list panel (items from the scriptblock; each action runs with <c>$_</c> set to the selected item).
+/// a list panel (items from the scriptblock; each action runs with <c>$_</c> set to the selected item). <c>-Preview</c>
+/// fills the details pane, <c>-RefreshSeconds</c> keeps it live and <c>-Command</c> adds <c>pk &lt;name&gt;</c> to open it.
 /// </summary>
 [Cmdlet(VerbsLifecycle.Register, "PicklePanel")]
 public sealed class RegisterPicklePanelCmdlet : PickleRegistrationCmdlet
@@ -225,11 +226,30 @@ public sealed class RegisterPicklePanelCmdlet : PickleRegistrationCmdlet
     [Parameter]
     public Hashtable? Actions { get; set; }
 
+    /// <summary>Text for the details pane of the selected item (<c>$_</c>).</summary>
+    [Parameter]
+    public ScriptBlock? Preview { get; set; }
+
+    [Parameter]
+    [ValidateRange(1, 3600)]
+    public int? RefreshSeconds { get; set; }
+
+    /// <summary>Also register <c>pk &lt;Command&gt;</c>, which opens the panel.</summary>
+    [Parameter]
+    [ValidatePattern("^[a-z][a-z0-9-]*$")]
+    public string? Command { get; set; }
+
     protected override void EndProcessing()
     {
         if (Key is not null && !KeyChord.TryParse(Key, out _))
         {
             Fail($"'{Key}' is not a valid key chord.", "PickleChordInvalid", Key);
+            return;
+        }
+
+        if (Command is not null && Runtime.CommandRegistry.Get(Command) is { } existing && existing is not OpenPanelPkCommand)
+        {
+            Fail($"'pk {Command}' already exists.", "PickleCommandExists", Command);
             return;
         }
 
@@ -248,7 +268,14 @@ public sealed class RegisterPicklePanelCmdlet : PickleRegistrationCmdlet
             DefaultKey = Key,
             ItemsScript = Items.ToString(),
             Actions = actions,
+            PreviewScript = Preview?.ToString(),
+            RefreshSeconds = RefreshSeconds,
         });
+        if (Command is not null)
+        {
+            Runtime.CommandRegistry.Register(new OpenPanelPkCommand(Command, Id, Description ?? $"Open the {Title} panel"));
+        }
+
         Record("panel: " + Id, Items);
     }
 }

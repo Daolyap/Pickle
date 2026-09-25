@@ -149,4 +149,41 @@ public class ListPanelTests
         Assert.Null(host.Show("fruit"));
         script.AssertOk();
     }
+
+    [Fact]
+    public void CustomPreviewAndAutoRefresh()
+    {
+        var script = new UiScript()
+            .WaitFor("preview", app => TuiHarness.Top<PluginListPanel>(app).Preview.PlainText.Contains("APPLE!", StringComparison.Ordinal))
+            .WaitFor("refreshed", app => TuiHarness.Top<PluginListPanel>(app).List.TotalCount == 3)
+            .Press(Key.Esc);
+        var (t, host) = TuiHarness.Start(script);
+        using var _ = t;
+        t.Run("$global:fruitCount = 2");
+        t.Runtime.Panels.RegisterList(new ListPanelSpec
+        {
+            Id = "live",
+            Title = "Live",
+            ItemsScript = "$global:fruitCount++; 1..$([Math]::Min($global:fruitCount, 3)) | ForEach-Object { 'apple' }",
+            PreviewScript = "$_.ToUpper() + '!'",
+            RefreshSeconds = 1,
+        });
+
+        Assert.Null(host.Show("live"));
+        script.AssertOk();
+    }
+
+    [Fact]
+    public void RegisterPicklePanelTakesPreviewRefreshAndACommand()
+    {
+        var (t, _) = TuiHarness.Start();
+        using var __ = t;
+
+        t.Run("Register-PicklePanel -Id todo -Title Todo -Items { 'a' } -Preview { 'details' } -RefreshSeconds 5 -Command todo");
+
+        var spec = Assert.Single(t.Runtime.Panels.ListPanels, p => p.Id == "todo");
+        Assert.Equal((" 'details' ", 5), (spec.PreviewScript, spec.RefreshSeconds));
+        Assert.Equal("pk todo [argument]", t.Runtime.CommandRegistry.Get("todo")?.Usage);
+        Assert.Throws<InvalidOperationException>(() => t.Run("Register-PicklePanel -Id other -Title Other -Items { 'b' } -Command config"));
+    }
 }

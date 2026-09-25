@@ -65,6 +65,12 @@ public sealed class ListPanelSpec
 
     /// <summary>Action label → script run with <c>$_</c> bound to the selected item.</summary>
     public Dictionary<string, string> Actions { get; init; } = [];
+
+    /// <summary>Script whose text output is the details pane for the selected item (<c>$_</c>); default: its properties.</summary>
+    public string? PreviewScript { get; init; }
+
+    /// <summary>Re-run <see cref="ItemsScript"/> this often while the panel is open (a live dashboard); null: only on F5.</summary>
+    public int? RefreshSeconds { get; init; }
 }
 
 public interface IPanelRegistry

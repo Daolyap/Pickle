@@ -12,7 +12,8 @@ namespace Pickle.Tui.Panels.ListPanel;
 /// (their Name property, else ToString) with a fuzzy filter and a Format-List preview, and runs the spec's actions
 /// with <c>$_</c> bound to the selected item. Enter runs the first action; the others get F-keys.
 /// An action may return an object/hashtable with a Run, Insert, Replace or Cd key to hand a result to the shell;
-/// anything else it outputs is shown in the preview and the list is refreshed.
+/// anything else it outputs is shown in the preview and the list is refreshed. A spec's PreviewScript replaces the
+/// Format-List preview; RefreshSeconds reloads the items on a timer.
 /// </summary>
 public sealed class PluginListPanel : PanelWindow
 {
@@ -31,6 +32,11 @@ public sealed class PluginListPanel : PanelWindow
         """;
 
     internal const string PreviewScript = "param($__pickleItem) $__pickleItem | Format-List -Property * | Out-String -Width 160";
+
+    internal const string CustomPreviewScript = """
+        param($__pickleScript, $__pickleItem)
+        $__pickleItem | ForEach-Object -Process ([scriptblock]::Create($__pickleScript)) | Out-String -Width 160
+        """;
 
     private static readonly Key[] ActionKeys = [Key.F2, Key.F3, Key.F4, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10, Key.F11, Key.F12];
 
@@ -99,7 +105,14 @@ public sealed class PluginListPanel : PanelWindow
         CreateView = ctx => new PluginListPanel(ctx, spec),
     };
 
-    protected override void OnOpened() => Refresh();
+    protected override void OnOpened()
+    {
+        Refresh();
+        if (_spec.RefreshSeconds is { } seconds and > 0)
+        {
+            Every(TimeSpan.FromSeconds(seconds), Refresh);
+        }
+    }
 
     internal static PanelResult? ToResult(PSObject output)
     {
@@ -199,8 +212,11 @@ public sealed class PluginListPanel : PanelWindow
             return;
         }
 
+        var (script, parameters) = _spec.PreviewScript is { Length: > 0 } custom
+            ? (CustomPreviewScript, new Dictionary<string, object?> { ["__pickleScript"] = custom, ["__pickleItem"] = item.Value })
+            : (PreviewScript, new Dictionary<string, object?> { ["__pickleItem"] = item.Value });
         RunInBackground(
-            ct => Pickle.Shell.InvokeAsync(PreviewScript, new Dictionary<string, object?> { ["__pickleItem"] = item.Value }, ShellTarget.Main, ct),
+            ct => Pickle.Shell.InvokeAsync(script, parameters, ShellTarget.Main, ct),
             result =>
             {
                 if (version != _previewVersion)

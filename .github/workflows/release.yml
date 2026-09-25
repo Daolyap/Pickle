@@ -92,8 +92,30 @@ jobs:
           name: dist-rpm
           path: dist/*.rpm
 
+  sdk:
+    # Pickle.Abstractions: what .NET plugins compile against (attached to the release; pushed to nuget.org when the
+    # NUGET_API_KEY secret is set).
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Pack Pickle.Abstractions
+        run: dotnet pack src/Pickle.Abstractions -c Release -p:Version=${{ needs.version.outputs.version }} -o dist
+      - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        if: env.NUGET_API_KEY != ''
+        run: dotnet nuget push "dist/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdk
+          path: dist/*.nupkg
+
   release:
-    needs: [version, binaries, rpm]
+    needs: [version, binaries, rpm, sdk]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +141,7 @@ jobs:
             dist/*.tar.gz
             dist/*.rpm
             dist/*.msi
+            dist/*.nupkg
             dist/SHA256SUMS.txt
             dist/manifests/**
       - name: Update Scoop bucket manifest

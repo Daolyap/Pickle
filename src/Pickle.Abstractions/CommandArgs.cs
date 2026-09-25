@@ -1,7 +1,7 @@
-namespace Pickle.Windows.Commands;
+namespace Pickle.Abstractions;
 
-/// <summary>Minimal <c>pk</c> argument parser: positionals, <c>--flag</c>, <c>--name value</c> / <c>--name=value</c>, <c>-y</c>.</summary>
-internal sealed class CommandArgs
+/// <summary>Minimal <c>pk</c> argument parser for commands and plugins: positionals, <c>--flag</c>, <c>--name value</c> / <c>--name=value</c>, <c>-y</c>.</summary>
+public sealed class CommandArgs
 {
     private readonly Dictionary<string, string?> _options = new(StringComparer.OrdinalIgnoreCase);
 

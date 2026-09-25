@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pickle.Core\Pickle.Core.csproj" />
+    <ProjectReference Include="..\Pickle.Network\Pickle.Network.csproj" />
     <ProjectReference Include="..\Pickle.Tui\Pickle.Tui.csproj" />
     <ProjectReference Include="..\Pickle.Windows\Pickle.Windows.csproj" />
     <ProjectReference Include="..\Pickle.Wizards\Pickle.Wizards.csproj" />

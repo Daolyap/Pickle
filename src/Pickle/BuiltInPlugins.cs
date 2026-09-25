@@ -13,10 +13,12 @@ internal static class BuiltInPlugins
         new Windows.WindowsPlugin(),
         new Wizards.WizardsPlugin(),
         new Core.SystemMonitoring.SystemMonitorsPlugin(),
+        new Network.NetworkToolsPlugin(),
         new Tui.TuiPlugin(),
         new Tui.Panels.Git.GitPanelPlugin(),
         new Tui.Panels.Windows.WindowsPanelsPlugin(),
         new Tui.Panels.Wizard.WizardPanelPlugin(),
         new Tui.Panels.SystemMonitoring.SystemPanelsPlugin(),
+        new Tui.Panels.NetTools.NetToolsPanelPlugin(),
     ];
 }

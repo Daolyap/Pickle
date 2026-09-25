@@ -55,7 +55,8 @@ public sealed class ShimModuleTests : IDisposable
         Assert.Equal(["sub", "b.log", "a.txt"], Run("ls -1 -r"));
         Assert.Equal(["a.txt", "b.log"], Run("ls -1 *.*"));
         Assert.Equal(["a.txt", "b.log", "sub"], Run("(ls).Name"));
-        Assert.Contains(Run("ls -l"), l => l.EndsWith(" a.txt", StringComparison.Ordinal) && l.Contains("24", StringComparison.Ordinal));
+        // a.txt is 27 bytes; the size column is right-aligned in 8 characters (a bare "27" could also match the date).
+        Assert.Contains(Run("ls -l"), l => l.EndsWith(" a.txt", StringComparison.Ordinal) && l.Contains("       27 ", StringComparison.Ordinal));
         Assert.Contains(Path.Combine("sub", "deep", "d.md"), Run("ls -1R"));
         Assert.Equal(["a.txt"], Run("ls -1S | Select-Object -First 1"));
         Assert.Single(RunWithErrors("ls nope").Errors);

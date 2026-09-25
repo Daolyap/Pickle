@@ -17,9 +17,18 @@ Set-Location $root
 $exe = Join-Path $PublishDir 'pickle.exe'
 if (-not (Test-Path $exe)) { throw "pickle.exe not found in $PublishDir" }
 
+# A win-arm64 pickle.exe cannot start on an x64 build agent (Windows only emulates the other way round). What the
+# script asks of it (version, Terminal fragment) does not depend on the architecture, so run a host build from source.
+$hostArch = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+$canRun = -not ($Rid -eq 'win-arm64' -and $hostArch -ne [Runtime.InteropServices.Architecture]::Arm64)
+function Invoke-Pickle {
+    if ($canRun) { & $exe @args }
+    else { dotnet run --project src/Pickle/Pickle.csproj -c Release -p:PickleBundleModules=false -- @args }
+}
+
 if (-not $Version) {
     # "Pickle 1.2.3 (PowerShell …)" → 1.2.3
-    $Version = ((& $exe --version) -split ' ')[1]
+    $Version = ((Invoke-Pickle --version) -split ' ')[1]
 }
 $msiVersion = ($Version -split '[-+]')[0]
 
@@ -34,8 +43,15 @@ New-Item -ItemType Directory -Force -Path $work, $Output | Out-Null
 # Windows Terminal fragment installed for all users; commandline relies on the PATH entry the MSI adds and the icon
 # is the pickle.png the MSI puts next to pickle.exe (Terminal expands environment variables in icon paths).
 $fragment = Join-Path $work 'pickle.json'
-& $exe --write-terminal-fragment $fragment --fragment-commandline 'pickle.exe' --fragment-icon '%ProgramFiles%\Pickle\pickle.png' 2>$null
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path $fragment)) {
+try {
+    Invoke-Pickle --write-terminal-fragment $fragment --fragment-commandline 'pickle.exe' --fragment-icon '%ProgramFiles%\Pickle\pickle.png' | Out-Host
+    $written = $LASTEXITCODE -eq 0 -and (Test-Path $fragment)
+} catch {
+    Write-Warning "Could not generate the Windows Terminal fragment: $($_.Exception.Message)"
+    $written = $false
+}
+if (-not $written) {
+    Write-Warning 'Using a minimal Windows Terminal fragment (no colour scheme).'
     @{
         profiles = @(@{
                 name        = 'Pickle'

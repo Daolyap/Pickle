@@ -67,8 +67,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "pickle -c failed" }
 
   package-windows:
-    name: Package (win-x64 single file + MSI)
+    # win-arm64 is built on the x64 agent like in the release, where its pickle.exe cannot run.
+    name: Package (${{ matrix.rid }} single file + MSI)
     needs: build-test
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -80,9 +85,10 @@ jobs:
 
       - name: Publish single-file exe
         shell: pwsh
-        run: ./packaging/publish.ps1 -Rid win-x64 -Output artifacts/publish/win-x64
+        run: ./packaging/publish.ps1 -Rid ${{ matrix.rid }} -Output artifacts/publish/${{ matrix.rid }}
 
       - name: Smoke test published exe
+        if: matrix.rid == 'win-x64'
         shell: pwsh
         run: |
           $exe = 'artifacts/publish/win-x64/pickle.exe'
@@ -91,13 +97,16 @@ jobs:
 
       - name: Build MSI
         shell: pwsh
-        run: ./packaging/wix/build-msi.ps1 -Rid win-x64 -PublishDir artifacts/publish/win-x64 -Output artifacts/msi
+        run: |
+          ./packaging/wix/build-msi.ps1 -Rid ${{ matrix.rid }} -PublishDir artifacts/publish/${{ matrix.rid }} -Output artifacts/msi
+          $fragment = Get-Content artifacts/msi-work/pickle.json -Raw | ConvertFrom-Json
+          if (-not $fragment.schemes) { throw "the MSI got the fallback Windows Terminal fragment" }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pickle-win-x64
+          name: pickle-${{ matrix.rid }}
           path: |
-            artifacts/publish/win-x64/pickle.exe
+            artifacts/publish/${{ matrix.rid }}/pickle.exe
             artifacts/msi/*.msi
           if-no-files-found: error
 

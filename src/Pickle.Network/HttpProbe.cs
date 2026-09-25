@@ -108,7 +108,10 @@ public static class HttpProbe
                 watch.Restart();
                 await socket.ConnectAsync(addresses, context.DnsEndPoint.Port, cancellationToken).ConfigureAwait(false);
                 Connect = watch.Elapsed;
-                Remote = (socket.RemoteEndPoint as IPEndPoint)?.Address.ToString();
+                // Dual-mode sockets report IPv4 peers as ::ffff:a.b.c.d.
+                Remote = (socket.RemoteEndPoint as IPEndPoint)?.Address is { } remote
+                    ? (remote.IsIPv4MappedToIPv6 ? remote.MapToIPv4() : remote).ToString()
+                    : null;
                 return new NetworkStream(socket, ownsSocket: true);
             }
             catch

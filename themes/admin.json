@@ -1,0 +1,128 @@
+{
+  "name": "admin",
+  "description": "Pickle in red for sessions running as administrator: an ADMIN badge and a # prompt, so an elevated window is never mistaken for a normal one. Used automatically when elevated (shell.adminTheme).",
+  "terminal": {
+    "background": "#1F1818",
+    "foreground": "#DDE5D6",
+    "cursorColor": "#FF7A72",
+    "selectionBackground": "#4A2A2A",
+    "black": "#1B1F1A",
+    "red": "#E0605A",
+    "green": "#8FC34A",
+    "yellow": "#E5C07B",
+    "blue": "#61AFEF",
+    "purple": "#C678DD",
+    "cyan": "#56B6C2",
+    "white": "#DDE5D6",
+    "brightBlack": "#5C6A55",
+    "brightRed": "#FF7A72",
+    "brightGreen": "#B5E36B",
+    "brightYellow": "#F2D68F",
+    "brightBlue": "#82C4FF",
+    "brightPurple": "#DA9BEF",
+    "brightCyan": "#7FD4DE",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#B5E36B",
+    "unknownCommand": "#FF7A72",
+    "parameter": "#7D8C75",
+    "string": "#E5C07B",
+    "number": "#DA9BEF",
+    "variable": "#7FD4DE",
+    "operator": "#7D8C75",
+    "keyword": "#C678DD",
+    "comment": "#5C6A55",
+    "type": "#82C4FF",
+    "member": "#DDE5D6",
+    "error": "#FF7A72",
+    "suggestion": "#5C6A55",
+    "selectionBackground": "#4A2A2A",
+    "translated": "#5C6A55"
+  },
+  "ui": {
+    "accent": "#E0605A",
+    "muted": "#5C6A55",
+    "success": "#8FC34A",
+    "warning": "#E5C07B",
+    "error": "#E0605A",
+    "info": "#61AFEF",
+    "panelBackground": "#1F1818",
+    "panelForeground": "#DDE5D6",
+    "panelBorder": "#5A2E2E",
+    "highlightBackground": "#4A2A2A",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#2A1F1F",
+    "menuForeground": "#DDE5D6",
+    "menuSelectedBackground": "#E0605A",
+    "menuSelectedForeground": "#1F1818",
+    "menuDescription": "#8C7575",
+    "matchHighlight": "#E5C07B"
+  },
+  "prompt": {
+    "separator": "plain",
+    "newlineBeforeInput": false,
+    "promptChar": "#",
+    "promptCharColor": "#FF7A72",
+    "promptCharErrorColor": "#FF7A72",
+    "continuationPrompt": "∙ ",
+    "transientTemplate": "{promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#1F1818",
+        "background": "#E0605A",
+        "template": " {value} ",
+        "options": {
+          "symbol": "ADMIN"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#E5C07B",
+        "template": "({value})"
+      },
+      {
+        "type": "cwd",
+        "foreground": "#F2D68F",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#8FC34A",
+        "template": "{icon} {value}",
+        "icon": "\uE0A0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#E5C07B",
+        "template": "took {value}"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#56B6C2",
+        "template": "⚙ {value}"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#E0605A"
+      },
+      {
+        "type": "user",
+        "foreground": "#E0605A"
+      },
+      {
+        "type": "time",
+        "foreground": "#8C7575",
+        "options": {
+          "format": "HH:mm"
+        }
+      }
+    ]
+  }
+}

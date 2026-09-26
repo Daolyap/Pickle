@@ -6,7 +6,7 @@ namespace Pickle.Core.Hosting;
 /// <summary>
 /// The interactive start banner (<c>shell.bannerStyle</c>): a pickle and the wordmark in the theme's greens, with an
 /// optional ~0.5 s shine that sweeps across once. Any key ends the animation early (and is left for the editor).
-/// Narrow or non-ANSI terminals get the one-line banner.
+/// Narrow or non-ANSI terminals get the one-line banner. Elevated sessions get the art in reds with an ADMIN badge.
 /// </summary>
 internal static class StartupBanner
 {
@@ -38,19 +38,23 @@ internal static class StartupBanner
 
     internal static int ArtWidth { get; } = Art.Max(TextWidth.VisibleWidth);
 
+    private static readonly string[] Badge = ["╭─────────╮", "│  ADMIN  │", "╰─────────╯"];
+
     public static void Write(PickleRuntime runtime, Action<int>? sleep = null)
     {
         var terminal = runtime.Terminal;
         var theme = runtime.Themes.Current;
+        var admin = runtime.IsElevated;
         var style = runtime.Config.Current.Shell.BannerStyle?.Trim().ToLowerInvariant();
-        var info = InfoLine(theme, terminal.Width);
+        var info = InfoLine(theme, terminal.Width, admin);
         if (style == "line" || !terminal.SupportsAnsi || terminal.Width < ArtWidth + 2 || terminal.Height < Art.Length + 4)
         {
             terminal.Write(info + "\r\n");
             return;
         }
 
-        var palette = Palette(theme);
+        var palette = Palette(theme, admin);
+        var badge = admin && terminal.Width >= ArtWidth + 3 + Badge[0].Length + 1;
         var frames = style == "art" || palette is null ? 1 : FrameCount;
         sleep ??= Thread.Sleep;
         terminal.Write(Ansi.HideCursor);
@@ -71,6 +75,11 @@ internal static class StartupBanner
                 for (var row = 0; row < Art.Length; row++)
                 {
                     AppendRow(sb, Art[row], row, shine, palette, theme.Ui.Accent);
+                    if (badge && row is >= 1 and <= 3)
+                    {
+                        AppendBadge(sb, Art[row], row - 1, theme);
+                    }
+
                     sb.Append(Ansi.Reset).Append("\r\n");
                 }
 
@@ -94,31 +103,39 @@ internal static class StartupBanner
     }
 
     /// <summary>The art in its resting gradient (no animation) with a left margin, or null when it doesn't fit.</summary>
-    internal static IReadOnlyList<string>? Logo(Theme theme, int width, int indent = 2)
+    internal static IReadOnlyList<string>? Logo(Theme theme, int width, int indent = 2, bool admin = false)
     {
         if (width < ArtWidth + indent + 1)
         {
             return null;
         }
 
-        var palette = Palette(theme);
+        var palette = Palette(theme, admin);
+        var badge = admin && width >= ArtWidth + indent + 3 + Badge[0].Length;
         var margin = new string(' ', indent);
         return [.. Art.Select((text, row) =>
         {
             var sb = new StringBuilder(margin);
             AppendRow(sb, text, row, double.NaN, palette, theme.Ui.Accent);
+            if (badge && row is >= 1 and <= 3)
+            {
+                AppendBadge(sb, text, row - 1, theme);
+            }
+
             return sb.Append(Ansi.Reset).ToString();
         })];
     }
 
     /// <summary>"🥒 Pickle x · PowerShell y · F1 commands · pk help", dropping trailing parts that don't fit.</summary>
-    private static string InfoLine(Theme theme, int width)
+    private static string InfoLine(Theme theme, int width, bool admin)
     {
         var head = "🥒 Pickle " + PickleRuntime.Version;
+        var badge = admin ? "⚡ Administrator" : null;
+        var used = TextWidth.VisibleWidth(head) + (badge is null ? 0 : TextWidth.VisibleWidth(badge) + 5);
         var rest = new StringBuilder();
         foreach (var part in new[] { "PowerShell " + PickleRuntime.PowerShellVersion, "F1 commands", "pk help" })
         {
-            if (TextWidth.VisibleWidth(head) + rest.Length + 5 + part.Length >= width)
+            if (used + rest.Length + 5 + part.Length >= width)
             {
                 break;
             }
@@ -126,7 +143,9 @@ internal static class StartupBanner
             rest.Append("  ·  ").Append(part);
         }
 
-        return Ansi.Colorize(head, theme.Ui.Accent, bold: true) + Ansi.Colorize(rest.ToString(), theme.Ui.Muted);
+        return Ansi.Colorize(head, theme.Ui.Accent, bold: true)
+            + (badge is null ? string.Empty : Ansi.Colorize("  ·  ", theme.Ui.Muted) + Ansi.Colorize(badge, theme.Ui.Error, bold: true))
+            + Ansi.Colorize(rest.ToString(), theme.Ui.Muted);
     }
 
     private static string[] BuildArt()
@@ -140,13 +159,22 @@ internal static class StartupBanner
         return rows;
     }
 
-    /// <summary>Dark and light ends of the gradient, from the theme's greens; null when the theme uses named colors.</summary>
-    private static (PickleColor Dark, PickleColor Light)? Palette(Theme theme)
+    /// <summary>
+    /// Dark and light ends of the gradient, from the theme's greens (reds when elevated); null when the theme uses
+    /// named colors.
+    /// </summary>
+    private static (PickleColor Dark, PickleColor Light)? Palette(Theme theme, bool admin = false)
     {
-        var dark = PickleColor.Parse(theme.Terminal.Green) ?? PickleColor.Parse(theme.Ui.Accent);
-        var light = PickleColor.Parse(theme.Terminal.BrightGreen) ?? PickleColor.Parse(theme.Ui.Success);
+        var dark = PickleColor.Parse(admin ? theme.Terminal.Red : theme.Terminal.Green) ?? PickleColor.Parse(admin ? theme.Ui.Error : theme.Ui.Accent);
+        var light = PickleColor.Parse(admin ? theme.Terminal.BrightRed : theme.Terminal.BrightGreen) ?? PickleColor.Parse(admin ? theme.Ui.Warning : theme.Ui.Success);
         return dark is { IsRgb: true } d && light is { IsRgb: true } l ? (d, l) : null;
     }
+
+    /// <summary>One line of the boxed ADMIN badge, three columns right of the art.</summary>
+    private static void AppendBadge(StringBuilder sb, string artRow, int line, Theme theme) =>
+        sb.Append(Ansi.Reset)
+            .Append(' ', ArtWidth - TextWidth.VisibleWidth(artRow) + 3)
+            .Append(Ansi.Colorize(Badge[line], theme.Ui.Error, bold: true));
 
     private static void AppendRow(StringBuilder sb, string text, int row, double shine, (PickleColor Dark, PickleColor Light)? palette, string accent)
     {

@@ -99,6 +99,9 @@ public sealed class ShellSettings
     /// <summary>"animated" (art with a short shine; any key skips it), "art" or "line".</summary>
     public string BannerStyle { get; set; } = "animated";
 
+    /// <summary>Theme for sessions running as administrator (not saved as <see cref="PickleConfig.Theme"/>); "none" keeps the normal one.</summary>
+    public string AdminTheme { get; set; } = "admin";
+
     public bool FirstRunCompleted { get; set; } = false;
 
     /// <summary>The newest setup whose questions were asked (see <c>pk setup</c>); newer offers are asked once.</summary>

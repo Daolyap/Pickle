@@ -4,23 +4,55 @@ using Pickle.Abstractions;
 
 namespace Pickle.Core.Prompt;
 
-/// <summary>Loads themes from the user's themes folder first, then the embedded built-ins (themes/*.json).</summary>
+/// <summary>
+/// Loads themes from the user's themes folder first, then the embedded built-ins (themes/*.json). An elevated session
+/// shows <c>shell.adminTheme</c> instead of the configured theme, without saving it, until a theme is applied.
+/// </summary>
 public sealed class ThemeProvider : IThemeProvider
 {
     private const string ResourcePrefix = "Pickle.Themes.";
     private readonly PicklePaths _paths;
     private readonly IConfigStore _config;
     private readonly IPickleLogger _log;
+    private readonly bool _elevated;
     private Theme _current;
+    private bool _adminOverride;
 
-    public ThemeProvider(PicklePaths paths, IConfigStore config, IPickleLogger log)
+    public ThemeProvider(PicklePaths paths, IConfigStore config, IPickleLogger log, bool elevated = false)
     {
         _paths = paths;
         _config = config;
         _log = log;
-        _current = Load(config.Current.Theme) ?? Load("pickle") ?? new Theme { Name = "pickle" };
+        _elevated = elevated;
+        var admin = AdminTheme(config.Current);
+        _adminOverride = admin is not null;
+        _current = admin ?? Load(config.Current.Theme) ?? Load("pickle") ?? new Theme { Name = "pickle" };
         config.Changed += (_, e) =>
         {
+            if (_elevated && (e.Path is null || e.Path.Equals("shell.adminTheme", StringComparison.OrdinalIgnoreCase)))
+            {
+                var next = AdminTheme(e.Config);
+                if (next is not null && !string.Equals(next.Name, _current.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    (_current, _adminOverride) = (next, true);
+                    ThemeChanged?.Invoke(this, next);
+                    return;
+                }
+
+                _adminOverride &= next is not null;
+            }
+
+            // Choosing a theme ends the admin override; a plain reload keeps it.
+            if (e.Path is not null && e.Path.Equals("theme", StringComparison.OrdinalIgnoreCase))
+            {
+                _adminOverride = false;
+            }
+
+            if (_adminOverride)
+            {
+                return;
+            }
+
             if (e.Path is null || e.Path.Equals("theme", StringComparison.OrdinalIgnoreCase))
             {
                 var name = e.Config.Theme;
@@ -34,6 +66,9 @@ public sealed class ThemeProvider : IThemeProvider
     }
 
     public Theme Current => _current;
+
+    /// <summary>True while an elevated session shows <c>shell.adminTheme</c> in place of the configured theme.</summary>
+    public bool AdminThemeActive => _adminOverride;
 
     public event EventHandler<Theme>? ThemeChanged;
 
@@ -113,9 +148,15 @@ public sealed class ThemeProvider : IThemeProvider
     {
         var theme = Load(name) ?? throw new ArgumentException($"Theme '{name}' not found. Available: {string.Join(", ", Available)}");
         _current = theme;
+        _adminOverride = false;
         _config.Update(c => c.Theme = theme.Name);
         ThemeChanged?.Invoke(this, theme);
     }
+
+    private Theme? AdminTheme(PickleConfig config) =>
+        _elevated && config.Shell.AdminTheme?.Trim() is { Length: > 0 } name && !name.Equals("none", StringComparison.OrdinalIgnoreCase)
+            ? Load(name)
+            : null;
 
     // The file name is the theme's identity: Apply persists Name to config and Load finds it by file name again.
     private static Theme? Normalize(Theme? theme, string name)

@@ -8,7 +8,7 @@ namespace Pickle.Core.Tests.Prompt;
 
 public class PromptRenderTests
 {
-    public static readonly string[] BuiltInThemes = ["classic", "minimal", "mono", "pickle", "powerline"];
+    public static readonly string[] BuiltInThemes = ["admin", "classic", "minimal", "mono", "pickle", "powerline"];
 
     public static TheoryData<string, int> ThemesAndWidths()
     {

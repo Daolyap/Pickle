@@ -48,6 +48,32 @@ public class StartupTests
     }
 
     [Fact]
+    public void ElevatedSessionsGetTheRedLogoWithAnAdminBadge()
+    {
+        using var t = TestPickle.Create(width: 100, height: 24, configure: c => c.Shell.BannerStyle = "art", start: true, elevated: true);
+
+        StartupBanner.Write(t.Runtime, _ => { });
+
+        var screen = t.Terminal.GetScreenText();
+        Assert.Contains("│  ADMIN  │", screen, StringComparison.Ordinal);
+        Assert.Contains("⚡ Administrator", screen, StringComparison.Ordinal);
+        var red = PickleColor.Parse(t.Runtime.Themes.Current.Terminal.Red)!.Value;
+        Assert.Contains($"«fg=#{red.R:X2}{red.G:X2}{red.B:X2}", t.Terminal.GetStyledScreen(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("admin", t.Runtime.Themes.Current.Name);
+    }
+
+    [Fact]
+    public void NormalSessionsHaveNoBadge()
+    {
+        using var t = TestPickle.Create(width: 100, height: 24, configure: c => c.Shell.BannerStyle = "art", start: true);
+
+        StartupBanner.Write(t.Runtime, _ => { });
+
+        Assert.DoesNotContain("ADMIN", t.Terminal.GetScreenText(), StringComparison.Ordinal);
+        Assert.Equal("pickle", t.Runtime.Themes.Current.Name);
+    }
+
+    [Fact]
     public void FirstRunAsksRelevantOffersOnceAndRemembers()
     {
         using var t = TestPickle.Create(start: true);

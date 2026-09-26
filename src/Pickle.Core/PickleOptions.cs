@@ -54,6 +54,9 @@ public sealed class PickleOptions
     /// <summary>Ask in a dialog whether to delete this user's data (the MSI's uninstall without its own UI).</summary>
     public bool UninstallPrompt { get; set; }
 
+    /// <summary>Treat the session as elevated (or not) regardless of the process token; tests use it.</summary>
+    public bool? Elevated { get; set; }
+
     public List<string> Errors { get; } = [];
 
     public static PickleOptions Parse(IReadOnlyList<string> args)

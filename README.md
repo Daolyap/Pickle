@@ -14,7 +14,7 @@ first-class Windows tooling on top.
 |---|---|
 | ✨ **Editor** | Live syntax highlighting, fish-style autosuggestions, multi-line editing, undo/redo, selection & clipboard |
 | 🔎 **Search** | Fuzzy history (Ctrl+R) scoped to all / this directory / this session; fuzzy completion menu with descriptions |
-| 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, venv, node…), 5 themes, drives `$PSStyle` and your Windows Terminal colors |
+| 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, venv, node…), 6 themes, drives `$PSStyle` and your Windows Terminal colors; a red admin theme and logo when elevated |
 | 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), disks (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), Windows Sandbox (Alt+X), settings (Alt+,) |
 | 🛰️ **Network tools** | Built in, nothing to install: port scan (`pk scan 10.0.0.0/24 -p top100`), host discovery with MACs (`pk sweep`), DNS lookups against any server (`pk dns`), `pk trace`, `pk whois`, TLS certificate checks (`pk cert`), `pk http` timings, `pk subnet`, Wake-on-LAN, `pk ip` |
 | 📥 **Missing tools** | Type `7z …` or `nmap …` without them installed and Pickle offers to install first — just for you, all users or this session only, added to PATH — instead of a broken command (`pk tool install <name>`) |

@@ -202,6 +202,11 @@
           "enum": ["animated", "art", "line"],
           "description": "Startup banner: ASCII art with a short shine animation (any key skips it), static art, or one line."
         },
+        "adminTheme": {
+          "type": "string",
+          "default": "admin",
+          "description": "Theme used while Pickle runs as administrator (red, with an ADMIN badge) without changing 'theme'; \"none\" keeps your normal theme."
+        },
         "firstRunCompleted": {
           "type": "boolean",
           "default": false,

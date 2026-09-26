@@ -55,7 +55,7 @@ public static class WindowsTerminalIntegration
                 () => manager.Locations.TerminalPresent && !manager.IsInstalled && !string.IsNullOrEmpty(executablePath()),
                 () =>
                 {
-                    manager.Install(executablePath()!, Appearance(), context.Themes.Current.Terminal);
+                    manager.Install(executablePath()!, Appearance(), TerminalFonts.Palette(context));
                     return $"Added the '{WindowsTerminalFragment.ProfileName}' profile. It shows up in new Windows Terminal windows (⌄ menu).";
                 })
             { Since = 2 });
@@ -84,7 +84,7 @@ public static class WindowsTerminalIntegration
         {
             try
             {
-                if (manager.Update(Appearance(), context.Themes.Current.Terminal))
+                if (manager.Update(Appearance(), TerminalFonts.Palette(context)))
                 {
                     context.Log.Info("terminal", $"Updated {manager.Locations.FragmentFile}");
                 }
@@ -114,9 +114,16 @@ public static class WindowsTerminalIntegration
     }
 }
 
-/// <summary>Keeps Windows Terminal from warning about fonts that are not installed.</summary>
+/// <summary>What goes into the profile: only installed fonts, and the configured theme's colours.</summary>
 public static class TerminalFonts
 {
+    /// <summary>
+    /// The configured theme's palette. An elevated session shows the admin theme, which must not leak into the
+    /// profile that normal sessions use.
+    /// </summary>
+    public static TerminalPalette Palette(IPickleContext context) =>
+        context.Themes.Load(context.Config.Current.Theme)?.Terminal ?? context.Themes.Current.Terminal;
+
     /// <summary>
     /// The appearance to write into a profile: <see cref="TerminalSettings.FontFace"/> (a comma-separated fallback list
     /// is allowed) keeps only installed faces, and is dropped (Terminal's default font) when none is installed.
@@ -203,7 +210,7 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
         }
 
         var pickle = context.Pickle;
-        m.Install(exe, Appearance(pickle), pickle.Themes.Current.Terminal);
+        m.Install(exe, Appearance(pickle), TerminalFonts.Palette(pickle));
         context.WriteHost($"Installed the Windows Terminal profile '{WindowsTerminalFragment.ProfileName}': {m.Locations.FragmentFile}");
         context.WriteHost("Restart Windows Terminal to pick it up. 'pk terminal default' makes it the default profile.");
         return 0;
@@ -393,7 +400,7 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
 
         if (m.IsInstalled)
         {
-            m.Update(written, pickle.Themes.Current.Terminal);
+            m.Update(written, TerminalFonts.Palette(pickle));
             context.WriteHost("Updated the Windows Terminal profile.");
         }
         else

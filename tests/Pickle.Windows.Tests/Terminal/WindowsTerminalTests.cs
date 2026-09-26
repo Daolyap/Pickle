@@ -396,6 +396,20 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.Equal("Cascadia Code NF", t.Runtime.Config.Current.Terminal.FontFace);
     }
 
+    [Fact]
+    public void AnElevatedSessionKeepsTheConfiguredThemesColoursInTheProfile()
+    {
+        using var t = TestPickle.Create(elevated: true);
+        Assert.Equal("admin", t.Runtime.Themes.Current.Name);
+        var locations = WindowsTerminalLocations.FromLocalAppData(_root);
+        new WindowsTerminalManager(locations).Install(Exe, new TerminalSettings(), new TerminalPalette { Background = "#000000" });
+
+        WindowsTerminalIntegration.Register(t.Runtime, locations, () => Exe);
+
+        using var doc = JsonDocument.Parse(File.ReadAllText(locations.FragmentFile));
+        Assert.Equal(t.Runtime.Themes.Load("pickle")!.Terminal.Background, doc.RootElement.GetProperty("schemes")[0].GetProperty("background").GetString());
+    }
+
     [Theory]
     [InlineData("Cascadia Code NF", "Cascadia Code NF")]
     [InlineData("Nope Mono", null)]

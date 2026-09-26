@@ -170,6 +170,15 @@ public class CompletionEngineTests
         Assert.Equal(["Get-Chilly"], set.Items.Select(i => i.CompletionText));
         await busy;
 
+        // The first PowerShell completion in a runspace is cold (command discovery) and on a loaded Windows CI agent
+        // can outlast the interactive 1.5 s budget; this test is about busy versus idle, not speed.
+        ((CompletionEngine)t.Runtime.Completion).Timeout = TimeSpan.FromSeconds(30);
+        deadline = DateTime.UtcNow.AddSeconds(10);
+        while (t.Runtime.Engine.MainRunspace.RunspaceAvailability != RunspaceAvailability.Available && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+
         var after = await Complete(t, "Get-Chil");
         Assert.Contains(after.Items, i => i.CompletionText == "Get-ChildItem");
     }

@@ -122,8 +122,8 @@ after installing a build.
       (Edge opens), "Test an installer" (Downloads is on the sandbox desktop, read-only, no network) and "Pickle
       inside" (Pickle starts in the sandbox). Edit a preset, F2 saves it under a new name, F3 exports a `.wsb` you can
       double-click, F4 previews the `.wsb` and setup script.
-- [ ] `pk sandbox run "Try apps with winget" --winget Git.Git` installs winget and Git inside the sandbox
-      (`pickle-setup.log` on its desktop shows each step).
+- [ ] `pk sandbox run "Try apps with winget" --winget Git.Git` installs winget and Git inside the sandbox on its first
+      boot, without a restart (`pickle-setup.log` on its desktop shows each step and `winget --version`).
 
 ## Wizards, aliases, plugins, sync
 

@@ -51,6 +51,36 @@ internal static unsafe partial class WindowsSystemNative
         return ((long)(status.TotalPhys - status.AvailPhys), (long)status.TotalPhys);
     }
 
+    /// <summary>Committed memory and the commit limit (physical memory plus page files), as Task Manager shows them.</summary>
+    public static (long Used, long Limit)? Commit()
+    {
+        var status = new MemoryStatusEx { Length = (uint)sizeof(MemoryStatusEx) };
+        if (!GlobalMemoryStatusEx(ref status))
+        {
+            return null;
+        }
+
+        return ((long)(status.TotalPageFile - status.AvailPageFile), (long)status.TotalPageFile);
+    }
+
+    /// <summary>Battery and AC state; null when the call fails, a null percent when there is no battery.</summary>
+    public static (bool OnAc, int? Percent, bool? Charging)? PowerStatus()
+    {
+        if (!GetSystemPowerStatus(out var status))
+        {
+            return null;
+        }
+
+        const byte NoBattery = 128;
+        const byte Unknown = 255;
+        const byte Charging = 8;
+        var hasBattery = status.BatteryFlag != NoBattery && status.BatteryFlag != Unknown;
+        return (
+            status.ACLineStatus == 1,
+            hasBattery && status.BatteryLifePercent <= 100 ? status.BatteryLifePercent : null,
+            hasBattery ? (status.BatteryFlag & Charging) != 0 : null);
+    }
+
     public static string? ImagePath(int processId) => WithProcess(processId, handle =>
     {
         foreach (var capacity in new[] { 1024, 32768 })
@@ -219,6 +249,17 @@ internal static unsafe partial class WindowsSystemNative
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct SystemPowerStatus
+    {
+        public byte ACLineStatus;
+        public byte BatteryFlag;
+        public byte BatteryLifePercent;
+        public byte SystemStatusFlag;
+        public uint BatteryLifeTime;
+        public uint BatteryFullLifeTime;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct UnicodeString
     {
         public ushort Length;
@@ -262,6 +303,10 @@ internal static unsafe partial class WindowsSystemNative
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GlobalMemoryStatusEx(ref MemoryStatusEx buffer);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetSystemPowerStatus(out SystemPowerStatus status);
 
     [LibraryImport("iphlpapi.dll")]
     private static partial uint GetExtendedTcpTable(void* table, ref uint size, [MarshalAs(UnmanagedType.Bool)] bool order, uint addressFamily, int tableClass, uint reserved);

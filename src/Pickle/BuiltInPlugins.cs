@@ -20,5 +20,6 @@ internal static class BuiltInPlugins
         new Tui.Panels.Wizard.WizardPanelPlugin(),
         new Tui.Panels.SystemMonitoring.SystemPanelsPlugin(),
         new Tui.Panels.NetTools.NetToolsPanelPlugin(),
+        new Tui.Panels.Dashboard.DashboardPanelPlugin(),
     ];
 }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 
 namespace Pickle.Windows.Terminal;
 
@@ -16,29 +17,74 @@ public static class WindowsTerminalIntegration
     {
         var manager = locations is null ? null : new WindowsTerminalManager(locations);
         executablePath ??= () => Environment.ProcessPath;
-        context.Commands.Register(new TerminalCommand(manager, executablePath));
+        TerminalSettings Appearance() => TerminalFonts.ForFragment(context.Config.Current.Terminal, context.Services.Get<IFontService>());
+        context.Commands.Register(new TerminalCommand(manager, executablePath, Appearance));
         if (manager is null)
         {
             return;
         }
 
-        context.Services.Get<IFirstRunOffers>()?.Add(new FirstRunOffer(
-            "windows-terminal",
-            "Add a Pickle profile to Windows Terminal?",
-            () => manager.Locations.TerminalPresent && !manager.IsInstalled
-                && !(manager.Locations.MachineFragmentFile is { } machine && File.Exists(machine))
-                && !string.IsNullOrEmpty(executablePath()),
-            () =>
+        bool MachineProfile() => manager.Locations.MachineFragmentFile is { } machine && File.Exists(machine);
+
+        if (context.Services.Get<IFirstRunOffers>() is { } offers)
+        {
+            if (context.Services.Get<IFontService>() is { } fonts)
             {
-                manager.Install(executablePath()!, context.Config.Current.Terminal, context.Themes.Current.Terminal);
-                return $"Added the '{WindowsTerminalFragment.ProfileName}' profile. Open a new Windows Terminal window and pick it from the ⌄ menu; 'pk terminal default' makes it the default.";
-            }));
+                offers.Add(new FirstRunOffer(
+                    "nerd-font",
+                    $"Install the {fonts.RecommendedFont} font so the prompt's icons display (about 5 MB, just for you)?",
+                    () => manager.Locations.TerminalPresent && !fonts.IsInstalled(fonts.RecommendedFont) && fonts.InstalledNerdFonts().Count == 0,
+                    () =>
+                    {
+                        var result = fonts.InstallRecommendedAsync(null, CancellationToken.None).GetAwaiter().GetResult();
+                        if (!result.Success)
+                        {
+                            throw new IOException(result.Message);
+                        }
+
+                        return result.Message + " Restart Windows Terminal to use it.";
+                    })
+                { Since = 2, Progress = $"Downloading {fonts.RecommendedFont}…" });
+            }
+
+            offers.Add(new FirstRunOffer(
+                "windows-terminal",
+                MachineProfile()
+                    ? "Keep Windows Terminal's Pickle profile in step with your theme and font?"
+                    : "Add a Pickle profile to Windows Terminal?",
+                () => manager.Locations.TerminalPresent && !manager.IsInstalled && !string.IsNullOrEmpty(executablePath()),
+                () =>
+                {
+                    manager.Install(executablePath()!, Appearance(), context.Themes.Current.Terminal);
+                    return $"Added the '{WindowsTerminalFragment.ProfileName}' profile. It shows up in new Windows Terminal windows (⌄ menu).";
+                })
+            { Since = 2 });
+
+            offers.Add(new FirstRunOffer(
+                "windows-terminal-default",
+                "Make Pickle the default profile in Windows Terminal (new windows and tabs open Pickle)?",
+                () => manager.Locations.TerminalPresent && (manager.IsInstalled || MachineProfile())
+                    && manager.SettingsStatus() is { Count: > 0 } status && !status.Any(s => s.IsDefault),
+                () =>
+                {
+                    var results = manager.SetDefaultProfile();
+                    if (results.FirstOrDefault(r => r.Error is not null) is { } failed)
+                    {
+                        throw new IOException($"{failed.SettingsFile}: {failed.Error}");
+                    }
+
+                    return "Pickle is now Windows Terminal's default profile" + (results.FirstOrDefault(r => r.BackupFile is not null) is { } r
+                        ? $" (backup: {r.BackupFile})."
+                        : ".");
+                })
+            { Since = 2 });
+        }
 
         void Regenerate()
         {
             try
             {
-                if (manager.Update(context.Config.Current.Terminal, context.Themes.Current.Terminal))
+                if (manager.Update(Appearance(), context.Themes.Current.Terminal))
                 {
                     context.Log.Info("terminal", $"Updated {manager.Locations.FragmentFile}");
                 }
@@ -47,6 +93,14 @@ public static class WindowsTerminalIntegration
             {
                 context.Log.Warn("terminal", "Could not update the Windows Terminal fragment", ex);
             }
+        }
+
+        // Also repairs a profile written before Pickle checked fonts (it named Cascadia Code NF whether or not it was
+        // installed, and Terminal warned about the missing font at every start).
+        Regenerate();
+        if (context.Services.Get<IFontService>() is { } installer)
+        {
+            installer.FontsChanged += (_, _) => Regenerate();
         }
 
         context.Themes.ThemeChanged += (_, _) => Regenerate();
@@ -60,8 +114,46 @@ public static class WindowsTerminalIntegration
     }
 }
 
+/// <summary>Keeps Windows Terminal from warning about fonts that are not installed.</summary>
+public static class TerminalFonts
+{
+    /// <summary>
+    /// The appearance to write into a profile: <see cref="TerminalSettings.FontFace"/> (a comma-separated fallback list
+    /// is allowed) keeps only installed faces, and is dropped (Terminal's default font) when none is installed.
+    /// </summary>
+    public static TerminalSettings ForFragment(TerminalSettings settings, IFontService? fonts) =>
+        ForFragment(settings, fonts is null ? null : fonts.IsInstalled);
+
+    public static TerminalSettings ForFragment(TerminalSettings settings, Func<string, bool>? isInstalled)
+    {
+        if (isInstalled is null || string.IsNullOrWhiteSpace(settings.FontFace))
+        {
+            return settings;
+        }
+
+        var faces = settings.FontFace.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(isInstalled).ToList();
+        var face = faces.Count == 0 ? null : string.Join(", ", faces);
+        if (face == settings.FontFace.Trim())
+        {
+            return settings;
+        }
+
+        return new TerminalSettings
+        {
+            FontFace = face,
+            FontSize = settings.FontSize,
+            Opacity = settings.Opacity,
+            UseAcrylic = settings.UseAcrylic,
+            CursorShape = settings.CursorShape,
+            BackgroundImage = settings.BackgroundImage,
+            BackgroundImageOpacity = settings.BackgroundImageOpacity,
+            Padding = settings.Padding,
+        };
+    }
+}
+
 /// <summary><c>pk terminal install|uninstall|status|set &lt;key&gt; &lt;value&gt;|default</c>.</summary>
-public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string?> executablePath) : IPickleCommand
+public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string?> executablePath, Func<TerminalSettings>? appearance = null) : IPickleCommand
 {
     private static readonly string[] CursorShapes = ["bar", "vintage", "underscore", "filledBox", "emptyBox", "doubleUnderscore"];
 
@@ -111,7 +203,7 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
         }
 
         var pickle = context.Pickle;
-        m.Install(exe, pickle.Config.Current.Terminal, pickle.Themes.Current.Terminal);
+        m.Install(exe, Appearance(pickle), pickle.Themes.Current.Terminal);
         context.WriteHost($"Installed the Windows Terminal profile '{WindowsTerminalFragment.ProfileName}': {m.Locations.FragmentFile}");
         context.WriteHost("Restart Windows Terminal to pick it up. 'pk terminal default' makes it the default profile.");
         return 0;
@@ -138,6 +230,11 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
 
         context.WriteHost("Windows Terminal profile: " + (m.IsInstalled ? Ansi.Colorize("installed", ui.Success) : Ansi.Colorize("not installed", ui.Warning)));
         context.WriteHost(Label("fragment") + m.Locations.FragmentFile);
+        if (m.Locations.MachineFragmentFile is { } machine && File.Exists(machine))
+        {
+            context.WriteHost(Label("all users") + machine + Ansi.Colorize(" (from the installer; a per-user profile overrides it)", ui.Muted));
+        }
+
         if (m.InstalledExecutable is { } exe)
         {
             context.WriteHost(Label("launches") + exe);
@@ -165,7 +262,7 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
         return 0;
     }
 
-    private static int Set(PickleCommandContext context, WindowsTerminalManager m, IReadOnlyList<string> args)
+    private int Set(PickleCommandContext context, WindowsTerminalManager m, IReadOnlyList<string> args)
     {
         if (args.Count < 3)
         {
@@ -238,7 +335,7 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
         return Save(context, m, apply, $"{key} = {shown}");
     }
 
-    private static int SetBackground(PickleCommandContext context, WindowsTerminalManager m, List<string> values, bool clear)
+    private int SetBackground(PickleCommandContext context, WindowsTerminalManager m, List<string> values, bool clear)
     {
         if (clear)
         {
@@ -275,14 +372,20 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
             "background = " + path + (opacity is { } op ? $" (opacity {op.ToString(CultureInfo.InvariantCulture)})" : string.Empty));
     }
 
-    private static int Save(PickleCommandContext context, WindowsTerminalManager m, Action<TerminalSettings> apply, string description)
+    private int Save(PickleCommandContext context, WindowsTerminalManager m, Action<TerminalSettings> apply, string description)
     {
         var pickle = context.Pickle;
         pickle.Config.Update(c => apply(c.Terminal));
         context.WriteHost("terminal." + description);
+        var written = Appearance(pickle);
+        if (!string.IsNullOrWhiteSpace(pickle.Config.Current.Terminal.FontFace) && written.FontFace != pickle.Config.Current.Terminal.FontFace)
+        {
+            context.WriteHost($"Note: '{pickle.Config.Current.Terminal.FontFace}' is not installed, so the profile uses Terminal's default font until it is. 'pk font install' installs {pickle.Services.Get<IFontService>()?.RecommendedFont ?? "a Nerd Font"}.");
+        }
+
         if (m.IsInstalled)
         {
-            m.Update(pickle.Config.Current.Terminal, pickle.Themes.Current.Terminal);
+            m.Update(written, pickle.Themes.Current.Terminal);
             context.WriteHost("Updated the Windows Terminal profile.");
         }
         else
@@ -326,6 +429,8 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
 
         return failed ? 1 : 0;
     }
+
+    private TerminalSettings Appearance(IPickleContext pickle) => appearance?.Invoke() ?? pickle.Config.Current.Terminal;
 
     private int Help(PickleCommandContext context)
     {

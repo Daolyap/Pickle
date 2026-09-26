@@ -28,6 +28,26 @@ public sealed class VersionCommand : IPickleCommand
     }
 }
 
+/// <summary><c>pk setup</c>: the first-run questions again (fonts, Windows Terminal profile, default profile, …).</summary>
+public sealed class SetupCommand(PickleRuntime runtime) : IPickleCommand
+{
+    public string Name => "setup";
+
+    public string Description => "Run the first-start setup again (font, Windows Terminal profile and default)";
+
+    public string Usage => "pk setup";
+
+    public ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
+    {
+        if (runtime.FirstRun.RunAgain(runtime) == 0)
+        {
+            context.WriteHost("Nothing to set up: every setup step is done or does not apply here.");
+        }
+
+        return ValueTask.FromResult(0);
+    }
+}
+
 public sealed record DoctorCheck(string Status, string Check, string Detail)
 {
     public const string Ok = "✔";

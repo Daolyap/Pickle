@@ -60,6 +60,12 @@ public sealed class PromptSettings
     public int DurationThresholdMs { get; set; } = 2000;
 
     public int GitTimeoutMs { get; set; } = 400;
+
+    /// <summary>
+    /// "auto" (Nerd Font icons when the terminal's font has them), "nerd" or "unicode" (no private-use glyphs, so no
+    /// "�" boxes with ordinary fonts; Powerline separators become plain blocks).
+    /// </summary>
+    public string Icons { get; set; } = "auto";
 }
 
 public sealed class TranslationSettings
@@ -94,6 +100,9 @@ public sealed class ShellSettings
     public string BannerStyle { get; set; } = "animated";
 
     public bool FirstRunCompleted { get; set; } = false;
+
+    /// <summary>The newest setup whose questions were asked (see <c>pk setup</c>); newer offers are asked once.</summary>
+    public int SetupVersion { get; set; } = 0;
 }
 
 public sealed class PluginSettings

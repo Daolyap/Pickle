@@ -19,7 +19,7 @@ public sealed class WindowsPlugin : IPicklePlugin
 
     public string DisplayName => "Windows integrations";
 
-    public string Description => "winget, Windows Update, Task Scheduler, elevation broker, Windows Terminal profile.";
+    public string Description => "winget, Windows Update, Task Scheduler, elevation broker, Windows Terminal profile, fonts.";
 
     public void Initialize(IPickleContext context)
     {
@@ -30,6 +30,10 @@ public sealed class WindowsPlugin : IPicklePlugin
         AddIfMissing(services, () => CreateTaskSchedulerService(context));
         AddIfMissing(services, () => CreateToolInstaller(context));
         AddIfMissing<ISandboxService>(services, () => new Sandbox.WindowsSandboxService(context));
+        if (OperatingSystem.IsWindows())
+        {
+            AddIfMissing<IFontService>(services, Fonts.WindowsFontService.ForCurrentSystem);
+        }
 
         context.Commands.Register(new WingetCommand());
         context.Commands.Register(new UpgradeCommand());
@@ -37,6 +41,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         context.Commands.Register(new ScheduleCommand());
         context.Commands.Register(new ToolCommand());
         context.Commands.Register(new SandboxCommand());
+        context.Commands.Register(new FontCommand());
 
         Terminal.WindowsTerminalIntegration.Register(context);
     }

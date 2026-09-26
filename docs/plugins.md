@@ -386,6 +386,7 @@ context.Commands.Register(new OpenMyPanel());   // ExecuteAsync: context.Pickle.
 | Translation | `context.Translations.RegisterRewriter(...)` / `RegisterShim(...)` |
 | Hook | `context.Hooks.Register(HookKind.PostExecute, (e, ct) => …)` (returns an `IDisposable` to unregister) |
 | Service | `context.Services.Add<IMyService>(impl)`; other plugins get it with `Services.Get<IMyService>()` |
+| First-start question | `context.Services.Get<IFirstRunOffers>()?.Add(new FirstRunOffer(id, question, isRelevant, accept) { Since = 2, Progress = "Downloading…" })`: asked once at the first start (and by `pk setup`); `Since` is the setup version that added it, so people who already went through setup are asked it once after upgrading |
 | Settings | read `context.Config.Current`; store your own file under `context.Paths.DataDir` |
 
 Windows-only code: mark it `[SupportedOSPlatform("windows")]` and check `OperatingSystem.IsWindows()` so the plugin

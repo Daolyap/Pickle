@@ -169,6 +169,72 @@ public class PromptEngineTests
         }
     }
 
+    [Fact]
+    public void WithoutANerdFontTheDefaultThemeDropsItsBranchGlyph()
+    {
+        using var t = Create(out var engine);
+        t.Runtime.ServiceRegistry.Add<IGitService>(new FakeGitService { Status = new GitStatus("/r", "feature/v0.5.0", null, 0, 0, false, "abc", [], 0) });
+        var fonts = new FakeFontService { HasNerdFont = false };
+        t.Runtime.ServiceRegistry.Add<IFontService>(fonts);
+
+        var left = Plain(engine.Render(t.Runtime.CreatePromptContext()).Left);
+
+        Assert.False(engine.UseNerdGlyphs);
+        Assert.Contains(" feature/v0.5.0 ❯ ", left, StringComparison.Ordinal);
+        Assert.False(GlyphFallback.HasPrivateUse(left), left);
+    }
+
+    [Theory]
+    [InlineData("auto", true, true)]
+    [InlineData("auto", false, false)]
+    [InlineData("auto", null, false)]
+    [InlineData("nerd", false, true)]
+    [InlineData("unicode", true, false)]
+    public void IconsSettingAndTerminalFontDecideTheGlyphs(string icons, bool? terminalHasNerdFont, bool expected)
+    {
+        using var t = TestPickle.Create(configure: c => c.Prompt.Icons = icons);
+        t.Runtime.ServiceRegistry.Add<IFontService>(new FakeFontService { HasNerdFont = terminalHasNerdFont });
+        var engine = (PromptEngine)t.Runtime.Prompt;
+
+        Assert.Equal(expected, engine.UseNerdGlyphs);
+    }
+
+    [Fact]
+    public void WithoutAFontServiceGlyphsStayOn()
+    {
+        using var t = Create(out var engine);
+        Assert.True(engine.UseNerdGlyphs);
+    }
+
+    [Fact]
+    public void PowerlineThemeFallsBackToPlainBlocks()
+    {
+        using var t = Create(out _);
+        var powerline = t.Runtime.ThemeProvider.Load("powerline")!;
+
+        var plain = GlyphFallback.ForUnicode(powerline);
+
+        Assert.Equal(SeparatorStyle.Plain, plain.Prompt.Separator);
+        Assert.Equal(SeparatorStyle.Powerline, powerline.Prompt.Separator);
+        var styles = plain.Prompt.Left.Concat(plain.Prompt.Right).ToList();
+        Assert.DoesNotContain(styles, s => GlyphFallback.HasPrivateUse(s.Icon) || GlyphFallback.HasPrivateUse(s.Template) || s.Options.Values.Any(GlyphFallback.HasPrivateUse));
+        Assert.Equal("⚡", styles.Single(s => s.Type == "admin").Options["symbol"]);
+        Assert.Equal("✘", styles.Single(s => s.Type == "status").Options["symbol"]);
+        Assert.Null(styles.Single(s => s.Type == "git").Icon);
+        Assert.Same(plain, GlyphFallback.ForUnicode(powerline));
+        var mono = t.Runtime.ThemeProvider.Load("mono")!;
+        Assert.Same(mono, GlyphFallback.ForUnicode(mono));
+    }
+
+    [Theory]
+    [InlineData("\uE0A0 main", "main")]
+    [InlineData(" \uF07C ~/src ", " ~/src ")]
+    [InlineData("a \uE0A0 b", "a b")]
+    [InlineData("\uF0E7 root", "⚡ root")]
+    [InlineData("\U000F10FE kind", "kind")]
+    [InlineData("plain ✓", "plain ✓")]
+    public void ReplacesPrivateUseGlyphs(string input, string expected) => Assert.Equal(expected, GlyphFallback.Replace(input));
+
     private static TestPickle Create(out PromptEngine engine)
     {
         var t = TestPickle.Create(configure: c => c.Prompt.GitTimeoutMs = TimeoutMs);

@@ -73,6 +73,67 @@ public class StartupTests
     }
 
     [Fact]
+    public void FirstStartWelcomesAndUpgradesOnlyAskNewOffers()
+    {
+        using var t = TestPickle.Create(start: true);
+        var offers = t.Runtime.Services.Require<IFirstRunOffers>();
+        offers.Add(new FirstRunOffer("old", "Old question?", () => true, () => "old done"));
+        offers.Add(new FirstRunOffer("new", "New question?", () => true, () => "new done") { Since = FirstRun.SetupVersion, Progress = "Working…" });
+        t.Runtime.Config.Update(c => (c.Shell.FirstRunCompleted, c.Shell.SetupVersion) = (true, 0));
+
+        t.Terminal.Press("Enter");
+        t.Runtime.FirstRun.Run(t.Runtime);
+
+        var screen = t.Terminal.GetScreenText();
+        Assert.DoesNotContain("Welcome to Pickle", screen, StringComparison.Ordinal);
+        Assert.DoesNotContain("Old question?", screen, StringComparison.Ordinal);
+        Assert.Contains("New in this version of Pickle:", screen, StringComparison.Ordinal);
+        Assert.Contains("New question? [Y/n] yes", screen, StringComparison.Ordinal);
+        Assert.Contains("Working…", screen, StringComparison.Ordinal);
+        Assert.Contains("pk setup", screen, StringComparison.Ordinal);
+        Assert.Equal(FirstRun.SetupVersion, t.Runtime.Config.Current.Shell.SetupVersion);
+    }
+
+    [Fact]
+    public void AFreshStartShowsTheWelcomeEvenWithNothingToAsk()
+    {
+        using var t = TestPickle.Create(width: 120, start: true);
+        t.Runtime.FirstRun.Run(t.Runtime);
+
+        var screen = t.Terminal.GetScreenText();
+        Assert.Contains("Welcome to Pickle!", screen, StringComparison.Ordinal);
+        Assert.Contains("pk help", screen, StringComparison.Ordinal);
+        Assert.True(t.Runtime.Config.Current.Shell.FirstRunCompleted);
+    }
+
+    [Fact]
+    public async Task PkSetupAsksEveryRelevantOfferAgain()
+    {
+        using var t = TestPickle.Create(start: true);
+        var accepted = 0;
+        t.Runtime.Services.Require<IFirstRunOffers>().Add(new FirstRunOffer("a", "Do A?", () => true, () => $"did A {++accepted}"));
+        t.Terminal.Press("Enter", "Enter");
+        t.Runtime.FirstRun.Run(t.Runtime);
+        t.Runtime.FirstRun.Run(t.Runtime);
+        Assert.Equal(1, accepted);
+
+        var output = new List<string>();
+        var context = new PickleCommandContext
+        {
+            Pickle = t.Runtime,
+            WriteObject = _ => { },
+            WriteHost = output.Add,
+            WriteError = output.Add,
+            Confirm = (_, d) => d,
+            Cwd = t.Home,
+        };
+        Assert.Equal(0, await t.Runtime.CommandRegistry.Get("setup")!.ExecuteAsync(context, [], CancellationToken.None));
+
+        Assert.Equal(2, accepted);
+        Assert.Empty(output);
+    }
+
+    [Fact]
     public void AFailingOfferIsReportedAndTheRestStillRun()
     {
         using var t = TestPickle.Create(start: true);

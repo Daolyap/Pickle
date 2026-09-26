@@ -45,6 +45,15 @@ public sealed class PickleOptions
     /// <summary>Profile icon path for <see cref="WriteTerminalFragment"/> (environment variables allowed).</summary>
     public string? FragmentIcon { get; set; }
 
+    /// <summary>Executable for <see cref="WriteTerminalFragment"/>, quoted into the commandline (the MSI passes its folder).</summary>
+    public string? FragmentExecutable { get; set; }
+
+    /// <summary>Delete this user's settings, history, data and Windows Terminal profile, then exit (the MSI's uninstall).</summary>
+    public bool RemoveUserData { get; set; }
+
+    /// <summary>Ask in a dialog whether to delete this user's data (the MSI's uninstall without its own UI).</summary>
+    public bool UninstallPrompt { get; set; }
+
     public List<string> Errors { get; } = [];
 
     public static PickleOptions Parse(IReadOnlyList<string> args)
@@ -126,6 +135,15 @@ public sealed class PickleOptions
                 case "--fragment-icon":
                     o.FragmentIcon = Next();
                     break;
+                case "--fragment-executable":
+                    o.FragmentExecutable = Next();
+                    break;
+                case "--remove-user-data":
+                    o.RemoveUserData = true;
+                    break;
+                case "--uninstall-prompt":
+                    o.UninstallPrompt = true;
+                    break;
                 default:
                     if (!a.StartsWith('-') && o.File is null && a.EndsWith(".ps1", StringComparison.OrdinalIgnoreCase))
                     {
@@ -162,6 +180,7 @@ public sealed class PickleOptions
           --log-level <level>            trace|debug|info|warning|error (logs in the data dir)
           --install-terminal-profile     Add Pickle to Windows Terminal and exit
           --uninstall-terminal-profile   Remove Pickle from Windows Terminal and exit
+          --remove-user-data             Delete your Pickle settings, history, data and Terminal profile, then exit
           -v, --version                  Print version
           -h, --help                     Show this help
 

@@ -6,15 +6,33 @@ after installing a build.
 
 ## Install
 
-- [ ] **MSI**: `pickle-<ver>-win-x64.msi` installs without errors; `pickle --version` works in a *new* terminal
-      (PATH updated); Start menu has "Pickle" with the pickle icon; Apps & features shows the pickle icon.
+- [ ] **MSI**: `pickle-<ver>-win-x64.msi` shows Welcome → feature tree (Add to PATH, Windows Terminal profile,
+      Cascadia Code Nerd Font, Start menu on; Desktop shortcut off) with **Browse** for the folder → Ready → Finish with
+      a ticked "Start Pickle now". Installing to a custom folder works: PATH, shortcuts and the Terminal profile's
+      commandline and icon all point there. `pickle --version` works in a *new* terminal; Apps shows the pickle icon.
+- [ ] After the MSI, Windows Terminal starts **without** "Unable to find the following fonts"; with the font feature
+      the Pickle profile uses Cascadia Code NF (prompt icons draw), without it Terminal's default font and no warning.
+      A Cascadia Code NF installed beforehand is left alone and survives uninstalling Pickle.
+- [ ] Upgrading from 0.2.x keeps the install folder; the next Pickle start asks the new setup questions once
+      ("New in this version of Pickle:").
 - [ ] `pickle.exe` shows the pickle icon in Explorer and on the taskbar; `pk help` starts with the pickle logo.
-- [ ] **Portable**: `pickle.exe` runs from any folder; the first interactive start asks "Add a Pickle profile to Windows
-      Terminal? [Y/n]" (only if Terminal is installed and the MSI's profile isn't); Y adds it, and it isn't asked again.
+- [ ] **First start** (fresh profile, e.g. `PICKLE_HOME=$env:TEMP\p1`): a "Welcome to Pickle!" page, then — where they
+      apply — "Install the Cascadia Code NF font…", "Add a Pickle profile to Windows Terminal?" (or, over the MSI's
+      profile, "Keep Windows Terminal's Pickle profile in step…") and "Make Pickle the default profile…". Y to all:
+      the font is in `%LOCALAPPDATA%\Microsoft\Windows\Fonts`, and a new Terminal window opens Pickle with it.
+      `pk setup` asks again; `pk font` shows the terminal font and whether it has Nerd glyphs.
+- [ ] Without a Nerd Font the prompt shows no "�" (git branch without icon; `pk theme set powerline` draws plain blocks);
+      `pk config set prompt.icons nerd` forces the icons back.
+- [ ] **Portable**: `pickle.exe` runs from any folder and gets the same first-start questions.
 - [ ] Startup banner: pickle art with a short shine; pressing a key during it skips the animation and the key is typed.
       `pk config set shell.bannerStyle line` (or `art`) changes it.
-- [ ] **winget / Scoop** (after publishing): `winget install Daolyap.Pickle`, `scoop install pickle/pickle`.
-- [ ] Uninstall (Apps & features) removes the exe, PATH entry, Start menu item and the Terminal fragment.
+- [ ] **winget / Scoop** (after publishing): `winget install Daolyap.Pickle`, `scoop install pickle/pickle`;
+      `scoop uninstall -p pickle` also deletes `%APPDATA%\Pickle` and `%LOCALAPPDATA%\Pickle`.
+- [ ] **Uninstall** from Settings → Apps → Uninstall asks "Also delete your Pickle settings, history…?" (No keeps
+      them); Settings → Apps → Modify → Remove shows the "Remove Pickle" page with the same choice as a checkbox.
+      Either way the exe, PATH entry, shortcuts, the all-users and your per-user Terminal profile go, and if Pickle was
+      Terminal's default profile the previous default comes back. `msiexec /x <msi> /qn REMOVEUSERDATA=1` deletes the
+      data without asking.
 
 ## Windows Terminal
 

@@ -214,9 +214,17 @@ public sealed class TerminalCommand(WindowsTerminalManager? manager, Func<string
         context.WriteHost(m.Uninstall()
             ? $"Removed the Windows Terminal profile ({m.Locations.FragmentFile})."
             : "The Windows Terminal profile is not installed.");
-        if (m.SettingsStatus().Any(s => s.IsDefault))
+        if (m.Locations.MachineFragmentFile is { } machine && File.Exists(machine))
         {
-            context.WriteHost("Windows Terminal still names Pickle as its default profile; it will fall back to its first profile.");
+            context.WriteHost("The installer's all-users Pickle profile stays; uninstall Pickle to remove it.");
+            return 0;
+        }
+
+        foreach (var result in m.RestoreDefaultProfile())
+        {
+            context.WriteHost(result.Error is null
+                ? $"Windows Terminal's default profile no longer points at Pickle ({result.SettingsFile})."
+                : $"Could not change the default profile in {result.SettingsFile}: {result.Error}");
         }
 
         return 0;

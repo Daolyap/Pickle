@@ -70,7 +70,7 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.Equal("\"[INSTALLFOLDER]pickle.exe\" --nologo", doc.RootElement.GetProperty("profiles")[0].GetProperty("commandline").GetString());
 
         var path = Path.Combine(_root, "msi", "Fragments", "Pickle", "pickle.json");
-        Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "\"C:\\Program Files\\Pickle\\pickle.exe\""));
+        Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "\"C:\\Program Files\\Pickle\\pickle.exe\"", fontInstalled: _ => true));
         Assert.Equal(WindowsTerminalProfile.BuildFragment("\"C:\\Program Files\\Pickle\\pickle.exe\""), File.ReadAllText(path));
         Assert.NotEqual(0xEF, File.ReadAllBytes(path)[0]);
         Assert.Equal(2, WindowsTerminalProfile.WriteFragment(path, " "));
@@ -78,6 +78,46 @@ public sealed class WindowsTerminalTests : IDisposable
         Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "pickle.exe", icon: "%ProgramFiles%\\Pickle\\pickle.png"));
         using var withIcon = JsonDocument.Parse(File.ReadAllText(path));
         Assert.Equal("%ProgramFiles%\\Pickle\\pickle.png", withIcon.RootElement.GetProperty("profiles")[0].GetProperty("icon").GetString());
+    }
+
+    [Fact]
+    public void InstallerFragmentLeavesOutAMissingFont()
+    {
+        var path = Path.Combine(_root, "msi", "pickle.json");
+
+        Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "pickle.exe", fontInstalled: _ => false));
+        Assert.DoesNotContain("\"face\"", File.ReadAllText(path), StringComparison.Ordinal);
+
+        Assert.Equal(0, WindowsTerminalProfile.WriteFragment(path, "pickle.exe", fontInstalled: f => f == "Cascadia Code NF"));
+        Assert.Contains("\"face\": \"Cascadia Code NF\"", File.ReadAllText(path), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RestoringTheDefaultProfileUsesPicklesBackup()
+    {
+        var locations = WindowsTerminalLocations.FromLocalAppData(_root);
+        var settings = locations.SettingsFiles[0];
+        Directory.CreateDirectory(Path.GetDirectoryName(settings)!);
+        const string Mine = "{574e775e-4f2a-5b96-ac1e-a2962a402336}";
+        File.WriteAllText(settings, $"{{\n    // keep me\n    \"defaultProfile\": \"{Mine}\"\n}}\n");
+        var manager = new WindowsTerminalManager(locations, () => new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.Zero));
+        manager.Install(Exe, new TerminalSettings(), new TerminalPalette());
+        Assert.True(Assert.Single(manager.SetDefaultProfile()).Changed);
+
+        Assert.True(Assert.Single(manager.RestoreDefaultProfile()).Changed);
+
+        Assert.Contains($"\"defaultProfile\": \"{Mine}\"", File.ReadAllText(settings), StringComparison.Ordinal);
+        Assert.Contains("// keep me", File.ReadAllText(settings), StringComparison.Ordinal);
+        Assert.Empty(manager.RestoreDefaultProfile());
+
+        foreach (var backup in Directory.GetFiles(Path.GetDirectoryName(settings)!, "*.bak"))
+        {
+            File.Delete(backup);
+        }
+
+        File.WriteAllText(settings, $"{{ \"defaultProfile\": \"{WindowsTerminalFragment.ProfileGuidString}\" }}");
+        manager.RestoreDefaultProfile();
+        Assert.Contains(WindowsTerminalManager.WindowsPowerShellProfileGuid, File.ReadAllText(settings), StringComparison.Ordinal);
     }
 
     [Fact]

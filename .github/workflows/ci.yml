@@ -95,12 +95,18 @@ jobs:
           & $exe -c 'Get-Date -Format yyyy; (Get-Command Get-FileHash).Source'
           if ($LASTEXITCODE -ne 0) { throw "published pickle.exe failed" }
 
+      - name: Cache the Cascadia Code release
+        uses: actions/cache@v4
+        with:
+          path: artifacts/font-cache
+          key: cascadia-code-2407.24
+
       - name: Build MSI
         shell: pwsh
         run: |
           ./packaging/wix/build-msi.ps1 -Rid ${{ matrix.rid }} -PublishDir artifacts/publish/${{ matrix.rid }} -Output artifacts/msi
           $fragment = Get-Content artifacts/msi-work/pickle.json -Raw | ConvertFrom-Json
-          if (-not $fragment.schemes) { throw "the MSI got the fallback Windows Terminal fragment" }
+          if (-not $fragment.schemes) { throw "pickle --write-terminal-fragment (run by the MSI at install time) wrote no colour scheme" }
 
       - uses: actions/upload-artifact@v4
         with:

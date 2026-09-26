@@ -47,11 +47,21 @@ if (options.UninstallTerminalProfile)
 
 if (options.WriteTerminalFragment is not null)
 {
-    return Pickle.Windows.Terminal.WindowsTerminalProfile.WriteFragment(
-        options.WriteTerminalFragment,
-        options.FragmentCommandLine ?? Environment.ProcessPath ?? "pickle.exe",
-        Console.Error,
-        options.FragmentIcon);
+    var commandline = options.FragmentCommandLine
+        ?? Pickle.Windows.Terminal.WindowsTerminalFragment.QuoteExecutable(options.FragmentExecutable ?? Environment.ProcessPath ?? "pickle.exe");
+    return Pickle.Windows.Terminal.WindowsTerminalProfile.WriteFragment(options.WriteTerminalFragment, commandline, Console.Error, options.FragmentIcon);
+}
+
+if (options.RemoveUserData)
+{
+    return Pickle.Windows.Uninstall.UserDataRemover.Remove(PicklePaths.Resolve(), Pickle.Windows.Terminal.WindowsTerminalLocations.ForCurrentUser(), Console.Out);
+}
+
+if (options.UninstallPrompt)
+{
+    return OperatingSystem.IsWindows()
+        ? Pickle.Windows.Uninstall.UninstallPrompt.Run(PicklePaths.Resolve(), Pickle.Windows.Terminal.WindowsTerminalLocations.ForCurrentUser(), Console.Out)
+        : 1;
 }
 
 return PickleApp.Run(options, BuiltInPlugins.Create());

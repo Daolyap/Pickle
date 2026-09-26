@@ -61,6 +61,12 @@ jobs:
             chmod +x "out/$rid/pickle"
             tar -C "out/$rid" -czf "dist/pickle-$v-$rid.tar.gz" pickle
           }
+      - name: Cache the Cascadia Code release
+        if: startsWith(matrix.rid, 'win-')
+        uses: actions/cache@v4
+        with:
+          path: artifacts/font-cache
+          key: cascadia-code-2407.24
       - name: Build MSI
         if: startsWith(matrix.rid, 'win-')
         shell: pwsh

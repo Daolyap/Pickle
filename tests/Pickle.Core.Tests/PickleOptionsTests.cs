@@ -28,6 +28,15 @@ public class PickleOptionsTests
     }
 
     [Fact]
+    public void InstallerOptions()
+    {
+        var o = PickleOptions.Parse(["--write-terminal-fragment", "out.json", "--fragment-executable", @"D:\Tools\Pickle\pickle.exe"]);
+        Assert.Equal(@"D:\Tools\Pickle\pickle.exe", o.FragmentExecutable);
+        Assert.True(PickleOptions.Parse(["--remove-user-data"]).RemoveUserData);
+        Assert.True(PickleOptions.Parse(["--uninstall-prompt"]).UninstallPrompt);
+    }
+
+    [Fact]
     public void ElevatedHelperTakesPipeAndNonce()
     {
         var o = PickleOptions.Parse(["--elevated-helper", "pipe-1", "abc"]);

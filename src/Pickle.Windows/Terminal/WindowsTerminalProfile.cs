@@ -53,9 +53,17 @@ public static class WindowsTerminalProfile
 
         try
         {
-            output.WriteLine(new WindowsTerminalManager(locations).Uninstall()
+            var manager = new WindowsTerminalManager(locations);
+            output.WriteLine(manager.Uninstall()
                 ? $"Removed the Windows Terminal profile ({locations.FragmentFile})."
                 : "The Windows Terminal profile is not installed.");
+            foreach (var result in manager.RestoreDefaultProfile())
+            {
+                output.WriteLine(result.Error is null
+                    ? $"Windows Terminal's default profile no longer points at Pickle ({result.SettingsFile})."
+                    : $"Could not change the default profile in {result.SettingsFile}: {result.Error}");
+            }
+
             return 0;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -77,8 +85,11 @@ public static class WindowsTerminalProfile
             palette ?? LoadEmbeddedTheme("pickle")?.Terminal ?? new TerminalPalette(),
             icon);
 
-    /// <summary>Writes <see cref="BuildFragment"/> to <paramref name="path"/> (UTF-8, no BOM), creating its directory. Returns an exit code.</summary>
-    public static int WriteFragment(string path, string commandline, TextWriter? error = null, string? icon = null)
+    /// <summary>
+    /// Writes <see cref="BuildFragment"/> to <paramref name="path"/> (UTF-8, no BOM), creating its directory. Returns an
+    /// exit code. On Windows the font is only named when installed (the MSI runs this after installing its fonts).
+    /// </summary>
+    public static int WriteFragment(string path, string commandline, TextWriter? error = null, string? icon = null, Func<string, bool>? fontInstalled = null)
     {
         if (string.IsNullOrWhiteSpace(commandline))
         {
@@ -94,7 +105,14 @@ public static class WindowsTerminalProfile
                 Directory.CreateDirectory(dir);
             }
 
-            File.WriteAllText(full, BuildFragment(commandline, icon: icon), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            if (fontInstalled is null && OperatingSystem.IsWindows())
+            {
+                var fonts = Fonts.InstalledFonts.Catalog();
+                fontInstalled = face => Fonts.FontCatalog.TerminalBundled.Contains(face, StringComparer.OrdinalIgnoreCase) || fonts.Contains(face);
+            }
+
+            var settings = TerminalFonts.ForFragment(new TerminalSettings(), fontInstalled);
+            File.WriteAllText(full, BuildFragment(commandline, settings, icon: icon), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return 0;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)

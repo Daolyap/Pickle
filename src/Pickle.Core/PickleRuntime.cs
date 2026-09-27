@@ -41,6 +41,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         HookRegistry = new HookRegistry(log);
         Engine = new ShellEngine(this);
         Repl = new Repl(this);
+        TabProgress = new TabProgress(this);
 
         History = new JsonlHistoryStore(this);
         var aliases = new AliasManager(this);
@@ -103,6 +104,9 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public HookRegistry HookRegistry { get; }
     public PickleServices ServiceRegistry { get; } = new();
     public FirstRun FirstRun { get; } = new();
+
+    /// <summary>Terminal tab/taskbar progress for interactive commands.</summary>
+    public TabProgress TabProgress { get; }
 
     // Components
     public ShellEngine Engine { get; }

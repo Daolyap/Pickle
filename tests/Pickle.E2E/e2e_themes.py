@@ -33,3 +33,17 @@ def test_animation_off_keeps_the_prompt_still(p):
         time.sleep(0.5)
         patterns = _prompt_colors(s, samples=6)
         assert len(patterns) == 1, f"prompt changed {len(patterns)} times with animation off"
+
+
+def test_tab_progress_reaches_the_terminal_without_touching_the_screen(p):
+    with PickleSession(p, config={"terminal": {"tabProgress": "on"}}) as s:
+        s.wait_for_prompt()
+        s.run("Start-Sleep -Milliseconds 300; Write-Output ('tab' + 'done')", "tabdone")
+        s.run("Get-Item -LiteralPath /definitely/missing", "Cannot find path")
+        time.sleep(0.5)
+        with s.lock:
+            raw = bytes(s.raw)
+        assert b"\x1b]9;4;3;0\x07" in raw, "no spinner sequence"
+        assert b"\x1b]9;4;0;0\x07" in raw, "no clear sequence"
+        assert b"\x1b]9;4;2;100\x07" in raw, "no error sequence"
+        assert "9;4" not in s.text(), "the sequence leaked onto the screen"

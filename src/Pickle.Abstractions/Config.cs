@@ -156,6 +156,15 @@ public sealed class TerminalSettings
     public string? BackgroundImage { get; set; }
     public double? BackgroundImageOpacity { get; set; }
     public string? Padding { get; set; } = "8";
+
+    /// <summary>
+    /// Progress ring on the terminal tab and taskbar (OSC 9;4) while a command runs, with Write-Progress percentages and
+    /// red after a failure: "auto" (Windows Terminal and ConEmu), "on" or "off".
+    /// </summary>
+    public string TabProgress { get; set; } = "auto";
+
+    /// <summary>Ring the bell when a command that ran at least this many seconds finishes (0: never). Windows Terminal flashes its taskbar button.</summary>
+    public int BellAfterSeconds { get; set; } = 0;
 }
 
 public sealed class WingetSettings

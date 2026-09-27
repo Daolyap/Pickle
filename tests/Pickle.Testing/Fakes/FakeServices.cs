@@ -180,22 +180,47 @@ public sealed class FakeWindowsUpdateService : IWindowsUpdateService
 
 public sealed class FakeTaskSchedulerService : ITaskSchedulerService
 {
+    // Panels call the service from several background tasks at once.
+    private readonly Lock _gate = new();
+
     public bool IsSupported { get; set; } = true;
     public List<ScheduledTaskInfo> Tasks { get; } = [];
     public List<string> Calls { get; } = [];
 
-    public Task<IReadOnlyList<string>> GetFoldersAsync(string root = @"\", CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<string>>([.. Tasks.Select(t => t.Folder).Distinct()]);
-    public Task<IReadOnlyList<ScheduledTaskInfo>> GetTasksAsync(string folder = @"\", bool recurse = false, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<ScheduledTaskInfo>>([.. Tasks.Where(t => recurse ? t.Folder.StartsWith(folder, StringComparison.OrdinalIgnoreCase) : string.Equals(t.Folder, folder, StringComparison.OrdinalIgnoreCase))]);
-    public Task<ScheduledTaskInfo?> GetTaskAsync(string path, CancellationToken cancellationToken = default) => Task.FromResult(Tasks.FirstOrDefault(t => t.Path == path));
+    public Task<IReadOnlyList<string>> GetFoldersAsync(string root = @"\", CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult<IReadOnlyList<string>>([.. Tasks.Select(t => t.Folder).Distinct()]);
+        }
+    }
+
+    public Task<IReadOnlyList<ScheduledTaskInfo>> GetTasksAsync(string folder = @"\", bool recurse = false, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult<IReadOnlyList<ScheduledTaskInfo>>([.. Tasks.Where(t => recurse ? t.Folder.StartsWith(folder, StringComparison.OrdinalIgnoreCase) : string.Equals(t.Folder, folder, StringComparison.OrdinalIgnoreCase))]);
+        }
+    }
+
+    public Task<ScheduledTaskInfo?> GetTaskAsync(string path, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(Tasks.FirstOrDefault(t => t.Path == path));
+        }
+    }
+
     public Task RunAsync(string path, CancellationToken cancellationToken = default) => Record("run " + path);
     public Task StopAsync(string path, CancellationToken cancellationToken = default) => Record("stop " + path);
     public Task SetEnabledAsync(string path, bool enabled, CancellationToken cancellationToken = default) => Record((enabled ? "enable " : "disable ") + path);
     public Task DeleteAsync(string path, CancellationToken cancellationToken = default)
     {
-        Tasks.RemoveAll(t => t.Path == path);
-        return Record("delete " + path);
+        lock (_gate)
+        {
+            Tasks.RemoveAll(t => t.Path == path);
+            return Record("delete " + path);
+        }
     }
 
     public Task<IReadOnlyList<ScheduledTaskRun>> GetHistoryAsync(string path, int max = 50, CancellationToken cancellationToken = default) =>
@@ -206,17 +231,34 @@ public sealed class FakeTaskSchedulerService : ITaskSchedulerService
         var path = definition.Folder.TrimEnd('\\') + @"\" + definition.Name;
         var info = new ScheduledTaskInfo(path, definition.Name, definition.Folder, true, "Ready", null, definition.Trigger.Start, null,
             definition.Description, Environment.UserName, [definition.Trigger.Kind.ToString()], [definition.Action.Program + " " + definition.Action.Arguments], definition.RunElevated);
-        Tasks.RemoveAll(t => t.Path == path);
-        Tasks.Add(info);
-        Calls.Add("create " + path);
+        lock (_gate)
+        {
+            Tasks.RemoveAll(t => t.Path == path);
+            Tasks.Add(info);
+            Calls.Add("create " + path);
+        }
+
         return Task.FromResult(info);
     }
 
     public TaskTriggerSpec ParseSchedule(string text) => new(TaskTriggerKind.Daily, DateTimeOffset.Now);
 
+    /// <summary>Whether a call was recorded (safe while panel background work is still running).</summary>
+    public bool Called(string call)
+    {
+        lock (_gate)
+        {
+            return Calls.Contains(call);
+        }
+    }
+
     private Task Record(string call)
     {
-        Calls.Add(call);
+        lock (_gate)
+        {
+            Calls.Add(call);
+        }
+
         return Task.CompletedTask;
     }
 }

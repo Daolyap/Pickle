@@ -30,6 +30,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         AddIfMissing(services, () => CreateTaskSchedulerService(context));
         AddIfMissing(services, () => CreateToolInstaller(context));
         AddIfMissing<ISandboxService>(services, () => new Sandbox.WindowsSandboxService(context));
+        AddIfMissing<ITerminalSchemeSource>(services, Terminal.WindowsTerminalSchemes.ForCurrentUser);
         if (OperatingSystem.IsWindows())
         {
             AddIfMissing<IFontService>(services, Fonts.WindowsFontService.ForCurrentSystem);

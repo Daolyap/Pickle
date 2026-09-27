@@ -75,7 +75,8 @@ graph LR
 | Syntax highlighting | `Core/Syntax/` (PowerShell tokenizer → theme styles, `CommandCache`) |
 | Autosuggest, fuzzy history, Ctrl+R | `Core/History/`, `Abstractions/Fuzzy.cs` (shared `FuzzyMatcher`) |
 | Tab completion + menu | `Core/Completion/` |
-| Prompt, themes, `$PSStyle` | `Core/Prompt/` (segments in `Segments/`), `themes/*.json` |
+| Prompt, themes, `$PSStyle` | `Core/Prompt/` (segments in `Segments/`), `themes/*.json`; animation frames in `ThemeAnimator` (redrawn from the line editor's idle loop), light/dark in `SystemAppearance`, `pk theme import` in `ThemeImport` + `Abstractions/Services/TerminalSchemes.cs` (Windows Terminal schemes: `Windows/Terminal/WindowsTerminalSchemes.cs`). Guide: [themes.md](themes.md) |
+| Tab/taskbar progress, long-command bell | `Core/Hosting/TabProgress.cs` (OSC 9;4 from the REPL and `ProgressPane`) |
 | Aliases | `Core/Aliases/` (`aliases.json` → PowerShell functions), `Cmdlets/AliasCmdlets.cs` |
 | Linux syntax | `Core/Translation/` (rewriters + `Modules/Pickle.Translate` shims + command-not-found) |
 | Config, schema, `pk config` | `Core/Config/`, `Abstractions/Config.cs`, `Config/Schemas/config.schema.json` |

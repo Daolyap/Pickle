@@ -14,7 +14,8 @@ first-class Windows tooling on top.
 |---|---|
 | ✨ **Editor** | Live syntax highlighting, fish-style autosuggestions, multi-line editing, undo/redo, selection & clipboard |
 | 🔎 **Search** | Fuzzy history (Ctrl+R) scoped to all / this directory / this session; fuzzy completion menu with descriptions |
-| 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, venv, node…), 6 themes, drives `$PSStyle` and your Windows Terminal colors; a red admin theme and logo when elevated |
+| 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, venv, node…) and 18 themes — dracula, nord, gruvbox, catppuccin, tokyo-night, rose-pine, a light one, and **animated** aurora, synthwave, matrix, ember and prism; follows the system's light/dark mode (`pk theme auto`), imports any Windows Terminal color scheme (`pk theme import`), drives `$PSStyle` and your Windows Terminal colors; a red admin theme and logo when elevated ([themes guide](docs/themes.md)) |
+| 📈 **Tab progress** | Windows Terminal's tab and taskbar button show a progress ring while a command runs, the real percentage for `Write-Progress`, and red when it failed; optional bell after long commands (`terminal.bellAfterSeconds`) |
 | 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), system dashboard (Alt+I), disks with partitions (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), Windows Sandbox (Alt+X), settings (Alt+,) |
 | 🛰️ **Network tools** | Built in, nothing to install: port scan (`pk scan 10.0.0.0/24 -p top100`), host discovery with MACs (`pk sweep`), DNS lookups against any server (`pk dns`), `pk trace`, `pk whois`, TLS certificate checks (`pk cert`), `pk http` timings, `pk subnet`, Wake-on-LAN, `pk ip` |
 | 📥 **Missing tools** | Type `7z …` or `nmap …` without them installed and Pickle offers to install first — just for you, all users or this session only, added to PATH — instead of a broken command (`pk tool install <name>`, ~100 known tools from zoxide to Sysinternals: `pk tool list`) |
@@ -49,6 +50,9 @@ picked up too, and `pk config set shell.loadPwshProfile true` loads your existin
 ```powershell
 pk help                      # all Pickle commands
 pk theme set powerline       # switch theme (also updates the Windows Terminal color scheme)
+pk theme set aurora          # an animated theme
+pk theme auto                # light theme in light mode, dark theme in dark mode
+pk theme import "One Half Dark"   # any Windows Terminal color scheme as a Pickle theme
 pk alias add gco 'git checkout {branch}' --kind param
 pk winget search ripgrep     # or press Alt+W
 pk upgrade                   # upgrade all apps + Windows updates

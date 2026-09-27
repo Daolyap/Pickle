@@ -42,6 +42,21 @@ after installing a build.
 - [ ] `pk theme set powerline` changes the prompt *and* the Terminal color scheme.
 - [ ] `pk terminal default` makes Pickle the default profile (a `settings.json` backup is created).
 
+## Themes and tab progress
+
+- [ ] `pk theme set aurora`, then `synthwave`, `matrix`, `ember`, `prism`: each prompt keeps moving while idle, typing
+      and completion are unaffected, and Task Manager shows Pickle's CPU near idle.
+- [ ] `pk config set prompt.animation off` stops the motion at the next prompt; `auto` brings it back.
+- [ ] `pk theme auto`, then switch Windows to light mode (Settings → Personalization → Colors → app mode): the next
+      prompt uses `solarized-light`; back to dark gives `pickle`. `pk theme list` shows what auto sees.
+- [ ] `pk theme import --list` shows your Windows Terminal schemes plus Campbell, One Half Dark…;
+      `pk theme import "One Half Dark"` then `pk theme set one-half-dark` looks right.
+- [ ] In Windows Terminal, `Start-Sleep 5` shows a progress ring on the tab and taskbar button;
+      `1..100 | % { Write-Progress -Activity x -PercentComplete $_; Start-Sleep -Milliseconds 30 }` fills it;
+      `Get-Item nope` turns the tab red until the next command.
+- [ ] `pk config set terminal.bellAfterSeconds 3`, run `Start-Sleep 5` and switch to another window: the taskbar
+      button flashes when it finishes.
+
 ## Editing experience
 
 - [ ] Typing shows syntax highlighting; an unknown command is red, but `apt install jq` / `sudo …` / `export X=1` are not.

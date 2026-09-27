@@ -106,6 +106,50 @@ public sealed class PromptTheme
 
     /// <summary>Template for the transient prompt left in scrollback after a command is accepted. Tokens: {promptChar}, {cwd}, {time}.</summary>
     public string TransientTemplate { get; set; } = "{promptChar} ";
+
+    /// <summary>Moving colors and prompt characters while Pickle waits for input; null for a static prompt.</summary>
+    public PromptAnimation? Animation { get; set; }
+}
+
+/// <summary>
+/// Animates the prompt while it waits for input. Effects recolor each segment (its background when it has one, else
+/// its text) and the prompt character, offset by <see cref="Spread"/> per segment so the motion travels along the prompt:
+/// <c>wave</c> scrolls <see cref="Colors"/> as a gradient, <c>rainbow</c> rotates each color's hue, <c>pulse</c> breathes
+/// toward <see cref="Colors"/>[0] (or a lighter shade), <c>shimmer</c> sweeps a bright band across. <see cref="PromptChars"/>
+/// cycles the prompt character (e.g. a spinner) with any effect, including <c>none</c>. The status and admin segments keep
+/// their colors, as does any segment with the option <c>"animate": "false"</c>.
+/// </summary>
+public sealed class PromptAnimation
+{
+    /// <summary>none, wave, rainbow, pulse or shimmer.</summary>
+    public string Effect { get; set; } = "wave";
+
+    /// <summary>Gradient stops for wave (cycled) and the target color for pulse; empty uses the segments' own colors.</summary>
+    public List<string> Colors { get; set; } = [];
+
+    /// <summary>Milliseconds per frame (40–2000).</summary>
+    public int FrameMs { get; set; } = 120;
+
+    /// <summary>Milliseconds for one full cycle of the effect.</summary>
+    public int PeriodMs { get; set; } = 4000;
+
+    /// <summary>Phase offset between neighbouring segments, as a fraction of the cycle.</summary>
+    public double Spread { get; set; } = 0.15;
+
+    /// <summary>How far pulse and shimmer move a color toward their target (0–1).</summary>
+    public double Intensity { get; set; } = 0.6;
+
+    /// <summary>"auto" (backgrounds of block segments, text of the others), "background" or "foreground".</summary>
+    public string Target { get; set; } = "auto";
+
+    /// <summary>Whether the prompt character's color takes part (its error color never does).</summary>
+    public bool PromptChar { get; set; } = true;
+
+    /// <summary>Prompt characters shown in turn instead of <see cref="PromptTheme.PromptChar"/>; padded to the widest.</summary>
+    public List<string> PromptChars { get; set; } = [];
+
+    /// <summary>Frames each of <see cref="PromptChars"/> stays on screen.</summary>
+    public int PromptCharFrames { get; set; } = 1;
 }
 
 public sealed class SegmentStyle

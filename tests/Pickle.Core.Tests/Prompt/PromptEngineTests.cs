@@ -142,6 +142,42 @@ public class PromptEngineTests
     }
 
     [Fact]
+    public void RerenderKeepsTheFirstPromptWithoutTheBlankLine()
+    {
+        using var t = TestPickle.Create(configure: c => c.Prompt.NewlineBeforePrompt = true);
+        var engine = (PromptEngine)t.Runtime.Prompt;
+        engine.Initialize();
+        Assert.False(engine.Render(Context()).Left.StartsWith('\n'));
+        Assert.False(engine.Rerender(Context()).Left.StartsWith('\n'));
+        Assert.StartsWith("\n", engine.Render(Context()).Left, StringComparison.Ordinal);
+        Assert.StartsWith("\n", engine.Rerender(Context()).Left, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("on", true)]
+    [InlineData("off", false)]
+    public void AnimatedThemesRenderTheFrameOfTheClock(string setting, bool animates)
+    {
+        using var t = TestPickle.Create(configure: c => c.Prompt.Animation = setting);
+        var engine = (PromptEngine)t.Runtime.Prompt;
+        engine.Initialize();
+        var theme = t.Runtime.ThemeProvider.Current;
+        theme.Prompt.Left = [new SegmentStyle { Type = "text", Foreground = "#FF0000", Options = { ["text"] = "x" } }];
+        theme.Prompt.Animation = new PromptAnimation { Effect = "rainbow", FrameMs = 100, PeriodMs = 1200, Spread = 0 };
+        var now = 0L;
+        engine.Clock = () => now;
+
+        var first = engine.Render(Context()).Left;
+        now = 600;
+        var later = engine.Rerender(Context()).Left;
+
+        Assert.Equal(animates ? 6 : null, engine.AnimationFrame);
+        Assert.Equal(animates, first != later);
+        Assert.Contains(Ansi.Style("#FF0000"), first, StringComparison.Ordinal);
+        Assert.Equal(animates, later.Contains(Ansi.Style("#00FFFF"), StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void RendersTheCurrentThemeAndColorsThePromptCharByStatus()
     {
         using var t = Create(out var engine);

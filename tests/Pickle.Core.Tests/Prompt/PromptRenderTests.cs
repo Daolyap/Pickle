@@ -8,7 +8,10 @@ namespace Pickle.Core.Tests.Prompt;
 
 public class PromptRenderTests
 {
-    public static readonly string[] BuiltInThemes = ["admin", "classic", "minimal", "mono", "pickle", "powerline"];
+    public static readonly string[] BuiltInThemes =
+    [
+        "admin", "aurora", "catppuccin", "classic", "dracula", "ember", "gruvbox", "matrix", "minimal", "mono", "nord", "pickle", "powerline", "prism", "rose-pine", "solarized-light", "synthwave", "tokyo-night",
+    ];
 
     public static TheoryData<string, int> ThemesAndWidths()
     {
@@ -47,7 +50,7 @@ public class PromptRenderTests
     public void TransientPrompts()
     {
         var preview = new ThemePreview(windowsPaths: false);
-        var lines = BuiltInThemes.Select(t => t.PadRight(10) + preview.RenderTransient(LoadTheme(t), 80) + "Get-Date");
+        var lines = BuiltInThemes.Select(t => t.PadRight(16) + preview.RenderTransient(LoadTheme(t), 80) + "Get-Date");
         var vt = new VirtualTerminal(80, BuiltInThemes.Length + 1);
         vt.Write(string.Join("\n", lines));
         Snapshot.Match(vt.GetStyledScreen());

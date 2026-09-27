@@ -1,6 +1,18 @@
-admin     «fg=#FF7A72»#«» Get-Date
-classic   PS «fg=#CCCCCC»/home/pickle/src/pickle/src/Pickle.Core/Prompt«»> Get-Date
-minimal   «fg=#B294BB»›«» Get-Date
-mono      «fg=#E0E0E0»>«» Get-Date
-pickle    «fg=#8FC34A»❯«» Get-Date
-powerline «fg=#5C6370»14:05:09«» «fg=#98C379»❯«» Get-Date
+admin           «fg=#FF7A72»#«» Get-Date
+aurora          «fg=#4A557A»14:05:09«» «fg=#3DDC97»❯«» Get-Date
+catppuccin      «fg=#CBA6F7»❯«» Get-Date
+classic         PS «fg=#CCCCCC»/home/pickle/src/pickle/src/Pickle.Core/Prompt«»> Get-Date
+dracula         «fg=#6272A4»14:05:09«» «fg=#FF79C6»❯«» Get-Date
+ember           «fg=#F8961E»❯«» Get-Date
+gruvbox         «fg=#FABD2F»❯«» Get-Date
+matrix          «fg=#00FF41»▮«» Get-Date
+minimal         «fg=#B294BB»›«» Get-Date
+mono            «fg=#E0E0E0»>«» Get-Date
+nord            «fg=#88C0D0»❯«» Get-Date
+pickle          «fg=#8FC34A»❯«» Get-Date
+powerline       «fg=#5C6370»14:05:09«» «fg=#98C379»❯«» Get-Date
+prism           «fg=#FFD166»❯«» Get-Date
+rose-pine       «fg=#C4A7E7»❯«» Get-Date
+solarized-light «fg=#268BD2»❯«» Get-Date
+synthwave       «fg=#FF2E97»❯«» Get-Date
+tokyo-night     «fg=#565F89»14:05:09«» «fg=#BB9AF7»❯«» Get-Date

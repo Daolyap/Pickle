@@ -102,7 +102,7 @@ public class ThemeTests
         Assert.Equal(["minimal"], t.Run("(Set-PickleTheme minimal -PassThru).Name"));
         Assert.Equal("minimal", t.Runtime.Config.Current.Theme);
         Assert.Throws<InvalidOperationException>(() => t.Run("Set-PickleTheme -Name nope"));
-        Assert.Equal(["minimal", "mono"], t.Run("(TabExpansion2 -inputScript 'Set-PickleTheme m' -cursorColumn 17).CompletionMatches.CompletionText"));
+        Assert.Equal(["matrix", "minimal", "mono"], t.Run("(TabExpansion2 -inputScript 'Set-PickleTheme m' -cursorColumn 17).CompletionMatches.CompletionText"));
     }
 
     [Fact]
@@ -139,12 +139,21 @@ public class ThemeTests
         Assert.Throws<InvalidOperationException>(() => t.Run("pk theme set nope"));
     }
 
+    // Optional sections (nullable, like prompt.animation) may be left out, but are checked when present.
     private static void AssertAllPropertiesPresent(Type type, JsonElement element, string path)
     {
+        var nullability = new NullabilityInfoContext();
         foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             var key = JsonNamingPolicy.CamelCase.ConvertName(property.Name);
-            Assert.True(element.TryGetProperty(key, out var value), $"{path}.{key} is missing");
+            var present = element.TryGetProperty(key, out var value);
+            if (!present && property.PropertyType.IsClass && property.PropertyType != typeof(string)
+                && nullability.Create(property).ReadState == NullabilityState.Nullable)
+            {
+                continue;
+            }
+
+            Assert.True(present, $"{path}.{key} is missing");
             Assert.NotEqual(JsonValueKind.Null, value.ValueKind);
             if (property.PropertyType.IsClass && property.PropertyType != typeof(string) && property.PropertyType.Namespace == typeof(Theme).Namespace)
             {

@@ -17,6 +17,9 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
 {
     private static readonly TimeSpan IdlePoll = TimeSpan.FromMilliseconds(50);
 
+    // An animated prompt stops moving after this long without a key, so an idle shell doesn't keep redrawing.
+    private const long AnimationIdleLimitMs = 5 * 60 * 1000;
+
     // A paste can reach us in several chunks; an Enter that ends a chunk waits this long for the rest.
     private static readonly TimeSpan PasteGrace = TimeSpan.FromMilliseconds(15);
 
@@ -44,6 +47,8 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
     private int _renderedHighlightVersion;
     private (int Width, int Height) _renderedSize;
     private volatile bool _promptRefreshPending;
+    private long? _animationFrame;
+    private long _lastInputMs;
 
     public LineEditor(PickleRuntime runtime) => _runtime = runtime;
 
@@ -134,6 +139,8 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         _history = null;
         _burst = false;
         _promptRefreshPending = false;
+        _animationFrame = _runtime.Prompt.AnimationFrame;
+        _lastInputMs = _runtime.Prompt.ClockMs;
         _undo.Clear();
         _reading = true;
         try
@@ -173,7 +180,9 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
             OnIdle();
         }
 
-        return _runtime.Terminal.ReadKey(cancellationToken);
+        var key = _runtime.Terminal.ReadKey(cancellationToken);
+        _lastInputMs = _runtime.Prompt.ClockMs;
+        return key;
     }
 
     private void OnIdle()
@@ -181,6 +190,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         var terminal = _runtime.Terminal;
         var changed = DrainRequests();
         changed |= RefreshPrompt();
+        changed |= AdvanceAnimation();
         changed |= (terminal.Width, terminal.Height) != _renderedSize;
         changed |= _runtime.Highlighter is SyntaxHighlighter highlighter && highlighter.Version != _renderedHighlightVersion;
         if (changed)
@@ -200,12 +210,34 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         _promptRefreshPending = false;
         try
         {
-            _prompt = _runtime.Prompt.Render(context);
+            _prompt = _runtime.Prompt.Rerender(context);
             return true;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _runtime.Log.Warn("editor", "prompt refresh failed", ex);
+            return false;
+        }
+    }
+
+    private bool AdvanceAnimation()
+    {
+        var prompt = _runtime.Prompt;
+        if (_promptContext is not { } context || _runtime.Engine.IsExecuting || prompt.AnimationFrame is not { } frame
+            || frame == _animationFrame || prompt.ClockMs - _lastInputMs > AnimationIdleLimitMs)
+        {
+            return false;
+        }
+
+        _animationFrame = frame;
+        try
+        {
+            _prompt = prompt.Rerender(context);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Warn("editor", "prompt animation failed", ex);
             return false;
         }
     }

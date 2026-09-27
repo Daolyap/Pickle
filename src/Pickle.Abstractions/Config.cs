@@ -66,6 +66,12 @@ public sealed class PromptSettings
     /// "�" boxes with ordinary fonts; Powerline separators become plain blocks).
     /// </summary>
     public string Icons { get; set; } = "auto";
+
+    /// <summary>
+    /// Animated themes: "auto" (animate, except over SSH or with NO_COLOR/TERM=dumb), "on" or "off" (the theme's own colors, still).
+    /// Animation pauses after a few minutes without a key press.
+    /// </summary>
+    public string Animation { get; set; } = "auto";
 }
 
 public sealed class TranslationSettings

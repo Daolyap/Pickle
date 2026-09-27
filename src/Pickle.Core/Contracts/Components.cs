@@ -18,6 +18,15 @@ public interface IPromptRenderer
 
     /// <summary>Kick off async segment refresh (git etc.) ahead of the next Render.</summary>
     void Prefetch(PromptContext context);
+
+    /// <summary>Renders the prompt of the current cycle again (a refreshed segment or animation frame), unlike Render which starts a new one.</summary>
+    PromptRender Rerender(PromptContext context) => Render(context);
+
+    /// <summary>The animation frame to show now, or null when the prompt doesn't animate.</summary>
+    long? AnimationFrame => null;
+
+    /// <summary>Milliseconds on the clock that drives <see cref="AnimationFrame"/>.</summary>
+    long ClockMs => Environment.TickCount64;
 }
 
 public interface ILineEditor

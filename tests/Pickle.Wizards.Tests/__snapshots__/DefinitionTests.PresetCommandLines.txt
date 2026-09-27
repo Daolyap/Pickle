@@ -54,6 +54,11 @@ My personal certificates:
 Download a file:
   certutil -urlcache -split -f https://example.com/file.zip file.zip
 
+## clear-disk
+Wipe USB disk 2 completely:
+  Clear-Disk -Number 2 -RemoveData -RemoveOEM
+  ! Disk number: Every partition and file on this disk is destroyed. Check the number with Get-Disk.
+
 ## curl
 GET JSON:
   curl -H 'Accept: application/json' -s -S -f https://api.github.com/repos/PowerShell/PowerShell
@@ -110,6 +115,17 @@ Make a GIF:
   ffmpeg -i input.mp4 -vf 'fps=10,scale=480:-1:flags=lanczos' output.gif
 Remux MKV to MP4:
   ffmpeg -y -i input.mkv -c copy output.mp4
+
+## format-volume
+USB stick as exFAT:
+  Format-Volume -DriveLetter E -FileSystem exFAT -NewFileSystemLabel USB
+  ! Drive letter: Everything on this drive is erased.
+NTFS data drive, 64K clusters:
+  Format-Volume -DriveLetter D -FileSystem NTFS -NewFileSystemLabel Data -AllocationUnitSize 65536
+  ! Drive letter: Everything on this drive is erased.
+Full NTFS format:
+  Format-Volume -DriveLetter E -FileSystem NTFS -Full
+  ! Drive letter: Everything on this drive is erased.
 
 ## get-winevent
 System errors, last 24 h:
@@ -171,6 +187,10 @@ Partial clone:
 Log in another folder:
   git -C C:\src\project log --oneline -n 10
 
+## initialize-disk
+New disk as GPT:
+  Initialize-Disk -Number 1 -PartitionStyle GPT
+
 ## kubectl
 Pods everywhere:
   kubectl get -o wide -A pods
@@ -221,6 +241,12 @@ Wi-Fi password:
   netsh wlan show profiles name=HomeWiFi key=clear
 IP configuration:
   netsh interface ip show config
+
+## new-partition
+All free space, next letter:
+  New-Partition -DiskNumber 1 -UseMaximumSize -AssignDriveLetter
+100 GB as F::
+  New-Partition -DiskNumber 1 -Size 100GB -DriveLetter F
 
 ## nmap
 Quick scan:
@@ -284,6 +310,29 @@ SHA-256 of a file:
 Check a server certificate:
   openssl s_client -connect example.com:443 -servername example.com -brief
 
+## optimize-volume
+Retrim the SSD C::
+  Optimize-Volume -DriveLetter C -ReTrim -Verbose
+Analyze D::
+  Optimize-Volume -DriveLetter D -Analyze -Verbose
+
+## remove-partition
+Delete partition 2 of disk 1:
+  Remove-Partition -DiskNumber 1 -PartitionNumber 2
+  ! Partition number: The partition and all its files are deleted.
+
+## repair-volume
+Scan C::
+  Repair-Volume -DriveLetter C -Scan
+Fix D::
+  Repair-Volume -DriveLetter D -SpotFix
+
+## resize-partition
+Extend D: to the maximum:
+  Resize-Partition -DriveLetter D -Size (Get-PartitionSupportedSize -DriveLetter D).SizeMax
+Shrink D: to 200 GB:
+  Resize-Partition -DriveLetter D -Size 200GB
+
 ## robocopy
 Mirror a folder:
   robocopy C:\Source D:\Backup\Source /MIR /MT:16 /R:2 /W:5
@@ -328,6 +377,18 @@ Upload a folder:
   scp -r ./site user@example.com:/var/www/
 Several files, custom port and key:
   scp -P 2222 -i ~/.ssh/id_ed25519 a.txt b.txt user@example.com:~/inbox/
+
+## set-disk
+Bring disk 1 online:
+  Set-Disk -Number 1 -IsOffline $false
+Clear read-only on disk 1:
+  Set-Disk -Number 1 -IsReadOnly $false
+
+## set-partition
+Change E: to X::
+  Set-Partition -DriveLetter E -NewDriveLetter X
+Make E: read-only:
+  Set-Partition -DriveLetter E -IsReadOnly $true
 
 ## ssh
 Connect with a key:

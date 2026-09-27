@@ -1,0 +1,25 @@
+{
+  "id": "new-partition",
+  "title": "New-Partition",
+  "description": "Create a partition in a disk's free space (diskpart 'create partition'). Pipe it to Format-Volume to format it.",
+  "command": "New-Partition",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/new-partition",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Partition",
+      "options": [
+        { "id": "diskNumber", "label": "Disk number", "type": "number", "flag": "-DiskNumber", "required": true, "validation": "^\\d+$", "description": "Get-Disk shows the numbers." },
+        { "id": "useMaximumSize", "label": "Use all free space", "type": "flag", "flag": "-UseMaximumSize" },
+        { "id": "size", "label": "Size", "type": "text", "flag": "-Size", "raw": true, "validation": "^\\d+(KB|MB|GB|TB)?$", "placeholder": "100GB", "dependsOn": "!useMaximumSize" },
+        { "id": "assignDriveLetter", "label": "Assign the next free drive letter", "type": "flag", "flag": "-AssignDriveLetter" },
+        { "id": "driveLetter", "label": "Drive letter", "type": "text", "flag": "-DriveLetter", "validation": "^[A-Za-z]$", "placeholder": "F", "dependsOn": "!assignDriveLetter" },
+        { "id": "isActive", "label": "Active (MBR boot partition)", "type": "flag", "flag": "-IsActive" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "All free space, next letter", "description": "One partition filling the disk's free space.", "values": { "diskNumber": "1", "useMaximumSize": "true", "assignDriveLetter": "true" } },
+    { "name": "100 GB as F:", "values": { "diskNumber": "1", "size": "100GB", "driveLetter": "F" } }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "set-disk",
+  "title": "Set-Disk",
+  "description": "Bring a disk online or offline, or make it read-only (diskpart 'online disk', 'attributes disk').",
+  "command": "Set-Disk",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/set-disk",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Disk",
+      "options": [
+        { "id": "number", "label": "Disk number", "type": "number", "flag": "-Number", "required": true, "validation": "^\\d+$" },
+        { "id": "isOffline", "label": "Offline", "type": "choice", "flag": "-IsOffline", "raw": true, "choices": [ { "value": "$false", "description": "online" }, { "value": "$true", "description": "offline" } ] },
+        { "id": "isReadOnly", "label": "Read-only", "type": "choice", "flag": "-IsReadOnly", "raw": true, "choices": [ { "value": "$false" }, { "value": "$true" } ] }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Bring disk 1 online", "values": { "number": "1", "isOffline": "$false" } },
+    { "name": "Clear read-only on disk 1", "values": { "number": "1", "isReadOnly": "$false" } }
+  ]
+}

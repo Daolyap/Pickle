@@ -1,0 +1,20 @@
+{
+  "id": "initialize-disk",
+  "title": "Initialize-Disk",
+  "description": "Initialize a new (RAW) disk with a GPT or MBR partition table (diskpart 'convert gpt').",
+  "command": "Initialize-Disk",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/initialize-disk",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Disk",
+      "options": [
+        { "id": "number", "label": "Disk number", "type": "number", "flag": "-Number", "required": true, "validation": "^\\d+$", "description": "Only RAW (uninitialized) disks; Get-Disk shows them." },
+        { "id": "partitionStyle", "label": "Partition style", "type": "choice", "flag": "-PartitionStyle", "choices": [ { "value": "GPT", "description": "Modern; disks over 2 TB, UEFI" }, { "value": "MBR", "description": "Old BIOS machines" } ] }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "New disk as GPT", "values": { "number": "1", "partitionStyle": "GPT" } }
+  ]
+}

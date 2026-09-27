@@ -1,0 +1,21 @@
+{
+  "id": "clear-disk",
+  "title": "Clear-Disk",
+  "description": "Wipe a disk's partitions so it can be set up again (diskpart 'clean'). Destroys all data on the disk.",
+  "command": "Clear-Disk",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/clear-disk",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Disk",
+      "options": [
+        { "id": "number", "label": "Disk number", "type": "number", "flag": "-Number", "required": true, "validation": "^\\d+$", "warning": "Every partition and file on this disk is destroyed. Check the number with Get-Disk." },
+        { "id": "removeData", "label": "Also remove data partitions", "type": "flag", "flag": "-RemoveData" },
+        { "id": "removeOem", "label": "Also remove OEM (recovery) partitions", "type": "flag", "flag": "-RemoveOEM" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Wipe USB disk 2 completely", "description": "Like diskpart 'clean' on a stick that won't format.", "values": { "number": "2", "removeData": "true", "removeOem": "true" } }
+  ]
+}

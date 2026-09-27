@@ -33,6 +33,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         if (OperatingSystem.IsWindows())
         {
             AddIfMissing<IFontService>(services, Fonts.WindowsFontService.ForCurrentSystem);
+            AddIfMissing<IDiskLayoutService>(services, () => new Storage.DiskLayoutService(() => context.Shell));
         }
 
         context.Commands.Register(new WingetCommand());

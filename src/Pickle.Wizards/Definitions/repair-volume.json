@@ -1,0 +1,28 @@
+{
+  "id": "repair-volume",
+  "title": "Repair-Volume",
+  "description": "Check and fix a volume's file system (chkdsk).",
+  "command": "Repair-Volume",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/repair-volume",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Volume",
+      "options": [
+        { "id": "driveLetter", "label": "Drive letter", "type": "text", "flag": "-DriveLetter", "required": true, "validation": "^[A-Za-z]$", "placeholder": "C" },
+        {
+          "id": "mode", "label": "Mode", "type": "choice",
+          "choices": [
+            { "value": "-Scan", "description": "online scan, no changes" },
+            { "value": "-SpotFix", "description": "fix found problems (brief offline moment)" },
+            { "value": "-OfflineScanAndFix", "description": "full chkdsk; C: waits for a restart", "warning": "Takes the volume offline while it runs." }
+          ]
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Scan C:", "values": { "driveLetter": "C", "mode": "-Scan" } },
+    { "name": "Fix D:", "values": { "driveLetter": "D", "mode": "-SpotFix" } }
+  ]
+}

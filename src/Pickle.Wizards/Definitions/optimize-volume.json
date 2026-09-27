@@ -1,0 +1,29 @@
+{
+  "id": "optimize-volume",
+  "title": "Optimize-Volume",
+  "description": "Retrim an SSD or defragment a hard disk (defrag).",
+  "command": "Optimize-Volume",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/optimize-volume",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Volume",
+      "options": [
+        { "id": "driveLetter", "label": "Drive letter", "type": "text", "flag": "-DriveLetter", "required": true, "validation": "^[A-Za-z]$", "placeholder": "C" },
+        {
+          "id": "operation", "label": "Operation", "type": "choice",
+          "choices": [
+            { "value": "-ReTrim", "description": "SSD: tell the drive which blocks are free" },
+            { "value": "-Defrag", "description": "hard disk: defragment" },
+            { "value": "-Analyze", "description": "report fragmentation only" }
+          ]
+        },
+        { "id": "verbose", "label": "Show progress details", "type": "flag", "flag": "-Verbose" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Retrim the SSD C:", "values": { "driveLetter": "C", "operation": "-ReTrim", "verbose": "true" } },
+    { "name": "Analyze D:", "values": { "driveLetter": "D", "operation": "-Analyze", "verbose": "true" } }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "resize-partition",
+  "title": "Resize-Partition",
+  "description": "Grow or shrink a partition (diskpart 'extend' / 'shrink'). Shrinking needs free space inside the volume.",
+  "command": "Resize-Partition",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/resize-partition",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Partition",
+      "options": [
+        { "id": "driveLetter", "label": "Drive letter", "type": "text", "flag": "-DriveLetter", "validation": "^[A-Za-z]$", "placeholder": "D" },
+        { "id": "diskNumber", "label": "Disk number", "type": "number", "flag": "-DiskNumber", "validation": "^\\d+$", "dependsOn": "!driveLetter" },
+        { "id": "partitionNumber", "label": "Partition number", "type": "number", "flag": "-PartitionNumber", "validation": "^\\d+$", "dependsOn": "!driveLetter" },
+        {
+          "id": "size", "label": "New size", "type": "text", "flag": "-Size", "required": true, "raw": true, "placeholder": "200GB",
+          "description": "A size (200GB) or an expression; (Get-PartitionSupportedSize -DriveLetter D).SizeMax extends to the largest possible size."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Extend D: to the maximum", "description": "Uses all free space after the partition.", "values": { "driveLetter": "D", "size": "(Get-PartitionSupportedSize -DriveLetter D).SizeMax" } },
+    { "name": "Shrink D: to 200 GB", "values": { "driveLetter": "D", "size": "200GB" } }
+  ]
+}

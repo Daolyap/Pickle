@@ -19,7 +19,7 @@ public sealed class PanelHost : IPanelHost
 
     private readonly IPickleContext _pickle;
     private readonly object _gate = new();
-    private (PanelDescriptor Panel, string? Argument)? _next;
+    private (PanelDescriptor Panel, string? Argument, string? Input)? _next;
     private bool _running;
 
     public PanelHost(IPickleContext pickle) => _pickle = pickle;
@@ -76,7 +76,7 @@ public sealed class PanelHost : IPanelHost
             {
                 // A panel asked for another panel while running: nesting Terminal.Gui applications is not supported,
                 // so run it once the current one has closed.
-                _next = (panel, argument);
+                _next = (panel, argument, null);
                 return null;
             }
 
@@ -84,22 +84,25 @@ public sealed class PanelHost : IPanelHost
             while (_next is { } next)
             {
                 _next = null;
-                result = RunOne(next.Panel, next.Argument, currentInput);
+                result = RunOne(next.Panel, next.Argument, next.Input ?? currentInput);
             }
 
             return result;
         }
     }
 
-    /// <summary>Open <paramref name="panelId"/> as soon as the running panel closes (its result replaces the current one).</summary>
-    public bool OpenNext(string panelId, string? argument = null)
+    /// <summary>
+    /// Open <paramref name="panelId"/> as soon as the running panel closes (its result replaces the current one).
+    /// <paramref name="input"/> stands in for the prompt's text (a wizard parses it to fill its form).
+    /// </summary>
+    public bool OpenNext(string panelId, string? argument = null, string? input = null)
     {
         if (Resolve(panelId) is not { } panel)
         {
             return false;
         }
 
-        _next = (panel, argument);
+        _next = (panel, argument, input);
         return true;
     }
 

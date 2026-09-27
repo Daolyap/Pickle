@@ -92,3 +92,42 @@ public interface IDiskMonitor
 
     Task<DiskToolResult> OpenDiskManagementAsync(CancellationToken cancellationToken = default);
 }
+
+/// <summary>A partition and, when it holds one, its volume (file system, label, free space).</summary>
+public sealed record DiskPartition(
+    int DiskNumber,
+    int PartitionNumber,
+    char? DriveLetter,
+    long Size,
+    string Type,
+    bool IsBoot,
+    bool IsSystem,
+    string? FileSystem,
+    string? Label,
+    long? FreeBytes);
+
+/// <summary>A physical disk as Disk Management sees it, with its partitions in order.</summary>
+public sealed record PhysicalDisk(
+    int Number,
+    string Name,
+    string PartitionStyle,
+    long Size,
+    long AllocatedSize,
+    string Status,
+    bool IsOffline,
+    bool IsReadOnly,
+    bool IsBoot,
+    bool IsSystem,
+    string BusType,
+    IReadOnlyList<DiskPartition> Partitions)
+{
+    public long UnallocatedBytes => Math.Max(0, Size - AllocatedSize);
+
+    public bool IsRaw => PartitionStyle.Equals("RAW", StringComparison.OrdinalIgnoreCase);
+}
+
+/// <summary>Disks and partitions (Windows Storage module) for the Disks panel's Partitions tab.</summary>
+public interface IDiskLayoutService
+{
+    Task<IReadOnlyList<PhysicalDisk>> GetDisksAsync(CancellationToken cancellationToken = default);
+}

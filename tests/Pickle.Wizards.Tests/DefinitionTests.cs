@@ -40,8 +40,9 @@ public class DefinitionTests
     {
         string[] expected =
         [
-            "7z", "adb", "certutil", "curl", "docker", "ffmpeg", "get-winevent", "git", "kubectl", "netsh", "nmap",
-            "openssl", "robocopy", "rsync", "scp", "ssh", "tar", "yt-dlp",
+            "7z", "adb", "certutil", "clear-disk", "curl", "docker", "ffmpeg", "format-volume", "get-winevent", "git",
+            "initialize-disk", "kubectl", "netsh", "new-partition", "nmap", "openssl", "optimize-volume", "remove-partition",
+            "repair-volume", "resize-partition", "robocopy", "rsync", "scp", "set-disk", "set-partition", "ssh", "tar", "yt-dlp",
         ];
         Assert.Equal(expected, All.Select(d => d.Id).Order(StringComparer.Ordinal));
         Assert.Equal(All.Count, WizardLoader.EmbeddedNames.Count);

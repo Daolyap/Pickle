@@ -1,0 +1,29 @@
+{
+  "id": "format-volume",
+  "title": "Format-Volume",
+  "description": "Format a volume (diskpart 'format'). Erases everything on it; needs an administrator shell.",
+  "command": "Format-Volume",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/format-volume",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Volume",
+      "options": [
+        { "id": "driveLetter", "label": "Drive letter", "type": "text", "flag": "-DriveLetter", "required": true, "validation": "^[A-Za-z]$", "placeholder": "E", "warning": "Everything on this drive is erased." },
+        {
+          "id": "fileSystem", "label": "File system", "type": "choice", "flag": "-FileSystem",
+          "choices": [ { "value": "NTFS" }, { "value": "exFAT", "description": "USB sticks and SD cards; works on macOS too" }, { "value": "FAT32", "description": "Old devices; files up to 4 GB" }, { "value": "ReFS" } ]
+        },
+        { "id": "label", "label": "New label", "type": "text", "flag": "-NewFileSystemLabel", "placeholder": "Data" },
+        { "id": "allocationUnitSize", "label": "Cluster size (bytes)", "type": "number", "flag": "-AllocationUnitSize", "validation": "^\\d+$", "placeholder": "65536" },
+        { "id": "full", "label": "Full format (check every sector, slow)", "type": "flag", "flag": "-Full" },
+        { "id": "force", "label": "Don't ask for confirmation", "type": "flag", "flag": "-Force" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "USB stick as exFAT", "description": "Quick format that Windows, macOS and cameras read.", "values": { "driveLetter": "E", "fileSystem": "exFAT", "label": "USB" } },
+    { "name": "NTFS data drive, 64K clusters", "description": "Large files (VMs, video) on a data disk.", "values": { "driveLetter": "D", "fileSystem": "NTFS", "label": "Data", "allocationUnitSize": "65536" } },
+    { "name": "Full NTFS format", "description": "Checks every sector for errors; takes a long time.", "values": { "driveLetter": "E", "fileSystem": "NTFS", "full": "true" } }
+  ]
+}

@@ -83,16 +83,20 @@ graph LR
 | Sync | `Core/Sync/` (folder and git backends) |
 | Profiles, PSReadLine shim | `Core/Profile/`, `Core/Modules/PSReadLine/` |
 | `pk` dispatcher | `Core/Commands/`, `Cmdlets/InvokePickleCommandCmdlet.cs` |
-| Panels | `Tui/Panels/<Feature>/` (Palette, Files, Settings, Jobs, Git, Windows, Wizard, ListPanel, NetTools, System) |
+| Panels | `Tui/Panels/<Feature>/` (Palette, Files, Settings, Jobs, Git, Windows, Wizard, ListPanel, NetTools, System, Dashboard, Devious) |
 | `pk` command helpers for plugins | `Abstractions/PickleCommandBase.cs` (+ `CommandOutput`), `CommandArgs.cs`, `Display.cs` |
 | Git | `Core/Git/` (`GitService` over the git CLI) + `Tui/Panels/Git/` |
-| Processes, network, disks (Alt+P/N/D, `pk top/net/disks`) | `Core/System/` (monitors: `/proc` on Linux, Process API + Win32 on Windows, disk usage scanner) + `Tui/Panels/System/` |
+| Processes, network, disks (Alt+P/N/D, `pk top/net/disks`) | `Core/System/` (monitors: `/proc` on Linux, Process API + Win32 on Windows, disk usage scanner) + `Tui/Panels/System/`; the Partitions tab reads `Windows/Storage/DiskLayoutService.cs` and opens the disk wizards |
+| Dashboard, `pk devious` (Alt+I) | `Core/System/SystemInfoProvider.cs` (`ISystemInfo`) + the monitors above → `Tui/Panels/Dashboard/` (canvas layout, also `--once` to stdout), `Tui/Panels/Devious/` |
 | winget, Windows Update, Task Scheduler | `Windows/Winget/`, `Windows/WindowsUpdate/`, `Windows/TaskScheduler/`, `Windows/Commands/` |
 | Network tools (Alt+T, `pk scan/sweep/dns/trace/whois/cert/subnet/http/wol/ip`) | `Network/` (engines + `Commands/`, table views in `Formats/`) + `Tui/Panels/NetTools/` |
 | Missing-tool install prompt, `pk tool` | `Core/Hosting/MissingToolPrompt.cs` (before a line runs), `Abstractions/Services/Tools.cs` (`ToolCatalog`), `Windows/Tools/` (winget install, PATH fix-up) |
 | Windows Sandbox (Alt+X, `pk sandbox`) | `Windows/Sandbox/` (.wsb + logon setup script, presets), `Tui/Panels/Windows/SandboxPanel.cs` |
 | Elevation | `Windows/Elevation/` (named-pipe broker, `--elevated-helper`, allowlisted operations) |
-| Windows Terminal profile | `Windows/Terminal/` (fragment, `pk terminal`, `--write-terminal-fragment`) |
+| Windows Terminal profile, fonts | `Windows/Terminal/` (fragment, `pk terminal`, `--write-terminal-fragment`, first-run offers), `Windows/Fonts/` (`pk font`, Nerd Font download), `Core/Prompt/GlyphFallback.cs` |
+| First-run setup, `pk setup` | `Core/Hosting/FirstRun.cs` (offers registered by plugins, re-shown when `SetupVersion` grows) |
+| Uninstall | `Windows/Uninstall/` (`--remove-user-data`, `--uninstall-prompt`), MSI custom actions in `packaging/wix/Package.wxs` |
+| Admin look | `themes/admin.json`, `ThemeProvider` (elevated override, `shell.adminTheme`), `Hosting/StartupBanner.cs` |
 | Command wizards | `Wizards/` (engine, parser, `Definitions/*.json`) + `Tui/Panels/Wizard/` |
 | Packaging | `packaging/` (WiX MSI, winget/Scoop manifests), `.github/workflows/`, `scripts/publish.sh` |
 

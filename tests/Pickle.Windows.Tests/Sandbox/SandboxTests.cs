@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
@@ -57,10 +58,57 @@ public sealed class SandboxTests : IDisposable
 
         var script = WsbBuilder.BuildSetupScript(config);
         Assert.Contains("AppsUseLightTheme -Value 0", script, StringComparison.Ordinal);
-        Assert.Contains("Repair-WinGetPackageManager", script, StringComparison.Ordinal);
-        Assert.Contains("install --id 'Git.Git' --exact", script, StringComparison.Ordinal);
+        Assert.Contains("Step 'Installing winget' { Install-PickleWinget }", script, StringComparison.Ordinal);
+        Assert.Contains("DesktopAppInstaller_Dependencies.zip", script, StringComparison.Ordinal);
+        Assert.Contains("Step 'Installing Git.Git' { Install-PickleWingetPackage 'Git.Git' }", script, StringComparison.Ordinal);
+        Assert.True(
+            script.IndexOf("Install-PickleWinget }", StringComparison.Ordinal) < script.IndexOf("Install-PickleWingetPackage 'Git.Git'", StringComparison.Ordinal),
+            "winget is installed before the packages");
         Assert.Contains($"Start-Process '{WsbBuilder.PickleMount}\\pickle.exe'", script, StringComparison.Ordinal);
         Assert.Contains("Start-Process cmd.exe -ArgumentList '/c', 'notepad.exe'", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WingetIsCalledByItsResolvedPathWithRetries()
+    {
+        var script = WsbBuilder.BuildSetupScript(new SandboxConfig { WingetPackages = ["Git.Git", "Git.Git", "Microsoft.PowerToys"] });
+
+        Assert.Contains("& $script:Winget install --id $Id --exact --silent --source winget", script, StringComparison.Ordinal);
+        Assert.Contains("Get-AppxPackage -Name Microsoft.DesktopAppInstaller", script, StringComparison.Ordinal);
+        Assert.Contains("Get-FileHash -Algorithm SHA256", script, StringComparison.Ordinal);
+        Assert.Single(Regex.Matches(script, "Install-PickleWingetPackage 'Git.Git'"));
+        Assert.Contains("Disable-PickleSlowMsiCheck", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("\r\r", script, StringComparison.Ordinal);
+        Assert.DoesNotContain('\n', script.Replace("\r\n", string.Empty, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void SetupScriptParsesAsPowerShell()
+    {
+        var script = WsbBuilder.BuildSetupScript(new SandboxConfig
+        {
+            DarkMode = true,
+            ShowHiddenFiles = true,
+            IncludePickle = true,
+            StartPickle = true,
+            WingetPackages = ["Git.Git"],
+            StartUrl = "https://example.test",
+            SetupScript = "Write-Host 'hi'",
+            LogonCommand = "notepad.exe",
+        });
+
+        System.Management.Automation.Language.Parser.ParseInput(script, out _, out var errors);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void WingetWithoutPackagesSkipsTheMsiTweak()
+    {
+        var script = WsbBuilder.BuildSetupScript(new SandboxConfig { InstallWinget = true });
+
+        Assert.Contains("Install-PickleWinget }", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Step 'Speeding up MSI installers'", script, StringComparison.Ordinal);
     }
 
     [Fact]

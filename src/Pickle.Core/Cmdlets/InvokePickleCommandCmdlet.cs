@@ -180,7 +180,7 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
         }
 
         var width = Math.Max(40, runtime.Terminal.Width - 1);
-        if (topic is null && StartupBanner.Logo(theme, width) is { } logo)
+        if (topic is null && StartupBanner.Logo(theme, width, admin: runtime.IsElevated) is { } logo)
         {
             foreach (var line in logo)
             {

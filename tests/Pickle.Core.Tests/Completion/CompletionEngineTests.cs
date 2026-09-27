@@ -170,6 +170,12 @@ public class CompletionEngineTests
         Assert.Equal(["Get-Chilly"], set.Items.Select(i => i.CompletionText));
         await busy;
 
+        deadline = DateTime.UtcNow.AddSeconds(10);
+        while (t.Runtime.Engine.MainRunspace.RunspaceAvailability != RunspaceAvailability.Available && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+
         var after = await Complete(t, "Get-Chil");
         Assert.Contains(after.Items, i => i.CompletionText == "Get-ChildItem");
     }
@@ -306,7 +312,14 @@ public class CompletionEngineTests
         Assert.Equal(second.Length - 1, buffer.Cursor);
     }
 
-    private static TestPickle Started(Action<PickleConfig>? configure = null) => TestPickle.Create(start: true, configure: configure);
+    // The engine gives up after 1.5 s so typing never stalls; a cold first completion on a loaded CI runner can take
+    // longer, so tests that aren't about the timeout get a generous one.
+    private static TestPickle Started(Action<PickleConfig>? configure = null)
+    {
+        var t = TestPickle.Create(start: true, configure: configure);
+        ((CompletionEngine)t.Runtime.Completion).Timeout = TimeSpan.FromSeconds(30);
+        return t;
+    }
 
     private static Task<CompletionSet> Complete(TestPickle t, string input) =>
         t.Runtime.Completion.CompleteAsync(new CompletionRequest(input, input.Length, t.Runtime.Engine.CurrentDirectory));

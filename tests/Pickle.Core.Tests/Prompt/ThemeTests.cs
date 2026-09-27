@@ -167,4 +167,32 @@ public class ThemeTests
 
     private static IEnumerable<(string Name, string? Value)> Strings(object section) =>
         section.GetType().GetProperties().Where(p => p.PropertyType == typeof(string)).Select(p => (p.Name, (string?)p.GetValue(section)));
+
+    [Fact]
+    public void ElevatedSessionsShowTheAdminThemeWithoutSavingIt()
+    {
+        using var t = TestPickle.Create(configure: c => c.Theme = "minimal", elevated: true);
+        var themes = t.Runtime.ThemeProvider;
+
+        Assert.Equal("admin", themes.Current.Name);
+        Assert.True(themes.AdminThemeActive);
+        Assert.Equal("minimal", t.Runtime.Config.Current.Theme);
+        Assert.Contains(themes.Current.Prompt.Left, s => s.Type == "admin");
+
+        themes.Apply("powerline");
+        Assert.Equal("powerline", themes.Current.Name);
+        Assert.False(themes.AdminThemeActive);
+    }
+
+    [Fact]
+    public void AdminThemeNoneKeepsTheNormalTheme()
+    {
+        using var t = TestPickle.Create(configure: c => (c.Theme, c.Shell.AdminTheme) = ("minimal", "none"), elevated: true);
+
+        Assert.Equal("minimal", t.Runtime.Themes.Current.Name);
+        Assert.False(t.Runtime.ThemeProvider.AdminThemeActive);
+
+        t.Runtime.Config.Update(c => c.Shell.AdminTheme = "admin");
+        Assert.Equal("admin", t.Runtime.Themes.Current.Name);
+    }
 }

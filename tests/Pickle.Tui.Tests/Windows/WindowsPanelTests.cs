@@ -557,11 +557,11 @@ public sealed class WindowsPanelTests : IDisposable
                 panel.Act("run");
                 panel.Act("toggle");
             }),
-            Wait(() => _tasks.Calls.Contains(@"disable \Pickle\backup")),
+            Wait(() => _tasks.Called(@"disable \Pickle\backup")),
             Do(() => panel.SelectFolder(@"\Pickle\Test")),
             Wait(() => panel.Tasks.Count == 1 && panel.Tasks[0].Name == "nested"),
             Do(() => panel.Act("delete")),
-            Wait(() => _tasks.Calls.Contains(@"delete \Pickle\Test\nested")));
+            Wait(() => _tasks.Called(@"delete \Pickle\Test\nested")));
 
         Assert.Contains(@"run \Pickle\backup", _tasks.Calls);
     }
@@ -573,7 +573,7 @@ public sealed class WindowsPanelTests : IDisposable
         Run(
             panel,
             Do(() => panel.CreateTask(new NewTaskValues("nightly", NewTaskTrigger.Weekly, "18:30", "mon,fri", true, "pk upgrade --yes", string.Empty, Elevated: true))),
-            Wait(() => _tasks.Calls.Contains(@"create \Pickle\nightly")),
+            Wait(() => _tasks.Called(@"create \Pickle\nightly")),
             Do(() => panel.CreateTask(new NewTaskValues(" ", NewTaskTrigger.Daily, "09:00", string.Empty, true, "Get-Date", string.Empty, false))));
 
         var created = Assert.Single(_tasks.Tasks);

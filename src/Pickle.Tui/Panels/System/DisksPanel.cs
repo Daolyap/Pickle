@@ -22,6 +22,11 @@ public sealed class DisksPanel : SystemPanelBase
     private readonly IDiskMonitor? _monitor;
     private readonly View _volumesTab = new() { Title = "Volumes", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
     private readonly View _analyzeTab = new() { Title = "Analyze", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
+    private readonly View _partitionsTab = new() { Title = "Partitions", Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
+    private readonly Label _partitionsHelp = new() { X = 0, Y = 0, Width = Dim.Fill(), Height = 1 };
+    private readonly IDiskLayoutService? _layout;
+    private SortableTable<LayoutRow>? _partitions;
+    private bool _partitionsLoaded;
     private readonly SortableTable<DiskVolume> _volumes;
     private const int MaxIoRows = 8;
 
@@ -77,7 +82,28 @@ public sealed class DisksPanel : SystemPanelBase
         _location.Text = "Select a volume and press Enter (or F3 for any folder) to see what uses the space.";
         _analyzeTab.Add(_location, _scanStatus, _entries);
 
-        Body.Add(CreateTabs(_volumesTab, _analyzeTab));
+        _layout = Pickle.Services.Get<IDiskLayoutService>();
+        if (_layout is not null)
+        {
+            _partitions = new SortableTable<LayoutRow>(PartitionColumns(), r => r.Order) { Y = 1, Schemes = Schemes };
+            _partitionsTab.Add(_partitionsHelp, _partitions);
+            Body.Add(CreateTabs(_volumesTab, _analyzeTab, _partitionsTab));
+            TabKeys(_partitions.Table, key =>
+            {
+                if (key != Key.Enter)
+                {
+                    return false;
+                }
+
+                ChooseDiskAction();
+                return true;
+            });
+        }
+        else
+        {
+            Body.Add(CreateTabs(_volumesTab, _analyzeTab));
+        }
+
         TabKeys(_volumes.Table);
         TabKeys(_entries.Table, HandleAnalyzeKey);
 
@@ -104,6 +130,62 @@ public sealed class DisksPanel : SystemPanelBase
     }
 
     internal SortableTable<DiskVolume> Volumes => _volumes;
+
+    internal SortableTable<LayoutRow>? Partitions => _partitions;
+
+    internal View PartitionsTab => _partitionsTab;
+
+    /// <summary>Tests capture the wizard (id, pre-filled command) instead of opening it.</summary>
+    internal Action<string, string>? WizardHook { get; set; }
+
+    internal void RefreshPartitions()
+    {
+        if (_layout is not { } layout || _partitions is null)
+        {
+            return;
+        }
+
+        _partitionsLoaded = true;
+        RunInBackground(
+            layout.GetDisksAsync,
+            disks =>
+            {
+                _partitions.SetItems(DiskLayoutRows.Build(disks));
+                _partitionsHelp.Text = Environment.IsPrivilegedProcess
+                    ? "Enter: what to do with the selected disk or partition (opens its wizard; you review the command before it runs)."
+                    : "Enter: actions (opens their wizards). Changing disks needs an administrator Pickle; reading them does not.";
+            },
+            "reading disks…");
+    }
+
+    internal void ChooseDiskAction()
+    {
+        if (_partitions?.Selected is not { } row)
+        {
+            return;
+        }
+
+        var actions = DiskLayoutRows.Actions(row);
+        if (actions.Count == 0)
+        {
+            return;
+        }
+
+        var choice = Choose(DiskLayoutRows.Name(row).Trim(), [.. actions.Select(a => a.Label)]);
+        if (actions.FirstOrDefault(a => a.Label == choice) is not { } action)
+        {
+            return;
+        }
+
+        if (WizardHook is { } hook)
+        {
+            hook(action.WizardId, action.Command);
+        }
+        else if (!OpenPanel("wizard", action.WizardId, action.Command))
+        {
+            Complete(new PanelResult(PanelResultKind.ReplaceInput, action.Command));
+        }
+    }
 
     internal SortableTable<DiskUsageNode> Entries => _entries;
 
@@ -336,6 +418,15 @@ public sealed class DisksPanel : SystemPanelBase
         {
             _volumes.Table.SetFocus();
         }
+        else if (page == _partitionsTab && _partitions is not null)
+        {
+            if (!_partitionsLoaded)
+            {
+                RefreshPartitions();
+            }
+
+            _partitions.Table.SetFocus();
+        }
     }
 
     private bool HandleAnalyzeKey(Key key)
@@ -371,6 +462,11 @@ public sealed class DisksPanel : SystemPanelBase
     private void Refresh()
     {
         RefreshVolumes();
+        if (CurrentTab == _partitionsTab)
+        {
+            RefreshPartitions();
+        }
+
         if (CurrentTab == _analyzeTab && _root is not null && _scan is null)
         {
             Analyze(_current?.FullPath ?? _root.FullPath);
@@ -430,6 +526,14 @@ public sealed class DisksPanel : SystemPanelBase
             Fail(result.Message);
         }
     }
+
+    private List<TableColumn<LayoutRow>> PartitionColumns() =>
+    [
+        new() { Header = "Disk / partition", Text = DiskLayoutRows.Name, SortKey = r => r.Order, MinWidth = 22, MaxWidth = 44, Color = r => r.IsDisk ? Schemes.Accent.Foreground : r.Free ? Schemes.Muted.Foreground : null },
+        new() { Header = "Type", Text = DiskLayoutRows.Kind, SortKey = r => r.Order, MaxWidth = 32 },
+        new() { Header = "Size", Text = r => SystemFormat.Bytes(DiskLayoutRows.Size(r)), SortKey = r => r.Order, MinWidth = 9, MaxWidth = 9 },
+        new() { Header = "Status", Text = DiskLayoutRows.Status, SortKey = r => r.Order, Color = r => r.Disk.IsOffline ? Schemes.Warning.Foreground : null },
+    ];
 
     private List<TableColumn<DiskVolume>> VolumeColumns() =>
     [

@@ -35,7 +35,8 @@ public sealed class TestPickle : IDisposable
         int height = 24,
         Action<PickleConfig>? configure = null,
         bool start = false,
-        IReadOnlyList<IPicklePlugin>? plugins = null)
+        IReadOnlyList<IPicklePlugin>? plugins = null,
+        bool elevated = false)
     {
         var home = Path.Combine(Path.GetTempPath(), "pickle-tests", Guid.NewGuid().ToString("N")[..12]);
         var paths = new PicklePaths(Path.Combine(home, "config"), Path.Combine(home, "data"));
@@ -47,7 +48,8 @@ public sealed class TestPickle : IDisposable
         File.WriteAllText(paths.ConfigFile, JsonSerializer.Serialize(config, PickleJson.Options));
 
         var terminal = new VirtualTerminal(width, height);
-        var options = new PickleOptions { NoProfile = true, NoLogo = true };
+        // Explicit, so tests behave the same when the test process itself runs as root or administrator.
+        var options = new PickleOptions { NoProfile = true, NoLogo = true, Elevated = elevated };
         var runtime = new PickleRuntime(options, terminal, paths, new FileLogger(paths.LogDir, PickleLogLevel.Debug));
         var test = new TestPickle(home, terminal, runtime);
         if (start)

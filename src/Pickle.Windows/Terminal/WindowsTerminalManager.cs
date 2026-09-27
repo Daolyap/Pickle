@@ -152,6 +152,61 @@ public sealed class WindowsTerminalManager(WindowsTerminalLocations locations, F
         return results;
     }
 
+    /// <summary>
+    /// Points <c>defaultProfile</c> away from Pickle wherever it names Pickle: back to the value in Pickle's newest
+    /// backup of that file, or to Windows PowerShell's built-in profile. Used when Pickle is uninstalled.
+    /// </summary>
+    public IReadOnlyList<DefaultProfileResult> RestoreDefaultProfile()
+    {
+        var results = new List<DefaultProfileResult>();
+        foreach (var path in locations.SettingsFiles.Where(File.Exists))
+        {
+            try
+            {
+                var bytes = File.ReadAllBytes(path);
+                var hasBom = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble);
+                var text = Utf8NoBom.GetString(hasBom ? bytes.AsSpan(3) : bytes);
+                if (!string.Equals(JsoncEditor.GetRootString(text, "defaultProfile"), WindowsTerminalFragment.ProfileGuidString, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var previous = PreviousDefault(path) ?? WindowsPowerShellProfileGuid;
+                WriteAtomic(path, JsoncEditor.SetRootString(text, "defaultProfile", previous), hasBom ? new UTF8Encoding(encoderShouldEmitUTF8Identifier: true) : Utf8NoBom);
+                results.Add(new DefaultProfileResult(path, true, null, null));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FormatException)
+            {
+                results.Add(new DefaultProfileResult(path, false, null, ex.Message));
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>Windows Terminal's built-in "Windows PowerShell" profile, present on every install.</summary>
+    public const string WindowsPowerShellProfileGuid = "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}";
+
+    private static string? PreviousDefault(string settingsPath)
+    {
+        var directory = Path.GetDirectoryName(settingsPath);
+        if (directory is null)
+        {
+            return null;
+        }
+
+        foreach (var backup in Directory.EnumerateFiles(directory, Path.GetFileName(settingsPath) + ".pickle-*.bak").Order(StringComparer.Ordinal).Reverse())
+        {
+            var value = TryRead(backup) is { } text ? SafeGetDefault(text) : null;
+            if (value is not null && !string.Equals(value, WindowsTerminalFragment.ProfileGuidString, StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
     private static string? SafeGetDefault(string text)
     {
         try

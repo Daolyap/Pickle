@@ -1,3 +1,4 @@
+admin     «fg=#FF7A72»#«» Get-Date
 classic   PS «fg=#CCCCCC»/home/pickle/src/pickle/src/Pickle.Core/Prompt«»> Get-Date
 minimal   «fg=#B294BB»›«» Get-Date
 mono      «fg=#E0E0E0»>«» Get-Date

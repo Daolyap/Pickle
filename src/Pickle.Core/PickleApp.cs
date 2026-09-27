@@ -42,6 +42,7 @@ public static class PickleApp
             return RunHeadless(runtime);
         }
 
+        runtime.Terminal.Title = runtime.IsElevated ? "Administrator: Pickle" : "Pickle";
         if (!options.NoLogo && runtime.Config.Current.Shell.ShowStartupBanner)
         {
             StartupBanner.Write(runtime);

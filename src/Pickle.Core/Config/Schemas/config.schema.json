@@ -114,6 +114,12 @@
           "default": 400,
           "minimum": 0,
           "description": "How long the prompt waits for git status before rendering without it."
+        },
+        "icons": {
+          "type": "string",
+          "enum": ["auto", "nerd", "unicode"],
+          "default": "auto",
+          "description": "Prompt icons: Nerd Font glyphs when the terminal font has them (auto), always (nerd), or plain Unicode symbols without Powerline separators (unicode)."
         }
       }
     },
@@ -196,10 +202,21 @@
           "enum": ["animated", "art", "line"],
           "description": "Startup banner: ASCII art with a short shine animation (any key skips it), static art, or one line."
         },
+        "adminTheme": {
+          "type": "string",
+          "default": "admin",
+          "description": "Theme used while Pickle runs as administrator (red, with an ADMIN badge) without changing 'theme'; \"none\" keeps your normal theme."
+        },
         "firstRunCompleted": {
           "type": "boolean",
           "default": false,
           "description": "Set once the first-run experience has been shown."
+        },
+        "setupVersion": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "The newest setup whose questions were asked; offers added later are asked once. 'pk setup' asks them all again."
         }
       }
     },

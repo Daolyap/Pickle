@@ -35,8 +35,9 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         Paths = paths;
         Log = log;
 
+        IsElevated = options.Elevated ?? Environment.IsPrivilegedProcess;
         ConfigStore = new JsonConfigStore(paths, log);
-        ThemeProvider = new ThemeProvider(paths, ConfigStore, log);
+        ThemeProvider = new ThemeProvider(paths, ConfigStore, log, IsElevated);
         HookRegistry = new HookRegistry(log);
         Engine = new ShellEngine(this);
         Repl = new Repl(this);
@@ -81,6 +82,10 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         ?? "7";
 
     public PickleOptions Options { get; }
+
+    /// <summary>Running as administrator (root elsewhere): the admin theme, logo and title apply.</summary>
+    public bool IsElevated { get; }
+
     public ITerminal Terminal { get; }
     public PicklePaths Paths { get; }
     public IPickleLogger Log { get; }
@@ -143,6 +148,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public void InitializeComponents()
     {
         CommandRegistry.Register(new Commands.VersionCommand());
+        CommandRegistry.Register(new Commands.SetupCommand(this));
         foreach (var component in Components.OfType<IRuntimeComponent>())
         {
             component.Initialize();
@@ -186,7 +192,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
             LastCommandSucceeded: last?.Success ?? true,
             LastExitCode: last?.ExitCode,
             LastCommandDuration: last?.Duration,
-            IsAdmin: Environment.IsPrivilegedProcess,
+            IsAdmin: IsElevated,
             JobCount: Engine.RunningJobCount,
             UserName: Environment.UserName,
             HostName: Environment.MachineName,

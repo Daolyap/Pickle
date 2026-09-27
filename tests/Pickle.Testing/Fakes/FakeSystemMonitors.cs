@@ -173,3 +173,22 @@ public sealed class FakeDiskMonitor : IDiskMonitor
         return root;
     }
 }
+
+/// <summary>A fixed <see cref="SystemSummary"/>; change <see cref="Summary"/> between calls.</summary>
+public sealed class FakeSystemInfo : ISystemInfo
+{
+    public SystemSummary Summary { get; set; } = new(
+        "pickle-box",
+        "tester",
+        "Windows 11 Pro 24H2 (build 26100)",
+        "AMD Ryzen 7 5800X 8-Core Processor",
+        16,
+        TimeSpan.FromHours(76.5),
+        6L << 30,
+        24L << 30,
+        null,
+        new BatteryStatus(84, true, true),
+        "Windows Update");
+
+    public Task<SystemSummary> GetSummaryAsync(CancellationToken cancellationToken = default) => Task.FromResult(Summary);
+}

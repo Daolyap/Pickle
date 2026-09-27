@@ -134,9 +134,9 @@ public class PanelWindow : Window
     }
 
     /// <summary>Close this panel and open <paramref name="panelId"/> in its place (its result becomes the result).</summary>
-    protected bool OpenPanel(string panelId, string? argument = null)
+    protected bool OpenPanel(string panelId, string? argument = null, string? input = null)
     {
-        if (Pickle.Services.Get<IPanelHost>() is not PanelHost host || !host.OpenNext(panelId, argument))
+        if (Pickle.Services.Get<IPanelHost>() is not PanelHost host || !host.OpenNext(panelId, argument, input))
         {
             return false;
         }

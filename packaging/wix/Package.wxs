@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Pickle MSI (WiX Toolset 5.0.2, MS-RL). Built by packaging/wix/build-msi.ps1.
-  Installs pickle.exe per-machine, adds it to PATH, registers a Windows Terminal profile fragment for all users
-  (C:\ProgramData\Microsoft\Windows Terminal\Fragments\Pickle) and a Start menu shortcut.
+  Pickle MSI (WiX Toolset 5.0.2, MS-RL; UI and Util extensions). Built by packaging/wix/build-msi.ps1.
+
+  Installing shows a feature tree (install folder, PATH, Windows Terminal profile, the Cascadia Code Nerd Font, Start
+  menu and desktop shortcuts) and can start Pickle when it finishes. Removing through the installer's own dialogs
+  (Apps > Pickle > Modify > Remove) has a checkbox to delete the user's Pickle data too; a plain uninstall (Apps >
+  Uninstall) asks the same in a message box; `msiexec /x … REMOVEUSERDATA=1` deletes it without asking.
+
+  The Windows Terminal profile for all users is written at install time by pickle.exe itself, so it launches the
+  chosen folder and names the Nerd Font only when that font is installed (Terminal warns about missing fonts).
   Do not change UpgradeCode: it ties every version together for major upgrades.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
@@ -23,6 +29,27 @@
     <Property Id="ARPHELPLINK" Value="https://github.com/Daolyap/Pickle/issues" />
     <Property Id="ARPCOMMENTS" Value="A PowerShell 7 shell with superpowers" />
 
+    <!-- Upgrades and maintenance use the folder chosen at the first install. -->
+    <Property Id="INSTALLFOLDER" Secure="yes">
+      <RegistrySearch Id="PreviousInstallDir" Root="HKLM" Key="Software\Pickle" Name="InstallDir" Type="raw" Bitness="always64" />
+    </Property>
+
+    <!--
+      A Cascadia Code NF that was already installed some other way is left alone (and so is not deleted on uninstall);
+      the marker value tells Pickle's own copy apart, so upgrades keep installing it.
+    -->
+    <Property Id="CASCADIANF_PRESENT">
+      <DirectorySearch Id="FontsFolderSearch" Path="[FontsFolder]" Depth="0">
+        <FileSearch Id="CascadiaCodeNFSearch" Name="CascadiaCodeNF.ttf" />
+      </DirectorySearch>
+    </Property>
+    <Property Id="PICKLE_FONT_MARKER">
+      <RegistrySearch Id="PickleFontMarker" Root="HKLM" Key="Software\Pickle" Name="CascadiaCodeNF" Type="raw" Bitness="always64" />
+    </Property>
+
+    <Property Id="REMOVEUSERDATA" Secure="yes" />
+    <Property Id="USERDATAASKED" Secure="yes" />
+
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="Pickle">
         <Component Id="PickleExe">
@@ -31,11 +58,27 @@
         <Component Id="PickleTerminalIcon" Guid="3C1B9C1E-6F0A-4C57-9B7E-2F4D8A1E5B63">
           <File Id="PickleTerminalIconFile" Source="$(var.AssetsDir)\pickle-terminal.png" Name="pickle.png" KeyPath="yes" />
         </Component>
-        <Component Id="PickleOnPath" Guid="85050476-7241-4273-9831-481EA44095FF">
-          <Environment Id="PickleOnPathEnv" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+        <Component Id="PickleRegistry">
           <RegistryValue Root="HKLM" Key="Software\Pickle" Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
         </Component>
+        <Component Id="PickleOnPath">
+          <Environment Id="PickleOnPathEnv" Name="PATH" Value="[INSTALLFOLDER]" Permanent="no" Part="last" Action="set" System="yes" />
+          <RegistryValue Root="HKLM" Key="Software\Pickle" Name="OnPath" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+        <Component Id="CascadiaCodeLicense">
+          <File Id="CascadiaCodeLicenseFile" Source="$(var.FontDir)\CascadiaCode-LICENSE.txt" KeyPath="yes" />
+        </Component>
       </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="FontsFolder">
+      <Component Id="CascadiaCodeNF" Condition="NOT CASCADIANF_PRESENT OR PICKLE_FONT_MARKER">
+        <File Id="CascadiaCodeNFFile" Source="$(var.FontDir)\CascadiaCodeNF.ttf" TrueType="yes" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Pickle" Name="CascadiaCodeNF" Type="integer" Value="1" />
+      </Component>
+      <Component Id="CascadiaCodeNFItalic" Condition="NOT CASCADIANF_PRESENT OR PICKLE_FONT_MARKER">
+        <File Id="CascadiaCodeNFItalicFile" Source="$(var.FontDir)\CascadiaCodeNFItalic.ttf" TrueType="yes" KeyPath="yes" />
+      </Component>
     </StandardDirectory>
 
     <StandardDirectory Id="CommonAppDataFolder">
@@ -43,8 +86,11 @@
         <Directory Id="WtRoot" Name="Windows Terminal">
           <Directory Id="WtFragments" Name="Fragments">
             <Directory Id="WtPickleFragment" Name="Pickle">
-              <Component Id="TerminalFragment" Guid="865E260F-AD67-4A22-8B7C-6D1E64E09D80">
-                <File Id="TerminalFragmentFile" Source="$(var.FragmentFile)" Name="pickle.json" KeyPath="yes" />
+              <!-- pickle.json itself is written by PickleWriteFragment below. -->
+              <Component Id="TerminalFragment">
+                <RegistryValue Root="HKLM" Key="Software\Pickle" Name="TerminalProfile" Type="integer" Value="1" KeyPath="yes" />
+                <RemoveFile Id="RemoveTerminalFragment" Name="pickle.json" On="uninstall" />
+                <RemoveFolder Id="RemoveWtPickleFragment" On="uninstall" />
               </Component>
             </Directory>
           </Directory>
@@ -63,12 +109,170 @@
       </Component>
     </StandardDirectory>
 
-    <Feature Id="Main" Title="Pickle" Level="1">
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut">
+        <Shortcut Id="PickleDesktop"
+                  Name="Pickle"
+                  Description="A PowerShell 7 shell with superpowers"
+                  Target="[INSTALLFOLDER]pickle.exe"
+                  Icon="PickleIcon" />
+        <RegistryValue Root="HKLM" Key="Software\Pickle" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="Pickle" Description="The Pickle shell (pickle.exe) with PowerShell 7 built in." Level="1"
+             AllowAbsent="no" Display="expand" ConfigurableDirectory="INSTALLFOLDER">
       <ComponentRef Id="PickleExe" />
       <ComponentRef Id="PickleTerminalIcon" />
-      <ComponentRef Id="PickleOnPath" />
-      <ComponentRef Id="TerminalFragment" />
-      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="PickleRegistry" />
+
+      <Feature Id="PathFeature" Title="Add to PATH" Level="1"
+               Description="Run 'pickle' from any terminal, Run box or script.">
+        <ComponentRef Id="PickleOnPath" />
+      </Feature>
+      <Feature Id="TerminalFeature" Title="Windows Terminal profile" Level="1"
+               Description="A Pickle profile (with its own colour scheme) in Windows Terminal for every user.">
+        <ComponentRef Id="TerminalFragment" />
+      </Feature>
+      <Feature Id="FontFeature" Title="Cascadia Code Nerd Font" Level="1"
+               Description="Cascadia Code NF (SIL Open Font License) so the prompt's icons and Powerline themes display. Skipped if already installed.">
+        <ComponentRef Id="CascadiaCodeNF" />
+        <ComponentRef Id="CascadiaCodeNFItalic" />
+        <ComponentRef Id="CascadiaCodeLicense" />
+      </Feature>
+      <Feature Id="StartMenuFeature" Title="Start menu shortcut" Level="1" Description="Pickle in the Start menu.">
+        <ComponentRef Id="StartMenuShortcut" />
+      </Feature>
+      <Feature Id="DesktopFeature" Title="Desktop shortcut" Level="2" Description="A Pickle shortcut on the desktop.">
+        <ComponentRef Id="DesktopShortcut" />
+      </Feature>
     </Feature>
+
+    <!-- Install / repair / change: write the all-users Terminal profile after the fonts are registered. -->
+    <SetProperty Id="PickleWriteFragment" Sequence="execute" Before="PickleWriteFragment"
+                 Value="&quot;[INSTALLFOLDER]pickle.exe&quot; --write-terminal-fragment &quot;[WtPickleFragment]pickle.json&quot; --fragment-executable &quot;[INSTALLFOLDER]pickle.exe&quot; --fragment-icon &quot;[INSTALLFOLDER]pickle.png&quot;" />
+    <CustomAction Id="PickleWriteFragment" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+
+    <!-- Uninstall: take this user's per-user Terminal profile and default profile back off Pickle. -->
+    <SetProperty Id="PickleUninstallTerminal" Sequence="execute" Before="PickleUninstallTerminal"
+                 Value="&quot;[INSTALLFOLDER]pickle.exe&quot; --uninstall-terminal-profile" />
+    <CustomAction Id="PickleUninstallTerminal" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+
+    <!-- Uninstall with REMOVEUSERDATA=1 (the Remove page's checkbox or the command line): delete this user's data. -->
+    <SetProperty Id="PickleRemoveUserData" Sequence="execute" Before="PickleRemoveUserData"
+                 Value="&quot;[INSTALLFOLDER]pickle.exe&quot; --remove-user-data" />
+    <CustomAction Id="PickleRemoveUserData" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+
+    <!-- Uninstall without the installer's dialogs (Apps > Uninstall): ask in a message box. -->
+    <SetProperty Id="WixQuietExecCmdLine" Sequence="execute" Before="PickleAskUserData"
+                 Value="&quot;[INSTALLFOLDER]pickle.exe&quot; --uninstall-prompt" />
+    <CustomAction Id="PickleAskUserData" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixQuietExec"
+                  Execute="immediate" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="PickleWriteFragment" Before="InstallFinalize"
+              Condition="NOT REMOVE~=&quot;ALL&quot; AND (&amp;TerminalFeature=3 OR (!TerminalFeature=3 AND &amp;TerminalFeature&lt;&gt;2))" />
+      <Custom Action="PickleAskUserData" Before="InstallInitialize"
+              Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND UILevel&gt;=3 AND NOT USERDATAASKED AND REMOVEUSERDATA&lt;&gt;&quot;1&quot;" />
+      <Custom Action="PickleUninstallTerminal" Before="RemoveFiles"
+              Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND REMOVEUSERDATA&lt;&gt;&quot;1&quot;" />
+      <Custom Action="PickleRemoveUserData" After="PickleUninstallTerminal"
+              Condition="REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND REMOVEUSERDATA=&quot;1&quot;" />
+    </InstallExecuteSequence>
+
+    <!-- Finish page: start Pickle (it asks its setup questions on the first start). -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALTEXT" Value="The first time Pickle starts it offers to install the font, add its Windows Terminal profile and make it Terminal's default. 'pk setup' asks again later." />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start Pickle now" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[INSTALLFOLDER]pickle.exe" />
+    <CustomAction Id="LaunchPickle" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec" Impersonate="yes" Return="ignore" />
+
+    <UIRef Id="PickleUI" />
   </Package>
+
+  <!--
+    WixUI_FeatureTree without the license page (Pickle is MIT), plus the Remove page. First install: Welcome → Customize
+    → Ready → Progress → Finish. Maintenance: Welcome → Change / Repair / Remove (→ Remove page) → Ready.
+  -->
+  <Fragment>
+    <UI Id="PickleUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+      <DialogRef Id="WelcomeDlg" />
+      <DialogRef Id="MaintenanceWelcomeDlg" />
+      <DialogRef Id="MaintenanceTypeDlg" />
+      <DialogRef Id="CustomizeDlg" />
+      <DialogRef Id="VerifyReadyDlg" />
+      <DialogRef Id="ExitDialog" />
+
+      <Dialog Id="PickleRemoveDlg" Width="370" Height="270" Title="!(loc.MaintenanceTypeDlg_Title)">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.MaintenanceTypeDlgBannerBitmap)" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Remove Pickle" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="20" Transparent="yes" NoPrefix="yes" Text="Choose whether your own Pickle files go too." />
+        <Control Id="Explanation" Type="Text" X="25" Y="58" Width="320" Height="52" NoPrefix="yes"
+                 Text="Your settings, command history, themes, aliases, plugins and logs live in [AppDataFolder]Pickle and [LocalAppDataFolder]Pickle. They stay by default, so installing Pickle again picks up where you left off." />
+        <Control Id="RemoveData" Type="CheckBox" X="25" Y="118" Width="320" Height="18" Property="REMOVEUSERDATA" CheckBoxValue="1"
+                 Text="Also delete my Pickle settings, history, themes, plugins and logs" />
+        <Control Id="Note" Type="Text" X="42" Y="140" Width="303" Height="40" NoPrefix="yes"
+                 Text="Only your own files are deleted. Your Windows Terminal profile for Pickle is removed either way; fonts stay installed." />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" DisableCondition="NOT WixUI_InstallMode" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchPickle" Order="1"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="CustomizeDlg" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH" />
+
+      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="1" Condition="Installed" />
+      <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="NOT Installed" />
+      <Publish Dialog="CustomizeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" />
+
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CustomizeDlg" Order="1" Condition="NOT Installed OR WixUI_InstallMode = &quot;Change&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="PickleRemoveDlg" Order="2" Condition="Installed AND WixUI_InstallMode = &quot;Remove&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="3" Condition="Installed AND WixUI_InstallMode = &quot;Repair&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="4" Condition="Installed AND PATCH" />
+
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+
+      <Publish Dialog="MaintenanceTypeDlg" Control="ChangeButton" Event="NewDialog" Value="CustomizeDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="PickleRemoveDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+
+      <Publish Dialog="PickleRemoveDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Condition="WixUI_InstallMode = &quot;Remove&quot;" />
+      <Publish Dialog="PickleRemoveDlg" Control="Next" Property="USERDATAASKED" Value="1" Order="1" />
+      <Publish Dialog="PickleRemoveDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2" Condition="WixUI_InstallMode = &quot;Remove&quot;" />
+      <Publish Dialog="PickleRemoveDlg" Control="Next" Event="EndDialog" Value="Return" Order="3" Condition="NOT WixUI_InstallMode" />
+
+      <InstallUISequence>
+        <!-- msiexec /x with full UI skips the maintenance pages; still offer the choice. -->
+        <Show Dialog="PickleRemoveDlg" Before="ProgressDlg"
+              Condition="Installed AND Preselected AND REMOVE~=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND NOT USERDATAASKED AND REMOVEUSERDATA&lt;&gt;&quot;1&quot;" />
+      </InstallUISequence>
+    </UI>
+
+    <UIRef Id="WixUI_Common" />
+  </Fragment>
 </Wix>

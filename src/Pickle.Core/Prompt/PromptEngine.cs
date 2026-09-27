@@ -20,6 +20,7 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
     private bool _themeSubscribed;
     private bool _renderedOnce;
     private int _psStyleDirty = 1;
+    private bool? _terminalHasNerdFont;
 
     public PromptEngine(PickleRuntime runtime)
     {
@@ -80,18 +81,44 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
 
     /// <summary>Renders any theme against the live segments and cache (no newline-before-prompt handling).</summary>
     public PromptRender Render(PromptContext context, Theme theme) =>
-        _composer.Compose(context, theme, _runtime.Config.Current.Prompt.GitTimeoutMs);
+        _composer.Compose(context, ForTerminal(theme), _runtime.Config.Current.Prompt.GitTimeoutMs);
 
-    public string RenderTransient(PromptContext context) => _composer.ComposeTransient(context, _runtime.Themes.Current);
+    public string RenderTransient(PromptContext context) => _composer.ComposeTransient(context, ForTerminal(_runtime.Themes.Current));
 
-    public void Prefetch(PromptContext context) => _composer.Prefetch(context, _runtime.Themes.Current);
+    public void Prefetch(PromptContext context) => _composer.Prefetch(context, ForTerminal(_runtime.Themes.Current));
+
+    /// <summary>
+    /// Whether themes may use Nerd Font glyphs here: <c>prompt.icons</c> "nerd"/"unicode", or for "auto" what the font
+    /// service says about the terminal (checked once per session). Without a font service (not Windows) glyphs stay on.
+    /// </summary>
+    public bool UseNerdGlyphs => _runtime.Config.Current.Prompt.Icons?.Trim().ToLowerInvariant() switch
+    {
+        "nerd" => true,
+        "unicode" or "plain" or "none" => false,
+        _ => _terminalHasNerdFont ??= DetectNerdFont(),
+    };
+
+    private Theme ForTerminal(Theme theme) => UseNerdGlyphs ? theme : GlyphFallback.ForUnicode(theme);
+
+    private bool DetectNerdFont()
+    {
+        try
+        {
+            return _runtime.ServiceRegistry.Get<IFontService>() is not { } fonts || (fonts.TerminalHasNerdFont() ?? false);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Warn("prompt", "Could not tell whether the terminal font has Nerd Font glyphs", ex);
+            return false;
+        }
+    }
 
     /// <summary>Marks cached segment values stale (called after every command) so the next render refreshes them.</summary>
     public void InvalidateSegments() => _cache.Invalidate();
 
     /// <summary>Sample prompt for a theme (fixed data, independent of the current directory).</summary>
     public PromptRender RenderPreview(Theme theme, int width, bool lastCommandSucceeded = false) =>
-        new ThemePreview(OperatingSystem.IsWindows()).Render(theme, width, lastCommandSucceeded);
+        new ThemePreview(OperatingSystem.IsWindows()).Render(ForTerminal(theme), width, lastCommandSucceeded);
 
     public int TerminalWidth => _runtime.Terminal.Width;
 

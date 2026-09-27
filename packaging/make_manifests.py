@@ -56,6 +56,10 @@ def main():
         "architecture": {},
         "bin": "pickle.exe",
         "post_install": ["& \"$dir\\pickle.exe\" --install-terminal-profile | Out-Null"],
+        # `scoop uninstall -p pickle` (purge) also deletes the user's Pickle settings and data.
+        "uninstaller": {"script": [
+            "if ($purge) { & \"$dir\\pickle.exe\" --remove-user-data | Out-Null } else { & \"$dir\\pickle.exe\" --uninstall-terminal-profile | Out-Null }"
+        ]},
         "checkver": {"github": f"https://github.com/{a.repo}"},
         "autoupdate": {"architecture": {
             "64bit": {"url": f"https://github.com/{a.repo}/releases/download/v$version/pickle-$version-win-x64.zip"},

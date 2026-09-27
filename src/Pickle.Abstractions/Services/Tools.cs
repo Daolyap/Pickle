@@ -112,6 +112,71 @@ public static class ToolCatalog
         new("restic", "restic.restic", "restic"),
         new("mkcert", "FiloSottile.mkcert", "mkcert"),
         new("speedtest", "Ookla.Speedtest.CLI", "Speedtest CLI"),
+
+        // Modern replacements for everyday commands
+        new("zoxide", "ajeetdsouza.zoxide", "zoxide"),
+        new("eza", "eza-community.eza", "eza"),
+        new("lsd", "lsd-rs.lsd", "lsd"),
+        new("sd", "chmln.sd", "sd"),
+        new("xh", "ducaale.xh", "xh"),
+        new("dust", "bootandy.dust", "dust"),
+        new("duf", "muesli.duf", "duf"),
+        new("procs", "dalance.procs", "procs"),
+        new("btm", "Clement.bottom", "bottom"),
+        new("btop", "aristocratos.btop4win", "btop4win"),
+        new("hexyl", "sharkdp.hexyl", "hexyl"),
+        new("hyperfine", "sharkdp.hyperfine", "hyperfine"),
+        new("tokei", "XAMPPRocky.Tokei", "tokei"),
+        new("tldr", "tldr-pages.tlrc", "tldr (tlrc)"),
+        new("glow", "charmbracelet.glow", "Glow"),
+        new("gum", "charmbracelet.gum", "Gum"),
+        new("just", "Casey.Just", "just"),
+        new("make", "ezwinports.make", "GNU Make"),
+        new("nano", "GNU.Nano", "GNU nano"),
+        new("micro", "zyedidia.micro", "micro"),
+        new("hx", "Helix.Helix", "Helix"),
+        new("gsudo", "gerardog.gsudo", "gsudo", @"%ProgramFiles%\gsudo\Current"),
+        new("starship", "Starship.Starship", "Starship", @"%ProgramFiles%\starship\bin"),
+        new("oh-my-posh", "JanDeDobbeleer.OhMyPosh", "Oh My Posh", @"%LOCALAPPDATA%\Programs\oh-my-posh\bin"),
+
+        // Networking
+        new("gping", "orf.gping", "gping"),
+        new("trip", "FujiApple.Trippy", "Trippy"),
+        new("iperf3", "ar51an.iPerf3", "iPerf3"),
+        new("croc", "schollz.croc", "croc"),
+        new("ngrok", "Ngrok.Ngrok", "ngrok"),
+        new("cloudflared", "Cloudflare.cloudflared", "cloudflared", @"%ProgramFiles(x86)%\cloudflared", @"%ProgramFiles%\cloudflared"),
+        new("tailscale", "Tailscale.Tailscale", "Tailscale", @"%ProgramFiles%\Tailscale"),
+        new("wg", "WireGuard.WireGuard", "WireGuard", @"%ProgramFiles%\WireGuard"),
+
+        // Windows internals (Sysinternals)
+        new("procmon", "Microsoft.Sysinternals.ProcessMonitor", "Process Monitor"),
+        new("procexp", "Microsoft.Sysinternals.ProcessExplorer", "Process Explorer"),
+        new("psexec", "Microsoft.Sysinternals.PsTools", "PsTools"),
+        new("autoruns", "Microsoft.Sysinternals.Autoruns", "Autoruns"),
+        new("tcpview", "Microsoft.Sysinternals.TCPView", "TCPView"),
+
+        // Languages and developer tooling
+        new("nvm", "CoreyButler.NVMforWindows", "NVM for Windows", @"%LOCALAPPDATA%\nvm", @"%APPDATA%\nvm"),
+        new("pnpm", "pnpm.pnpm", "pnpm"),
+        new("bun", "Oven-sh.Bun", "Bun", @"%USERPROFILE%\.bun\bin"),
+        new("deno", "DenoLand.Deno", "Deno"),
+        new("uv", "astral-sh.uv", "uv"),
+        new("ruff", "astral-sh.ruff", "Ruff"),
+        new("sqlite3", "SQLite.SQLite", "SQLite"),
+        new("k9s", "Derailed.k9s", "k9s"),
+        new("kubectx", "ahmetb.kubectx", "kubectx"),
+        new("kubens", "ahmetb.kubectx", "kubectx (kubens)"),
+        new("minikube", "Kubernetes.minikube", "minikube", @"%ProgramFiles%\Kubernetes\Minikube"),
+        new("podman", "RedHat.Podman", "Podman", @"%ProgramFiles%\RedHat\Podman"),
+        new("gcloud", "Google.CloudSDK", "Google Cloud CLI", @"%LOCALAPPDATA%\Google\Cloud SDK\google-cloud-sdk\bin", @"%ProgramFiles(x86)%\Google\Cloud SDK\google-cloud-sdk\bin"),
+        new("ollama", "Ollama.Ollama", "Ollama", @"%LOCALAPPDATA%\Programs\Ollama"),
+
+        // Files and media
+        new("zstd", "Meta.Zstandard", "Zstandard"),
+        new("magick", "ImageMagick.ImageMagick", "ImageMagick", @"%ProgramFiles%\ImageMagick-*"),
+        new("pandoc", "JohnMacFarlane.Pandoc", "Pandoc", @"%LOCALAPPDATA%\Pandoc", @"%ProgramFiles%\Pandoc"),
+        new("exiftool", "OliverBetz.ExifTool", "ExifTool", @"%LOCALAPPDATA%\Programs\ExifTool", @"%ProgramFiles%\ExifTool"),
     ];
 
     private static readonly Dictionary<string, ToolPackage> ByCommand =

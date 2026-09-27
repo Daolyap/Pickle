@@ -152,7 +152,9 @@ public sealed class DisksPanelTests : IDisposable
         _monitor.SupportsSystemTools = true;
         _monitor.SupportsIoRates = false;
         using var panel = Panel();
-        var screen = SystemPanelRunner.RunAndDraw(panel, Wait(() => panel.Volumes.TotalCount == 2), Do(() => panel.Hints.SubViews.OfType<Shortcut>().Single(s => s.Title == "Disk Cleanup").Action!()));
+        var screen = SystemPanelRunner.RunAndDraw(panel, Wait(() => panel.Volumes.TotalCount == 2), Do(() => panel.Hints.SubViews.OfType<Shortcut>().Single(s => s.Title == "Disk Cleanup").Action!()),
+            // Disk Cleanup starts on a background task; don't close the panel before it has run.
+            Wait(() => _monitor.Calls.Count > 0));
 
         Assert.Contains("F7  Disk Cleanup", screen, StringComparison.Ordinal);
         Assert.Contains("F9  Disk Mgmt", screen, StringComparison.Ordinal);

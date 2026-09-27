@@ -44,3 +44,27 @@ def test_pk_disks_analyzes_a_folder(p):
             s.run("Write-Output ('pk-disks' + '-closed')", "pk-disks-closed", timeout=15)
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+def test_dashboard_opens_with_alt_i_and_shows_real_data(p):
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        time.sleep(0.3)
+        _open_and_close(s, "i", "Dashboard", "CPU & memory", "dashboard")
+
+
+def test_pk_devious_runs_and_q_leaves(p):
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        s.type("pk devious\r")
+        s.wait_for("devious  ·  Esc to close", timeout=20)
+        time.sleep(1.5)
+        s.type("q")
+        time.sleep(0.5)
+        s.run("Write-Output ('devious' + '-closed')", "devious-closed", timeout=15)
+
+
+def test_pk_dashboard_once_prints_a_snapshot(p):
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        s.run("pk dashboard --once", "Largest (memory)", timeout=30)

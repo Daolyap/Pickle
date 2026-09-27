@@ -16,6 +16,94 @@ public static class WsbBuilder
     public const string PickleMount = @"C:\Pickle";
     public const string SetupScriptName = "setup.ps1";
 
+    // Windows Sandbox has no winget. Repair-WinGetPackageManager fails there (winget-cli#5559: it cannot resolve
+    // Microsoft.UI.Xaml), which left packages uninstallable until the sandbox was restarted. This follows winget-pkgs'
+    // Tools/SandboxTest.ps1 instead: install the release's dependency .appx files and msixbundle (SHA-256 checked
+    // against the release's .txt files), and call winget.exe by its resolved path because the WindowsApps alias
+    // can appear only after a delay.
+    private static readonly string WingetBootstrap = """
+        function Update-PickleEnvironment {
+            $paths = foreach ($scope in 'Machine', 'User') { [Environment]::GetEnvironmentVariable('Path', $scope) -split ';' }
+            $env:Path = (@($env:Path -split ';') + $paths | Where-Object { $_ } | Select-Object -Unique) -join ';'
+        }
+
+        function Find-PickleWinget {
+            $alias = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+            if (Test-Path $alias) { return $alias }
+            $package = Get-AppxPackage -Name Microsoft.DesktopAppInstaller -ErrorAction SilentlyContinue | Sort-Object Version -Descending | Select-Object -First 1
+            if ($package -and (Test-Path (Join-Path $package.InstallLocation 'winget.exe'))) { return Join-Path $package.InstallLocation 'winget.exe' }
+            return $null
+        }
+
+        function Save-PickleReleaseAsset($Release, [string]$Name, [string]$Folder) {
+            $asset = $Release.assets | Where-Object { $_.name -eq $Name } | Select-Object -First 1
+            if (-not $asset) { throw "$Name is not part of winget $($Release.tag_name)" }
+            $file = Join-Path $Folder $Name
+            Invoke-WebRequest -UseBasicParsing -Uri $asset.browser_download_url -OutFile $file
+            $hashAsset = $Release.assets | Where-Object { $_.name -eq ([IO.Path]::GetFileNameWithoutExtension($Name) + '.txt') } | Select-Object -First 1
+            if ($hashAsset) {
+                $hashFile = Join-Path $Folder $hashAsset.name
+                Invoke-WebRequest -UseBasicParsing -Uri $hashAsset.browser_download_url -OutFile $hashFile
+                $expected = [regex]::Match((Get-Content -Raw -Path $hashFile), '[0-9A-Fa-f]{64}').Value
+                $actual = (Get-FileHash -Algorithm SHA256 -Path $file).Hash
+                if (-not $expected -or $actual -ne $expected) { throw "$Name failed its SHA-256 check" }
+            }
+            return $file
+        }
+
+        function Install-PickleWinget {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            if (-not (Find-PickleWinget)) {
+                try {
+                    $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+                    $work = Join-Path $env:TEMP 'pickle-winget'
+                    New-Item -ItemType Directory -Force -Path $work | Out-Null
+                    $release = Invoke-RestMethod -UseBasicParsing -Uri 'https://api.github.com/repos/microsoft/winget-cli/releases/latest' -Headers @{ 'User-Agent' = 'Pickle-Sandbox' }
+                    $dependencies = Save-PickleReleaseAsset $release 'DesktopAppInstaller_Dependencies.zip' $work
+                    $bundle = Save-PickleReleaseAsset $release 'Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' $work
+                    Expand-Archive -Path $dependencies -DestinationPath (Join-Path $work 'dependencies') -Force
+                    foreach ($appx in Get-ChildItem -Path (Join-Path $work 'dependencies') -Recurse -Filter '*.appx' | Where-Object { $_.FullName -match $arch }) {
+                        try { Add-AppxPackage -Path $appx.FullName -ErrorAction Stop } catch { Write-Warning "$($appx.Name): $_" }
+                    }
+                    Add-AppxPackage -Path $bundle -ErrorAction Stop
+                } catch {
+                    Write-Warning "Installing winget from its GitHub release failed ($_); trying Repair-WinGetPackageManager."
+                    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null
+                    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+                    Install-Module -Name Microsoft.WinGet.Client -Force | Out-Null
+                    Repair-WinGetPackageManager -Latest -Force | Out-Null
+                }
+            }
+
+            Update-PickleEnvironment
+            for ($i = 0; $i -lt 30 -and -not (Find-PickleWinget); $i++) { Start-Sleep -Seconds 1 }
+            $script:Winget = Find-PickleWinget
+            if (-not $script:Winget) { throw 'winget.exe did not appear after installing App Installer.' }
+            Set-Alias -Name winget -Value $script:Winget -Scope Script
+            & $script:Winget --version
+        }
+
+        function Disable-PickleSlowMsiCheck {
+            # MSI installers crawl in the sandbox while Smart App Control's reputation check is on (Windows-Sandbox#68).
+            reg.exe add 'HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy' /v VerifiedAndReputablePolicyState /t REG_DWORD /d 0 /f | Out-Null
+            if (Get-Command CiTool.exe -ErrorAction SilentlyContinue) { CiTool.exe --refresh --json | Out-Null }
+        }
+
+        function Install-PickleWingetPackage([string]$Id) {
+            if (-not $script:Winget) { throw 'winget is not available.' }
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+                & $script:Winget install --id $Id --exact --silent --source winget --accept-package-agreements --accept-source-agreements --disable-interactivity
+                # 0x8A150061 already installed, 0x8A15002B no applicable upgrade.
+                if ($LASTEXITCODE -in 0, -1978335135, -1978335189) { Update-PickleEnvironment; return }
+                Write-Warning "winget exited with $LASTEXITCODE (attempt $attempt of 3)."
+                if ($attempt -eq 1) { & $script:Winget source reset --force | Out-Null; & $script:Winget source update | Out-Null }
+                Start-Sleep -Seconds 5
+            }
+            throw "winget could not install $Id."
+        }
+
+        """.ReplaceLineEndings("\r\n");
+
     public static bool NeedsSetup(SandboxConfig c) =>
         c.DarkMode || c.ShowFileExtensions || c.ShowHiddenFiles || InstallsWinget(c) || IncludesPickle(c)
         || !string.IsNullOrWhiteSpace(c.StartUrl) || (c.OpenMappedFolder && c.MappedFolders.Count > 0) || !string.IsNullOrWhiteSpace(c.SetupScript);
@@ -185,18 +273,17 @@ public static class WsbBuilder
         if (InstallsWinget(c))
         {
             Line();
-            Line("Step 'Installing winget' {");
-            Line("    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12");
-            Line("    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force | Out-Null");
-            Line("    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted");
-            Line("    Install-Module -Name Microsoft.WinGet.Client -Force | Out-Null");
-            Line("    Repair-WinGetPackageManager -Latest -Force | Out-Null");
-            Line("}");
-            foreach (var id in c.WingetPackages.Where(WindowsIds.IsValidWingetId).Distinct(StringComparer.OrdinalIgnoreCase))
+            sb.Append(WingetBootstrap);
+            Line("Step 'Installing winget' { Install-PickleWinget }");
+            var packages = c.WingetPackages.Where(WindowsIds.IsValidWingetId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            if (packages.Count > 0)
             {
-                Line($"Step {Quote("Installing " + id)} {{");
-                Line($"    & (Join-Path $env:LOCALAPPDATA 'Microsoft\\WindowsApps\\winget.exe') install --id {Quote(id)} --exact --silent --accept-package-agreements --accept-source-agreements");
-                Line("}");
+                Line("Step 'Speeding up MSI installers' { Disable-PickleSlowMsiCheck }");
+            }
+
+            foreach (var id in packages)
+            {
+                Line($"Step {Quote("Installing " + id)} {{ Install-PickleWingetPackage {Quote(id)} }}");
             }
         }
 

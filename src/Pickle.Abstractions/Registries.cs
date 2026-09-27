@@ -214,10 +214,17 @@ public interface IKeyBindingRegistry
 // ───────────────────────────── First run ─────────────────────────────
 
 /// <summary>
-/// A yes/no question asked once, at the first interactive start (e.g. "Add Pickle to Windows Terminal?").
-/// <paramref name="Accept"/> does the work and returns a line to show the user.
+/// A yes/no question asked once, at the first interactive start (e.g. "Add Pickle to Windows Terminal?"), and again
+/// by <c>pk setup</c>. <paramref name="Accept"/> does the work and returns a line to show the user.
 /// </summary>
-public sealed record FirstRunOffer(string Id, string Question, Func<bool> IsRelevant, Func<string> Accept);
+public sealed record FirstRunOffer(string Id, string Question, Func<bool> IsRelevant, Func<string> Accept)
+{
+    /// <summary>The setup version that added this offer: people who finished an older setup are asked newer offers once.</summary>
+    public int Since { get; init; } = 1;
+
+    /// <summary>Shown while <see cref="Accept"/> runs, for slow work (e.g. "Downloading…").</summary>
+    public string? Progress { get; init; }
+}
 
 /// <summary>Register offers from a plugin's Initialize: <c>context.Services.Get&lt;IFirstRunOffers&gt;()?.Add(...)</c>.</summary>
 public interface IFirstRunOffers

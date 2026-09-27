@@ -1,0 +1,26 @@
+{
+  "id": "set-partition",
+  "title": "Set-Partition",
+  "description": "Change a partition's drive letter or flags (diskpart 'assign letter', 'active', 'attributes').",
+  "command": "Set-Partition",
+  "homepage": "https://learn.microsoft.com/powershell/module/storage/set-partition",
+  "windowsOnly": true,
+  "sections": [
+    {
+      "title": "Partition",
+      "options": [
+        { "id": "driveLetter", "label": "Current drive letter", "type": "text", "flag": "-DriveLetter", "validation": "^[A-Za-z]$", "placeholder": "E" },
+        { "id": "diskNumber", "label": "Disk number", "type": "number", "flag": "-DiskNumber", "validation": "^\\d+$", "dependsOn": "!driveLetter" },
+        { "id": "partitionNumber", "label": "Partition number", "type": "number", "flag": "-PartitionNumber", "validation": "^\\d+$", "dependsOn": "!driveLetter" },
+        { "id": "newDriveLetter", "label": "New drive letter", "type": "text", "flag": "-NewDriveLetter", "validation": "^[A-Za-z]$", "placeholder": "X" },
+        { "id": "isActive", "label": "Active (MBR)", "type": "choice", "flag": "-IsActive", "raw": true, "choices": [ { "value": "$true" }, { "value": "$false" } ] },
+        { "id": "isReadOnly", "label": "Read-only", "type": "choice", "flag": "-IsReadOnly", "raw": true, "choices": [ { "value": "$true" }, { "value": "$false" } ] },
+        { "id": "isHidden", "label": "Hidden", "type": "choice", "flag": "-IsHidden", "raw": true, "choices": [ { "value": "$true" }, { "value": "$false" } ] }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Change E: to X:", "values": { "driveLetter": "E", "newDriveLetter": "X" } },
+    { "name": "Make E: read-only", "values": { "driveLetter": "E", "isReadOnly": "$true" } }
+  ]
+}

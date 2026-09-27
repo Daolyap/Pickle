@@ -24,6 +24,19 @@ public sealed class WingetToolInstallerTests
     }
 
     [Fact]
+    public void CatalogEntriesAreWellFormed()
+    {
+        Assert.All(ToolCatalog.All, p =>
+        {
+            Assert.True(WindowsIds.IsValidWingetId(p.WingetId), p.WingetId);
+            Assert.Equal(p.Command, ToolCatalog.NormalizeCommand(p.Command));
+            Assert.Same(p, ToolCatalog.Find(p.Command + ".exe"));
+        });
+        Assert.Equal("ahmetb.kubectx", ToolCatalog.Find("kubens")?.WingetId);
+        Assert.Equal("Microsoft.Sysinternals.ProcessMonitor", ToolCatalog.Find("procmon")?.WingetId);
+    }
+
+    [Fact]
     public async Task ProgramThatIsNotOnPathIsAddedToSessionAndUserPath()
     {
         var folder = Path.Combine(ProgramFiles, "7-Zip");

@@ -9,7 +9,14 @@ namespace Pickle.Abstractions;
 /// </summary>
 public sealed class PickleConfig
 {
+    /// <summary>A theme name, or "auto" to follow the system's light/dark mode with <see cref="LightTheme"/> and <see cref="DarkTheme"/>.</summary>
     public string Theme { get; set; } = "pickle";
+
+    /// <summary>Theme used by "auto" while the system is in light mode.</summary>
+    public string LightTheme { get; set; } = "solarized-light";
+
+    /// <summary>Theme used by "auto" while the system is in dark mode (or when it can't be told).</summary>
+    public string DarkTheme { get; set; } = "pickle";
     public EditorSettings Editor { get; set; } = new();
     public HistorySettings History { get; set; } = new();
     public PromptSettings Prompt { get; set; } = new();

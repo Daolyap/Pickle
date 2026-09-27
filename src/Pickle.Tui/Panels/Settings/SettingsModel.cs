@@ -48,7 +48,9 @@ public static class SettingsModel
     {
         var fields = new List<SettingField>
         {
-            new(ThemeCategory, "theme", "Theme", SettingKind.Choice, false, pickle.Themes.Available),
+            new(ThemeCategory, "theme", "Theme", SettingKind.Choice, false, [.. pickle.Themes.Available, "auto"]),
+            new(ThemeCategory, "lightTheme", "Light theme (for auto)", SettingKind.Choice, false, pickle.Themes.Available),
+            new(ThemeCategory, "darkTheme", "Dark theme (for auto)", SettingKind.Choice, false, pickle.Themes.Available),
         };
 
         foreach (var section in SectionProperties())
@@ -91,7 +93,7 @@ public static class SettingsModel
     {
         if (field.Path == "theme")
         {
-            return pickle.Themes.Current.Name;
+            return string.Equals(pickle.Config.Current.Theme, "auto", StringComparison.OrdinalIgnoreCase) ? "auto" : pickle.Themes.Current.Name;
         }
 
         if (pickle.Config.GetValue(field.Path) is not { } element)

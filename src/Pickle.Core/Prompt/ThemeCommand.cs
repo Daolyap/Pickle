@@ -3,14 +3,14 @@ using Pickle.Abstractions;
 
 namespace Pickle.Core.Prompt;
 
-/// <summary><c>pk theme list|set &lt;name&gt;|show [name]|preview</c>.</summary>
+/// <summary><c>pk theme list|set &lt;name&gt;|auto [light dark]|show [name]|preview</c>.</summary>
 public sealed class ThemeCommand(PromptEngine engine) : IPickleCommand
 {
     public string Name => "theme";
 
     public string Description => "List, switch, inspect and preview color themes";
 
-    public string Usage => "pk theme list | set <name> | show [name] | preview";
+    public string Usage => "pk theme list | set <name|auto> | auto [<light> <dark>] | show [name] | preview [names…]";
 
     public ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
@@ -19,6 +19,7 @@ public sealed class ThemeCommand(PromptEngine engine) : IPickleCommand
         {
             "list" or "ls" => List(context),
             "set" or "use" => Set(context, args),
+            "auto" => Auto(context, args),
             "show" => Show(context, args.Count > 1 ? args[1] : null),
             "preview" => Preview(context, args.Skip(1).ToList()),
             "help" or "-h" or "--help" => Help(context),
@@ -43,7 +44,63 @@ public sealed class ThemeCommand(PromptEngine engine) : IPickleCommand
                 + Ansi.Colorize(description, ui.Muted));
         }
 
+        if (themes is ThemeProvider provider)
+        {
+            var auto = provider.FollowsSystem;
+            context.WriteHost(
+                (auto ? Ansi.Colorize("● ", ui.Accent) : "  ")
+                + Ansi.Colorize(ThemeProvider.Auto.PadRight(width), auto ? ui.Accent : null, bold: auto)
+                + Ansi.Colorize(AutoDescription(context, provider), ui.Muted));
+        }
+
         return 0;
+    }
+
+    private int Auto(PickleCommandContext context, IReadOnlyList<string> args)
+    {
+        var themes = context.Pickle.Themes;
+        if (args.Count is not (1 or 3))
+        {
+            context.WriteError("Usage: pk theme auto [<light theme> <dark theme>]");
+            return 2;
+        }
+
+        if (args.Count == 3)
+        {
+            foreach (var name in args.Skip(1))
+            {
+                if (ThemeProvider.IsAuto(name) || themes.Load(name) is null)
+                {
+                    context.WriteError($"Theme '{name}' not found. Available: {string.Join(", ", themes.Available)}");
+                    return 1;
+                }
+            }
+
+            context.Pickle.Config.Update(c =>
+            {
+                c.LightTheme = args[1];
+                c.DarkTheme = args[2];
+            });
+        }
+
+        themes.Apply(ThemeProvider.Auto);
+        var config = context.Pickle.Config.Current;
+        context.WriteHost(
+            $"Theme follows the system: {config.LightTheme} in light mode, {config.DarkTheme} in dark mode. Now showing "
+            + Ansi.Colorize(themes.Current.Name, themes.Current.Ui.Accent, bold: true) + ".");
+        return 0;
+    }
+
+    private static string AutoDescription(PickleCommandContext context, ThemeProvider provider)
+    {
+        var config = context.Pickle.Config.Current;
+        var mode = provider.SystemPrefersLight switch
+        {
+            true => "light now",
+            false => "dark now",
+            null => "can't tell, so dark",
+        };
+        return $"Follows the system: {config.LightTheme} in light mode, {config.DarkTheme} in dark mode ({mode})";
     }
 
     private int Set(PickleCommandContext context, IReadOnlyList<string> args)

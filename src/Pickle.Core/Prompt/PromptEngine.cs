@@ -69,6 +69,7 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
 
     public PromptRender Render(PromptContext context)
     {
+        _runtime.ThemeProvider.RefreshAppearance();
         _lastRenderHadNewline = _runtime.Config.Current.Prompt.NewlineBeforePrompt && _renderedOnce;
         _renderedOnce = true;
         return Rerender(context);

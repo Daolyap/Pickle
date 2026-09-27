@@ -12,7 +12,17 @@
     "theme": {
       "type": "string",
       "default": "pickle",
-      "description": "Theme name: a built-in theme or a file in the themes folder (without .json)."
+      "description": "Theme name: a built-in theme or a file in the themes folder (without .json), or \"auto\" to follow the system's light/dark mode (lightTheme / darkTheme)."
+    },
+    "lightTheme": {
+      "type": "string",
+      "default": "solarized-light",
+      "description": "Theme used while the system is in light mode, when theme is \"auto\"."
+    },
+    "darkTheme": {
+      "type": "string",
+      "default": "pickle",
+      "description": "Theme used while the system is in dark mode (or when it can't be told), when theme is \"auto\"."
     },
     "editor": {
       "type": "object",

@@ -2,7 +2,7 @@ using Pickle.Abstractions;
 
 namespace Pickle.Tui.Panels.Dashboard;
 
-/// <summary>Registers the dashboard panel (Alt+I) and <c>pk dashboard</c>.</summary>
+/// <summary>Registers the dashboard panel (Alt+I) with <c>pk dashboard</c>, and <c>pk devious</c>.</summary>
 public sealed class DashboardPanelPlugin : IPicklePlugin
 {
     public string Id => "pickle.dashboard";
@@ -22,5 +22,14 @@ public sealed class DashboardPanelPlugin : IPicklePlugin
             CreateView = ctx => new DashboardPanel(ctx),
         });
         context.Commands.Register(new DashboardCommand());
+
+        context.Panels.Register(new PanelDescriptor
+        {
+            Id = Devious.DeviousPanel.PanelId,
+            Title = "Devious",
+            Description = "Hollywood-style wall of this machine's real processes, traffic, code, hashes and logs",
+            CreateView = ctx => new Devious.DeviousPanel(ctx),
+        });
+        context.Commands.Register(new Devious.DeviousCommand());
     }
 }

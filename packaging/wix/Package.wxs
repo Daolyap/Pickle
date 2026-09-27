@@ -74,8 +74,10 @@
     <StandardDirectory Id="FontsFolder">
       <Component Id="CascadiaCodeNF" Condition="NOT CASCADIANF_PRESENT OR PICKLE_FONT_MARKER">
         <File Id="CascadiaCodeNFFile" Source="$(var.FontDir)\CascadiaCodeNF.ttf" TrueType="yes" KeyPath="yes" />
-        <File Id="CascadiaCodeNFItalicFile" Source="$(var.FontDir)\CascadiaCodeNFItalic.ttf" TrueType="yes" />
         <RegistryValue Root="HKLM" Key="Software\Pickle" Name="CascadiaCodeNF" Type="integer" Value="1" />
+      </Component>
+      <Component Id="CascadiaCodeNFItalic" Condition="NOT CASCADIANF_PRESENT OR PICKLE_FONT_MARKER">
+        <File Id="CascadiaCodeNFItalicFile" Source="$(var.FontDir)\CascadiaCodeNFItalic.ttf" TrueType="yes" KeyPath="yes" />
       </Component>
     </StandardDirectory>
 
@@ -135,6 +137,7 @@
       <Feature Id="FontFeature" Title="Cascadia Code Nerd Font" Level="1"
                Description="Cascadia Code NF (SIL Open Font License) so the prompt's icons and Powerline themes display. Skipped if already installed.">
         <ComponentRef Id="CascadiaCodeNF" />
+        <ComponentRef Id="CascadiaCodeNFItalic" />
         <ComponentRef Id="CascadiaCodeLicense" />
       </Feature>
       <Feature Id="StartMenuFeature" Title="Start menu shortcut" Level="1" Description="Pickle in the Start menu.">

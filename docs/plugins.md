@@ -317,6 +317,7 @@ internal sealed class DeployCommand : PickleCommandBase
 }
 ```
 
+Override `Examples` to list example lines that `pk deploy --help` prints after the usage.
 `ArgumentException`s become usage errors (exit code 2); I/O, timeout and invalid-operation errors become exit code
 1 with the message printed. `CommandOutput` has `Line`, `Heading`, `Muted`, `Success`, `Failure`, `Warning`,
 `Status` (a line that the next one replaces) and `Transcript`. Write objects with `Object`; `Display.Columns` picks

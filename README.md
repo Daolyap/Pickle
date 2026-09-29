@@ -59,6 +59,7 @@ pk theme gallery             # or Alt+E: every theme previewed live in its own c
 pk theme auto                # light theme in light mode, dark theme in dark mode
 pk theme import "One Half Dark"   # any Windows Terminal color scheme as a Pickle theme
 pk alias add gco 'git checkout {branch}' --kind param
+pk alias add scan 'nmap -A -oN {out=scan}.txt {*}' --kind param   # then: scan out=home 10.0.0.0/24 10.0.0.9
 pk winget search ripgrep     # or press Alt+W
 pk upgrade                   # upgrade all apps + Windows updates
 pk update check              # Windows Update

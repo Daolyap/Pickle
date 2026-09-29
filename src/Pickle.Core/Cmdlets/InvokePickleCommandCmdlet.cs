@@ -161,6 +161,15 @@ public sealed class InvokePickleCommandCmdlet : PickleCmdlet
                 Host.UI.WriteLine("  " + line);
             }
         }
+
+        if (command.Examples.Count > 0)
+        {
+            Host.UI.WriteLine(Ansi.Colorize("Examples:", theme.Ui.Muted));
+            foreach (var line in command.Examples)
+            {
+                Host.UI.WriteLine("  " + line);
+            }
+        }
     }
 
     private void WriteHelp(PickleRuntime runtime, string? topic)

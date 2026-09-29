@@ -108,6 +108,12 @@ public static partial class AliasCompiler
             sb.Append("param(")
                 .Append(string.Join(", ", placeholders.Select(p => p.Default is null ? "$" + p.Name : $"${p.Name} = {PowerShellText.SingleQuote(p.Default)}")))
                 .AppendLine(")");
+
+            // `scan IP=10.0.0.1 OUT=home` fills placeholders by name (PowerShell alone would bind "IP=…" by position).
+            var names = string.Join(", ", placeholders.Select(p => PowerShellText.SingleQuote(p.Name)));
+            var defaults = string.Join("; ", placeholders.Where(p => p.Default is not null).Select(p => $"{PowerShellText.SingleQuote(p.Name)} = {PowerShellText.SingleQuote(p.Default!)}"));
+            sb.Append("if ($__named = [Pickle.Core.Aliases.AliasArguments]::ByName(@(").Append(names).Append("), @{").Append(defaults)
+                .AppendLine("}, $PSBoundParameters, $args)) { $__named.Apply($ExecutionContext.SessionState, $PSBoundParameters); $args = $__named.Rest }");
         }
 
         var usage = Usage(alias);

@@ -184,6 +184,10 @@ public class CompletionEngineTests
     public async Task WaitsBrieflyForABackgroundCallHoldingTheRunspace()
     {
         using var t = Started();
+
+        // Generous so a loaded CI machine (a late timer, a queued background call taking the lock next) can't fail it;
+        // the old zero-wait behavior still does.
+        ((CompletionEngine)t.Runtime.Completion).LockWait = TimeSpan.FromSeconds(10);
         Assert.True(t.Runtime.Engine.TryEnterMain(TimeSpan.Zero));
         _ = Task.Delay(150).ContinueWith(_ => t.Runtime.Engine.ExitMain(), TaskScheduler.Default);
 

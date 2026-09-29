@@ -20,7 +20,8 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
     /// <summary>How long PowerShell may take before it is stopped and only provider results are used.</summary>
     internal TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(1500);
 
-    private const double LockWaitMs = 300;
+    /// <summary>How long to wait for a background call holding the runspace (capped at half of <see cref="Timeout"/>).</summary>
+    internal TimeSpan LockWait { get; set; } = TimeSpan.FromMilliseconds(300);
 
     public void Initialize()
     {
@@ -160,7 +161,7 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
         // Hold the engine's runspace lock so background InvokeAsync calls can't start a pipeline mid-completion. A
         // background call (the command cache refreshing, a hook) may hold it for a moment; wait that out rather than
         // answer Tab without PowerShell's completions.
-        var lockWait = TimeSpan.FromMilliseconds(Math.Min(LockWaitMs, Timeout.TotalMilliseconds / 2));
+        var lockWait = TimeSpan.FromMilliseconds(Math.Min(LockWait.TotalMilliseconds, Timeout.TotalMilliseconds / 2));
         bool entered;
         try
         {

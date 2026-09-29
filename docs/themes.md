@@ -64,7 +64,22 @@ folder under a new name. Colors are `#RRGGBB`, an ANSI name (`red`, `brightBlack
 ```
 
 Segment types: `cwd`, `git`, `status`, `duration`, `time`, `user`, `host`, `admin`, `venv`, `node`, `k8s`, `jobs`, `text`
-(`options.text`), plus any segment a plugin registers ([plugin guide](plugins.md)). A segment with a `background` is drawn
+(`options.text`), plus any segment a plugin registers ([plugin guide](plugins.md)). Context segments that only show when
+they apply:
+
+| Type | Shows | Options |
+|---|---|---|
+| `aws` | `AWS_PROFILE` (or `AWS_DEFAULT_PROFILE`) and the region | `region` (true) |
+| `azure` | the default subscription from `az account set` (`~/.azure/azureProfile.json`, `AZURE_CONFIG_DIR`) | |
+| `gcloud` | the active gcloud configuration's project (`CLOUDSDK_CONFIG`, `CLOUDSDK_ACTIVE_CONFIG_NAME`) | |
+| `docker` | `DOCKER_CONTEXT` or `currentContext` from `~/.docker/config.json`, unless it's `default` | |
+| `dotnet` | in a folder with a project/solution or under a `global.json`: its pinned SDK, else `dotnet --version` | |
+| `go` | inside a module: `go.mod`'s toolchain or go version (no process started) | |
+| `rust` | inside a Cargo project: the `rust-toolchain(.toml)` channel, else `rustc --version` | |
+| `battery` | charge (`57%`, `↑` while charging), red at or below `low`; hidden on AC power at or above `hideAbove` | `low` (15), `hideAbove` (95) |
+
+Config files are re-read only when they change, and a tool's version is asked for once per session. `powerline` and
+`tokyo-night` include all of them. A segment with a `background` is drawn
 as a block joined by the separator; without one it's colored text.
 
 ## Animation

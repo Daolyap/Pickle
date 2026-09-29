@@ -154,7 +154,10 @@ public sealed class PromptAnimation
 
 public sealed class SegmentStyle
 {
-    /// <summary>Segment type id: cwd, git, status, duration, time, user, host, admin, venv, node, k8s, jobs, text, or a plugin segment id.</summary>
+    /// <summary>
+    /// Segment type id: cwd, git, status, duration, time, user, host, admin, venv, node, k8s, aws, azure, gcloud, docker,
+    /// dotnet, go, rust, battery, jobs, text, or a plugin segment id.
+    /// </summary>
     public string Type { get; set; } = "text";
     public string? Foreground { get; set; }
     public string? Background { get; set; }

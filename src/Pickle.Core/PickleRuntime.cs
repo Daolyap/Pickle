@@ -29,6 +29,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
 {
     public PickleRuntime(PickleOptions options, ITerminal terminal, PicklePaths paths, IPickleLogger log)
     {
+        Startup = new StartupTimings();
         Current = this;
         Options = options;
         Terminal = terminal;
@@ -41,6 +42,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         HookRegistry = new HookRegistry(log);
         Engine = new ShellEngine(this);
         Repl = new Repl(this);
+        TabProgress = new TabProgress(this);
 
         History = new JsonlHistoryStore(this);
         var aliases = new AliasManager(this);
@@ -104,6 +106,12 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public PickleServices ServiceRegistry { get; } = new();
     public FirstRun FirstRun { get; } = new();
 
+    /// <summary>How long each startup phase took (<c>pk doctor --startup</c>).</summary>
+    public StartupTimings Startup { get; }
+
+    /// <summary>Terminal tab/taskbar progress for interactive commands.</summary>
+    public TabProgress TabProgress { get; }
+
     // Components
     public ShellEngine Engine { get; }
     public Repl Repl { get; }
@@ -147,19 +155,24 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     /// <summary>Phase 1: components register actions/commands/segments/session contributions.</summary>
     public void InitializeComponents()
     {
-        CommandRegistry.Register(new Commands.VersionCommand());
+        Startup.Mark("runtime");
+        CommandRegistry.Register(new Commands.VersionCommand(this));
         CommandRegistry.Register(new Commands.SetupCommand(this));
         foreach (var component in Components.OfType<IRuntimeComponent>())
         {
             component.Initialize();
         }
+
+        Startup.Mark("components");
     }
 
     /// <summary>Phase 2: open the runspace, load plugins, define aliases/shims, run the profile.</summary>
     public void Start(IReadOnlyList<IPicklePlugin> builtInPlugins)
     {
         Engine.Open();
+        Startup.Mark("runspace");
         Plugins.LoadAll(builtInPlugins);
+        Startup.Mark("plugins");
         foreach (var component in Components.OfType<IRuntimeComponent>())
         {
             try
@@ -172,9 +185,11 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
             }
         }
 
+        Startup.Mark("started");
         if (!Options.NoProfile)
         {
             ProfileLoader.Load();
+            Startup.Mark("profile");
         }
     }
 

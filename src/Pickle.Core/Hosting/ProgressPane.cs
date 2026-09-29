@@ -38,9 +38,12 @@ internal sealed class ProgressPane
 
         if (_active.Count == 0)
         {
+            _runtime.TabProgress.ProgressDone();
             ClearIfVisible();
             return;
         }
+
+        _runtime.TabProgress.Progress(_active.Values.Last().PercentComplete);
 
         var now = Environment.TickCount64;
         if (_visible && now - _lastRenderTicks < 50)

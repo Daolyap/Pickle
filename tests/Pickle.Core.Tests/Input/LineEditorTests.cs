@@ -9,6 +9,35 @@ namespace Pickle.Core.Tests.Input;
 public class LineEditorTests
 {
     [Fact]
+    public void AnimatedPromptMovesWhileIdleAndStopsAfterTheIdleLimit()
+    {
+        using var h = EditorHarness.Create(width: 40, configure: c => c.Prompt.Animation = "on");
+        var engine = (Pickle.Core.Prompt.PromptEngine)h.Runtime.Prompt;
+        var theme = h.Runtime.ThemeProvider.Current;
+        theme.Prompt.Left = [new SegmentStyle { Type = "text", Foreground = "#FF0000", Options = { ["text"] = "anim" } }];
+        theme.Prompt.Animation = new PromptAnimation { Effect = "rainbow", FrameMs = 100, PeriodMs = 1200, Spread = 0, PromptChar = false };
+        var now = 0L;
+        engine.Clock = () => now;
+
+        // Idle ticks run while the editor waits for the next key; after "s" the clock jumps past the idle limit.
+        h.Terminal.Idle(() => now = 400).Type("l").Idle(() => now = 600).Type("s")
+            .Idle(() => now = 600 + (6 * 60 * 1000) + 400).Idle(() => now += 100);
+        Assert.Equal("ls", h.Pending());
+
+        var raw = h.Terminal.RawOutput;
+        var green = raw.IndexOf("38;2;0;255;0", StringComparison.Ordinal);
+        var cyan = raw.IndexOf("38;2;0;255;255", StringComparison.Ordinal);
+        Assert.True(green >= 0 && cyan > green, "expected the green frame, then the cyan one");
+
+        // Frozen on the frame drawn before the pause, not the one the clock is at now.
+        Assert.Contains("«fg=#00FFFF»anim", h.Terminal.GetStyledScreen(), StringComparison.Ordinal);
+        Assert.Equal(1, CountOf(raw[cyan..], "anim"));
+
+        h.Press("Enter");
+        Assert.Equal("ls", h.ReadLine());
+    }
+
+    [Fact]
     public void TypingAndCursorMovement()
     {
         using var h = EditorHarness.Create();
@@ -564,5 +593,16 @@ public class LineEditorTests
         var command = Assert.IsType<System.Management.Automation.Language.CommandAst>(Assert.Single(ast.FindAll(a => a is System.Management.Automation.Language.CommandAst, true)));
         Assert.Equal("Set-Location", command.GetCommandName());
         Assert.Equal(path, Assert.IsType<System.Management.Automation.Language.StringConstantExpressionAst>(command.CommandElements[^1]).Value);
+    }
+
+    private static int CountOf(string text, string value)
+    {
+        var count = 0;
+        for (var i = text.IndexOf(value, StringComparison.Ordinal); i >= 0; i = text.IndexOf(value, i + value.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
     }
 }

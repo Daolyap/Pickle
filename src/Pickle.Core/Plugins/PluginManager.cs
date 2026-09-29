@@ -54,6 +54,7 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
         commands.Register(new PluginCommand(_runtime, this));
         commands.Register(new ConfigCommand(_runtime));
         commands.Register(new DoctorCommand(_runtime));
+        commands.Register(new BugReportCommand(_runtime));
         commands.Register(new ReloadCommand(_runtime));
         commands.Register(new PathsCommand(_runtime));
     }

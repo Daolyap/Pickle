@@ -12,7 +12,7 @@ namespace Pickle.Testing;
 /// </summary>
 public sealed class VirtualTerminal : ITerminal
 {
-    private readonly Queue<(ConsoleKeyInfo Key, bool Burst)> _keys = new();
+    private readonly Queue<(ConsoleKeyInfo Key, bool Burst, Action? Idle)> _keys = new();
     private readonly StringBuilder _raw = new();
     private Cell[,] _cells;
     private Cell[,]? _savedMainScreen;
@@ -75,7 +75,7 @@ public sealed class VirtualTerminal : ITerminal
     {
         foreach (var c in text)
         {
-            _keys.Enqueue((CharKey(c), false));
+            _keys.Enqueue((CharKey(c), false, null));
         }
 
         return this;
@@ -86,7 +86,7 @@ public sealed class VirtualTerminal : ITerminal
     {
         foreach (var c in text.Replace("\r\n", "\n", StringComparison.Ordinal))
         {
-            _keys.Enqueue((CharKey(c), true));
+            _keys.Enqueue((CharKey(c), true, null));
         }
 
         return this;
@@ -116,7 +116,7 @@ public sealed class VirtualTerminal : ITerminal
                 key,
                 parsed.Modifiers.HasFlag(ConsoleModifiers.Shift),
                 parsed.Modifiers.HasFlag(ConsoleModifiers.Alt),
-                parsed.Modifiers.HasFlag(ConsoleModifiers.Control)), false));
+                parsed.Modifiers.HasFlag(ConsoleModifiers.Control)), false, null));
         }
 
         return this;
@@ -124,13 +124,42 @@ public sealed class VirtualTerminal : ITerminal
 
     public VirtualTerminal Enqueue(ConsoleKeyInfo key)
     {
-        _keys.Enqueue((key, false));
+        _keys.Enqueue((key, false, null));
         return this;
+    }
+
+    /// <summary>
+    /// Enqueue a pause before the next key: <see cref="WaitForInput"/> times out once (the line editor's idle work runs),
+    /// after <paramref name="during"/> (e.g. advancing a fake clock) has run.
+    /// </summary>
+    public VirtualTerminal Idle(Action? during = null)
+    {
+        _keys.Enqueue((default, false, during ?? (() => { })));
+        return this;
+    }
+
+    public bool WaitForInput(TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_keys.Count > 0 && _keys.Peek().Idle is { } idle)
+        {
+            _keys.Dequeue();
+            idle();
+            return false;
+        }
+
+        return true;
     }
 
     public ConsoleKeyInfo ReadKey(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        while (_keys.Count > 0 && _keys.Peek().Idle is { } idle)
+        {
+            _keys.Dequeue();
+            idle();
+        }
+
         if (_keys.Count > 0)
         {
             return _keys.Dequeue().Key;

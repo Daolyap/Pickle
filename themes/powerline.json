@@ -80,6 +80,14 @@
       { "type": "venv", "foreground": "#282C34", "background": "#E5C07B", "template": " {icon} {value} ", "icon": "" },
       { "type": "node", "foreground": "#282C34", "background": "#98C379", "template": " {icon} {value} ", "icon": "" },
       { "type": "k8s", "foreground": "#282C34", "background": "#61AFEF", "template": " {icon} {value} ", "icon": "󱃾" },
+      { "type": "dotnet", "foreground": "#282C34", "background": "#C678DD", "template": " {icon} {value} ", "icon": "" },
+      { "type": "go", "foreground": "#282C34", "background": "#56B6C2", "template": " {icon} {value} ", "icon": "" },
+      { "type": "rust", "foreground": "#282C34", "background": "#D19A66", "template": " {icon} {value} ", "icon": "" },
+      { "type": "aws", "foreground": "#282C34", "background": "#E5C07B", "template": " {icon} {value} ", "icon": "" },
+      { "type": "azure", "foreground": "#282C34", "background": "#61AFEF", "template": " {icon} {value} ", "icon": "󰠅" },
+      { "type": "gcloud", "foreground": "#282C34", "background": "#98C379", "template": " {icon} {value} ", "icon": "󱇶" },
+      { "type": "docker", "foreground": "#282C34", "background": "#56B6C2", "template": " {icon} {value} ", "icon": "" },
+      { "type": "battery", "foreground": "#282C34", "background": "#E5C07B", "template": " {icon} {value} ", "icon": "" },
       { "type": "time", "foreground": "#ABB2BF", "background": "#3E4451", "template": " {icon} {value} ", "icon": "", "options": { "format": "HH:mm:ss" } }
     ]
   }

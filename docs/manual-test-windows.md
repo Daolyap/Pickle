@@ -42,6 +42,29 @@ after installing a build.
 - [ ] `pk theme set powerline` changes the prompt *and* the Terminal color scheme.
 - [ ] `pk terminal default` makes Pickle the default profile (a `settings.json` backup is created).
 
+## Themes and tab progress
+
+- [ ] `pk theme set aurora`, then `synthwave`, `matrix`, `ember`, `prism`: each prompt keeps moving while idle, typing
+      and completion are unaffected, and Task Manager shows Pickle's CPU near idle.
+- [ ] `pk config set prompt.animation off` stops the motion at the next prompt; `auto` brings it back.
+- [ ] `pk theme auto`, then switch Windows to light mode (Settings → Personalization → Colors → app mode): the next
+      prompt uses `solarized-light`; back to dark gives `pickle`. `pk theme list` shows what auto sees.
+- [ ] `pk theme import --list` shows your Windows Terminal schemes plus Campbell, One Half Dark…;
+      `pk theme import "One Half Dark"` then `pk theme set one-half-dark` looks right.
+- [ ] In Windows Terminal, `Start-Sleep 5` shows a progress ring on the tab and taskbar button;
+      `1..100 | % { Write-Progress -Activity x -PercentComplete $_; Start-Sleep -Milliseconds 30 }` fills it;
+      `Get-Item nope` turns the tab red until the next command.
+- [ ] Alt+E opens the theme gallery: animated themes move in the preview, Enter applies, F2/F3 set auto's themes.
+- [ ] Alt+H lists the hosts in `%USERPROFILE%\.ssh\config` and `known_hosts`; Enter connects, F2 opens a new
+      Windows Terminal tab and F3 a split pane running `ssh <host>`.
+- [ ] Portable exe of an older release: `pk version check` names the newer one; `pk version update` downloads it, the
+      file is replaced, and the next Pickle reports the new version (the `.old` copy is gone after that start).
+- [ ] MSI install of an older release: `pk version update` starts the new MSI and Pickle closes; the upgrade completes.
+- [ ] `pk doctor` shows a Startup line; `pk doctor --startup` lists the phases.
+- [ ] `pk bugreport` writes a zip; its config and logs have no tokens, passwords or your user name.
+- [ ] `pk config set terminal.bellAfterSeconds 3`, run `Start-Sleep 5` and switch to another window: the taskbar
+      button flashes when it finishes.
+
 ## Editing experience
 
 - [ ] Typing shows syntax highlighting; an unknown command is red, but `apt install jq` / `sudo …` / `export X=1` are not.

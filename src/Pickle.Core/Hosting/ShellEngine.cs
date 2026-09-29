@@ -179,6 +179,9 @@ public sealed class ShellEngine : IPickleShell, IDisposable
     /// </summary>
     internal bool TryEnterMain(TimeSpan timeout) => _mainLock.Wait(timeout);
 
+    /// <summary>As <see cref="TryEnterMain"/>, without blocking the calling thread while waiting.</summary>
+    internal Task<bool> TryEnterMainAsync(TimeSpan timeout, CancellationToken cancellationToken) => _mainLock.WaitAsync(timeout, cancellationToken);
+
     internal void ExitMain() => _mainLock.Release();
 
     /// <summary>Stop the running interactive pipeline (Ctrl+C).</summary>

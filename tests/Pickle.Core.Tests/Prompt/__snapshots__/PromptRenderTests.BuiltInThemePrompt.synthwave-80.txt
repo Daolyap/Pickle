@@ -1,0 +1,7 @@
+after a failed command:
+«fg=#FF3864»«fg=#14061F,bg=#FF3864»  «fg=#FF3864,bg=#FF2E97»«fg=#14061F,bg=#FF2E97»  ~/src/«fg=#14061F,bg=#FF2E97,bold»pickle«fg=#14061F,bg=#FF2E97»/…/Prompt «fg=#FF2E97,bg=#B537F2»«fg=#14061F,bg=#B537F2»  main ↑1 +2 !1 ?1 ≡1 «fg=#B537F2,bg=#3CF6FF»«fg=#14061F,bg=#3CF6FF»  3.2s «fg=#3CF6FF,bg=#FFD319»«fg=#14061F,bg=#FFD319»  1 «fg=#FFD319»«»
+«fg=#FF3864»❯«» █                «fg=#FF3864»«fg=#FFFFFF,bg=#FF3864»  1 «fg=#FFD319,bg=#FF3864»«fg=#14061F,bg=#FFD319»  pickle «fg=#3CF6FF,bg=#FFD319»«fg=#14061F,bg=#3CF6FF»  v22.9.0 «fg=#B537F2,bg=#3CF6FF»«fg=#14061F,bg=#B537F2» 󱃾 kind-dev:web «fg=#2D1B4E,bg=#B537F2»«fg=#F5E6FF,bg=#2D1B4E»  14:05:09 «fg=#2D1B4E»«»
+
+after a successful command:
+«fg=#FF3864»«fg=#14061F,bg=#FF3864»  «fg=#FF3864,bg=#FF2E97»«fg=#14061F,bg=#FF2E97»  ~/src/«fg=#14061F,bg=#FF2E97,bold»pickle«fg=#14061F,bg=#FF2E97»/…/Prompt «fg=#FF2E97,bg=#B537F2»«fg=#14061F,bg=#B537F2»  main ↑1 +2 !1 ?1 ≡1 «fg=#B537F2,bg=#3CF6FF»«fg=#14061F,bg=#3CF6FF»  3.2s «fg=#3CF6FF,bg=#FFD319»«fg=#14061F,bg=#FFD319»  1 «fg=#FFD319»«»
+«fg=#FF2E97»❯«» █                      «fg=#FFD319»«fg=#14061F,bg=#FFD319»  pickle «fg=#3CF6FF,bg=#FFD319»«fg=#14061F,bg=#3CF6FF»  v22.9.0 «fg=#B537F2,bg=#3CF6FF»«fg=#14061F,bg=#B537F2» 󱃾 kind-dev:web «fg=#2D1B4E,bg=#B537F2»«fg=#F5E6FF,bg=#2D1B4E»  14:05:09 «fg=#2D1B4E»«»

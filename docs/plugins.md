@@ -182,7 +182,8 @@ Register-PicklePromptSegment -Type k8sns -ScriptBlock {
 ```
 
 Add `{ "type": "k8sns" }` to the `left` or `right` segment list of your theme to show it (themes are JSON files in
-the themes folder, `pk paths`; copy a built-in one there under a new name to customise it, then `pk theme set`). Segments
+the themes folder, `pk paths`; copy a built-in one there under a new name to customise it, then `pk theme set`; the
+[themes guide](themes.md) has the format, animation and color-scheme import). Segments
 are rendered with a time budget and cached, so a slow segment never blocks the prompt.
 
 ### Completions

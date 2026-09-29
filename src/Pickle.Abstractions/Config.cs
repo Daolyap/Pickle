@@ -9,7 +9,14 @@ namespace Pickle.Abstractions;
 /// </summary>
 public sealed class PickleConfig
 {
+    /// <summary>A theme name, or "auto" to follow the system's light/dark mode with <see cref="LightTheme"/> and <see cref="DarkTheme"/>.</summary>
     public string Theme { get; set; } = "pickle";
+
+    /// <summary>Theme used by "auto" while the system is in light mode.</summary>
+    public string LightTheme { get; set; } = "solarized-light";
+
+    /// <summary>Theme used by "auto" while the system is in dark mode (or when it can't be told).</summary>
+    public string DarkTheme { get; set; } = "pickle";
     public EditorSettings Editor { get; set; } = new();
     public HistorySettings History { get; set; } = new();
     public PromptSettings Prompt { get; set; } = new();
@@ -66,6 +73,13 @@ public sealed class PromptSettings
     /// "�" boxes with ordinary fonts; Powerline separators become plain blocks).
     /// </summary>
     public string Icons { get; set; } = "auto";
+
+    /// <summary>
+    /// Animated themes: "auto" (animate, except over SSH, with NO_COLOR/TERM=dumb, or with Windows' "Show animations" off),
+    /// "on" or "off" (the theme's own colors, still).
+    /// Animation pauses after a few minutes without a key press.
+    /// </summary>
+    public string Animation { get; set; } = "auto";
 }
 
 public sealed class TranslationSettings
@@ -143,6 +157,15 @@ public sealed class TerminalSettings
     public string? BackgroundImage { get; set; }
     public double? BackgroundImageOpacity { get; set; }
     public string? Padding { get; set; } = "8";
+
+    /// <summary>
+    /// Progress ring on the terminal tab and taskbar (OSC 9;4) while a command runs, with Write-Progress percentages and
+    /// red after a failure: "auto" (Windows Terminal and ConEmu), "on" or "off".
+    /// </summary>
+    public string TabProgress { get; set; } = "auto";
+
+    /// <summary>Ring the bell when a command that ran at least this many seconds finishes (0: never). Windows Terminal flashes its taskbar button.</summary>
+    public int BellAfterSeconds { get; set; } = 0;
 }
 
 public sealed class WingetSettings

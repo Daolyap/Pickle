@@ -192,7 +192,8 @@ public sealed class SystemInfoProvider : ISystemInfo
         return OperatingSystem.IsLinux() && ParseSwap(ReadText("/proc/meminfo")) is { } swap ? (swap.Used, swap.Total) : (null, null);
     }
 
-    private static BatteryStatus? Battery()
+    /// <summary>The battery right now (null without one): Win32 on Windows, /sys/class/power_supply on Linux.</summary>
+    public static BatteryStatus? Battery()
     {
         if (OperatingSystem.IsWindows())
         {

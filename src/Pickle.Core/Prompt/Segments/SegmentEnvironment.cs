@@ -26,11 +26,35 @@ public sealed class SegmentEnvironment
 
     public required Func<int> DurationThresholdMs { get; init; }
 
+    // Optional inputs: left unset, their segments stay hidden.
+
+    /// <summary>The default Azure subscription's name.</summary>
+    public Func<string?> GetAzureSubscription { get; init; } = () => null;
+
+    /// <summary>The active gcloud configuration's project.</summary>
+    public Func<string?> GetGcloudProject { get; init; } = () => null;
+
+    /// <summary>The Docker context from ~/.docker/config.json (DOCKER_CONTEXT is read through the environment).</summary>
+    public Func<string?> GetDockerContext { get; init; } = () => null;
+
+    /// <summary>The .NET SDK version for a directory, or null outside .NET projects.</summary>
+    public Func<string, CancellationToken, Task<string?>> GetDotnetVersion { get; init; } = (_, _) => Task.FromResult<string?>(null);
+
+    /// <summary>The Go version for a directory, or null outside Go modules.</summary>
+    public Func<string, string?> GetGoVersion { get; init; } = _ => null;
+
+    /// <summary>The Rust toolchain for a directory, or null outside Cargo projects.</summary>
+    public Func<string, CancellationToken, Task<string?>> GetRustVersion { get; init; } = (_, _) => Task.FromResult<string?>(null);
+
+    public Func<BatteryStatus?> GetBattery { get; init; } = () => null;
+
     /// <summary>The live environment: real filesystem, process environment, git service, node, kubeconfig.</summary>
     public static SegmentEnvironment Create(Func<IGitService?> git, Func<int> durationThresholdMs)
     {
         var node = new NodeVersionProbe();
         var kube = new KubeConfigReader(Environment.GetEnvironmentVariable, HomeDirectory);
+        var cloud = new CloudConfigReader(Environment.GetEnvironmentVariable, HomeDirectory);
+        var toolchains = new ToolchainReader();
         return new SegmentEnvironment
         {
             Home = HomeDirectory,
@@ -41,6 +65,13 @@ public sealed class SegmentEnvironment
             GetNodeVersion = node.GetVersionAsync,
             GetKubeContext = kube.Read,
             DurationThresholdMs = durationThresholdMs,
+            GetAzureSubscription = cloud.AzureSubscription,
+            GetGcloudProject = cloud.GcloudProject,
+            GetDockerContext = cloud.DockerContext,
+            GetDotnetVersion = toolchains.DotnetAsync,
+            GetGoVersion = toolchains.Go,
+            GetRustVersion = toolchains.RustAsync,
+            GetBattery = SystemMonitoring.SystemInfoProvider.Battery,
         };
     }
 

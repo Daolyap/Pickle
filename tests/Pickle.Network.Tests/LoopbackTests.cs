@@ -58,10 +58,10 @@ public sealed class LoopbackTests
     [Fact]
     public async Task DnsQueryParsesAnswersAndFallsBackToTcpWhenTruncated()
     {
-        using var udp = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var pair = UdpAndTcpOnOnePort();
+        using var udp = pair.Udp;
+        using var tcp = pair.Tcp;
         var endpoint = (IPEndPoint)udp.Client.LocalEndPoint!;
-        using var tcp = new TcpListener(IPAddress.Loopback, endpoint.Port);
-        tcp.Start();
 
         var udpServer = Task.Run(async () =>
         {
@@ -89,6 +89,25 @@ public sealed class LoopbackTests
         Assert.Equal(["10 mail.example.test.", "\"v=spf1 -all\""], response.Answers.Select(a => a.Data));
         Assert.Equal("example.test.", response.Answers.First().Name);
         await Task.WhenAll(udpServer, tcpServer);
+    }
+
+    // A free UDP port's number can be taken (or reserved, on Windows) for TCP, so try a few.
+    private static (UdpClient Udp, TcpListener Tcp) UdpAndTcpOnOnePort()
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            var udp = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+            var tcp = new TcpListener(IPAddress.Loopback, ((IPEndPoint)udp.Client.LocalEndPoint!).Port);
+            try
+            {
+                tcp.Start();
+                return (udp, tcp);
+            }
+            catch (SocketException) when (attempt < 20)
+            {
+                udp.Dispose();
+            }
+        }
     }
 
     [Fact]

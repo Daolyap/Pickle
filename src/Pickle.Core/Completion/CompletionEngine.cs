@@ -20,6 +20,9 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
     /// <summary>How long PowerShell may take before it is stopped and only provider results are used.</summary>
     internal TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(1500);
 
+    /// <summary>How long to wait for a background call holding the runspace (capped at half of <see cref="Timeout"/>).</summary>
+    internal TimeSpan LockWait { get; set; } = TimeSpan.FromMilliseconds(300);
+
     public void Initialize()
     {
         _runtime.CompletionRegistry.Register(new PickleCommandCompletionProvider(_runtime.CommandRegistry));
@@ -155,9 +158,28 @@ public sealed class CompletionEngine : ICompletionEngine, IRuntimeComponent
             return null;
         }
 
-        // Hold the engine's runspace lock so background InvokeAsync calls can't start a pipeline mid-completion.
-        if (!engine.TryEnterMain(TimeSpan.Zero))
+        // Hold the engine's runspace lock so background InvokeAsync calls can't start a pipeline mid-completion. A
+        // background call (the command cache refreshing, a hook) may hold it for a moment; wait that out rather than
+        // answer Tab without PowerShell's completions.
+        var lockWait = TimeSpan.FromMilliseconds(Math.Min(LockWait.TotalMilliseconds, Timeout.TotalMilliseconds / 2));
+        bool entered;
+        try
         {
+            entered = await engine.TryEnterMainAsync(lockWait, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+
+        if (!entered)
+        {
+            return null;
+        }
+
+        if (runspace.RunspaceAvailability != RunspaceAvailability.Available || engine.IsExecuting)
+        {
+            engine.ExitMain();
             return null;
         }
 

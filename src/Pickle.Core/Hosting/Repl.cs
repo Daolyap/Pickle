@@ -12,6 +12,7 @@ namespace Pickle.Core.Hosting;
 public sealed class Repl
 {
     private readonly PickleRuntime _runtime;
+    private bool _firstPromptShown;
     private readonly MissingToolPrompt _missingTools;
     private int _nestedDepth;
     private int _exitNestedRequested;
@@ -38,6 +39,11 @@ public sealed class Repl
                 var promptContext = _runtime.CreatePromptContext();
                 RaiseHook(new HookEvent(HookKind.Prompt, Cwd: promptContext.Cwd));
                 var prompt = _runtime.Prompt.Render(promptContext);
+                if (!_firstPromptShown)
+                {
+                    _firstPromptShown = true;
+                    _runtime.Startup.Mark("first prompt");
+                }
 
                 string? line;
                 _runtime.Terminal.SetEditMode(true);
@@ -67,6 +73,7 @@ public sealed class Repl
         {
             Console.CancelKeyPress -= OnCancelKeyPress;
             _missingTools.RemoveTemporary();
+            _runtime.TabProgress.Reset();
             RaiseHook(new HookEvent(HookKind.Exit, Cwd: _runtime.Engine.CurrentDirectory));
         }
 
@@ -104,7 +111,9 @@ public sealed class Repl
         }
 
         RaiseHook(new HookEvent(HookKind.PreExecute, line, cwdBefore));
+        _runtime.TabProgress.CommandStarted();
         var result = _runtime.Engine.ExecuteInteractive(outcome.Command);
+        _runtime.TabProgress.CommandFinished(result.Success || result.Interrupted, result.Duration);
         _runtime.History.CompleteLast(result.Success, (long)result.Duration.TotalMilliseconds);
         RaiseHook(new HookEvent(HookKind.PostExecute, line, _runtime.Engine.CurrentDirectory, cwdBefore, result.Success, result.Duration));
 

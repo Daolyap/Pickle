@@ -21,13 +21,13 @@ public sealed class NodeSegment(SegmentEnvironment environment) : IPromptSegment
     }
 }
 
-/// <summary>Runs <c>node --version</c> at most once per session.</summary>
+/// <summary>Runs <c>&lt;tool&gt; --version</c> (node by default) at most once per session.</summary>
 public sealed class NodeVersionProbe
 {
     private readonly Lazy<Task<string?>> _version;
 
-    public NodeVersionProbe(string executable = "node", TimeSpan? timeout = null) =>
-        _version = new Lazy<Task<string?>>(() => Task.Run(() => RunAsync(executable, timeout ?? TimeSpan.FromSeconds(3))));
+    public NodeVersionProbe(string executable = "node", TimeSpan? timeout = null, Func<string, string?>? parse = null) =>
+        _version = new Lazy<Task<string?>>(() => Task.Run(() => RunAsync(executable, timeout ?? TimeSpan.FromSeconds(3), parse ?? ParseVersion)));
 
     /// <summary>The probe itself is never cancelled (the result is shared); only this caller's wait is.</summary>
     public Task<string?> GetVersionAsync(CancellationToken cancellationToken) => _version.Value.WaitAsync(cancellationToken);
@@ -38,7 +38,7 @@ public sealed class NodeVersionProbe
         return line is { Length: > 0 and < 40 } && (line[0] == 'v' || char.IsAsciiDigit(line[0])) ? SegmentText.Sanitize(line) : null;
     }
 
-    private static async Task<string?> RunAsync(string executable, TimeSpan timeout)
+    private static async Task<string?> RunAsync(string executable, TimeSpan timeout, Func<string, string?> parse)
     {
         if (Commands.ExecutableLocator.Find(executable) is not { } path)
         {
@@ -67,7 +67,7 @@ public sealed class NodeVersionProbe
             try
             {
                 await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
-                return ParseVersion(await output.ConfigureAwait(false));
+                return parse(await output.ConfigureAwait(false));
             }
             catch (OperationCanceledException)
             {

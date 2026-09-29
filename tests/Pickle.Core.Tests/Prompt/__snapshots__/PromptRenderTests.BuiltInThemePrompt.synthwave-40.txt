@@ -1,0 +1,7 @@
+after a failed command:
+«fg=#FF3864»«fg=#14061F,bg=#FF3864»  «fg=#FF3864,bg=#FF2E97»«fg=#14061F,bg=#FF2E97»  ~/src/«fg=#14061F,bg=#FF2E97,bold»pickle«fg=#14061F,bg=#FF2E97»/…/Prompt «fg=#FF2E97»«»
+«fg=#FF3864»❯«» █
+
+after a successful command:
+«fg=#FF3864»«fg=#14061F,bg=#FF3864»  «fg=#FF3864,bg=#FF2E97»«fg=#14061F,bg=#FF2E97»  ~/src/«fg=#14061F,bg=#FF2E97,bold»pickle«fg=#14061F,bg=#FF2E97»/…/Prompt «fg=#FF2E97»«»
+«fg=#FF2E97»❯«» █

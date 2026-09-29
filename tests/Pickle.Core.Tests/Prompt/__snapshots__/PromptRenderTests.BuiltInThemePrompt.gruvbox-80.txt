@@ -1,0 +1,5 @@
+after a failed command:
+«fg=#282828,bg=#CC241D»  «fg=#CC241D,bg=#FABD2F»«fg=#282828,bg=#FABD2F»  ~/src/«fg=#282828,bg=#FABD2F,bold»pickle«fg=#282828,bg=#FABD2F»/…/Prompt «fg=#FABD2F,bg=#8EC07C»«fg=#282828,bg=#8EC07C»  main ↑1 +2 !1 ?1 ≡1 «fg=#8EC07C,bg=#FE8019»«fg=#282828,bg=#FE8019»  3.2s «fg=#FE8019,bg=#83A598»«fg=#282828,bg=#83A598»  1 «fg=#83A598»«» «fg=#FB4934»❯«» █
+
+after a successful command:
+«fg=#282828,bg=#CC241D»  «fg=#CC241D,bg=#FABD2F»«fg=#282828,bg=#FABD2F»  ~/src/«fg=#282828,bg=#FABD2F,bold»pickle«fg=#282828,bg=#FABD2F»/…/Prompt «fg=#FABD2F,bg=#8EC07C»«fg=#282828,bg=#8EC07C»  main ↑1 +2 !1 ?1 ≡1 «fg=#8EC07C,bg=#FE8019»«fg=#282828,bg=#FE8019»  3.2s «fg=#FE8019,bg=#83A598»«fg=#282828,bg=#83A598»  1 «fg=#83A598»«» «fg=#FABD2F»❯«» █

@@ -47,6 +47,7 @@ public sealed class ThemePreview
             GetNodeVersion = _ => Task.FromResult<string?>("v22.9.0"),
             GetKubeContext = () => new KubeContext("kind-dev", "web"),
             DurationThresholdMs = () => 2000,
+            GetDotnetVersion = (_, _) => Task.FromResult<string?>("10.0.100"),
         };
         _segments = BuiltInSegments.Create(SegmentEnvironment).ToDictionary(s => s.Type, StringComparer.OrdinalIgnoreCase);
     }

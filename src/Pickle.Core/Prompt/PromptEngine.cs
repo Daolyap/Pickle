@@ -10,7 +10,7 @@ namespace Pickle.Core.Prompt;
 /// Renders the theme's prompt segments (left, right, separators, transient prompt), keeps slow segments off the
 /// typing path via <see cref="SegmentCache"/>, and mirrors the theme into $PSStyle.
 /// </summary>
-public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposable
+public sealed class PromptEngine : IPromptRenderer, IThemePreviewer, IRuntimeComponent, IDisposable
 {
     private readonly PickleRuntime _runtime;
     private readonly CancellationTokenSource _lifetime = new();
@@ -19,6 +19,7 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
     private IDisposable? _postExecuteHook;
     private bool _themeSubscribed;
     private bool _renderedOnce;
+    private bool _lastRenderHadNewline;
     private int _psStyleDirty = 1;
     private bool? _terminalHasNerdFont;
 
@@ -47,6 +48,10 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
         }
 
         _runtime.CommandRegistry.Register(new ThemeCommand(this));
+        if (_runtime.ServiceRegistry.Get<IThemePreviewer>() is null)
+        {
+            _runtime.ServiceRegistry.Add<IThemePreviewer>(this);
+        }
         _postExecuteHook ??= _runtime.Hooks.Register(HookKind.PostExecute, (_, _) =>
         {
             InvalidateSegments();
@@ -68,20 +73,52 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
 
     public PromptRender Render(PromptContext context)
     {
-        SyncPsStyle();
-        var render = Render(context, _runtime.Themes.Current);
-        if (_runtime.Config.Current.Prompt.NewlineBeforePrompt && _renderedOnce)
-        {
-            render = render with { Left = "\n" + render.Left };
-        }
-
+        _runtime.ThemeProvider.RefreshAppearance();
+        _lastRenderHadNewline = _runtime.Config.Current.Prompt.NewlineBeforePrompt && _renderedOnce;
         _renderedOnce = true;
-        return render;
+        return Rerender(context);
+    }
+
+    public PromptRender Rerender(PromptContext context)
+    {
+        SyncPsStyle();
+        var theme = _runtime.Themes.Current;
+        var render = Render(context, AnimationFrame is { } frame ? ThemeAnimator.Frame(theme, frame) : theme);
+        return _lastRenderHadNewline ? render with { Left = "\n" + render.Left } : render;
     }
 
     /// <summary>Renders any theme against the live segments and cache (no newline-before-prompt handling).</summary>
     public PromptRender Render(PromptContext context, Theme theme) =>
         _composer.Compose(context, ForTerminal(theme), _runtime.Config.Current.Prompt.GitTimeoutMs);
+
+    /// <summary>Milliseconds for animation timing (replaceable in tests).</summary>
+    internal Func<long> Clock { get; set; } = () => Environment.TickCount64;
+
+    public long ClockMs => Clock();
+
+    /// <summary>The current theme's animation frame, or null when it's static or <c>prompt.animation</c> turns animation off.</summary>
+    public long? AnimationFrame =>
+        _runtime.Themes.Current.Prompt.Animation is { } animation && ThemeAnimator.IsAnimated(_runtime.Themes.Current) && AnimationEnabled
+            ? ThemeAnimator.FrameAt(animation, Clock())
+            : null;
+
+    /// <summary>
+    /// <c>prompt.animation</c>: "on", "off", or "auto" (off over SSH, on terminals that ask for no color, and when Windows'
+    /// "Show animations" is off).
+    /// </summary>
+    public bool AnimationEnabled => _runtime.Config.Current.Prompt.Animation?.Trim().ToLowerInvariant() switch
+    {
+        "on" or "true" or "always" => true,
+        "off" or "false" or "never" => false,
+        _ => !IsSet("SSH_CONNECTION") && !IsSet("SSH_CLIENT") && !IsSet("SSH_TTY") && !IsSet("NO_COLOR")
+            && !string.Equals(Environment.GetEnvironmentVariable("TERM"), "dumb", StringComparison.Ordinal)
+            && SystemAllowsAnimation() != false,
+    };
+
+    /// <summary>The desktop's own animation setting (replaceable in tests).</summary>
+    internal Func<bool?> SystemAllowsAnimation { get; set; } = SystemAppearance.AnimationsEnabled;
+
+    private static bool IsSet(string variable) => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(variable));
 
     public string RenderTransient(PromptContext context) => _composer.ComposeTransient(context, ForTerminal(_runtime.Themes.Current));
 
@@ -119,6 +156,9 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
     /// <summary>Sample prompt for a theme (fixed data, independent of the current directory).</summary>
     public PromptRender RenderPreview(Theme theme, int width, bool lastCommandSucceeded = false) =>
         new ThemePreview(OperatingSystem.IsWindows()).Render(ForTerminal(theme), width, lastCommandSucceeded);
+
+    public IReadOnlyList<string> Preview(Theme theme, int width, long? frame = null) =>
+        ThemePreview.ToLines(RenderPreview(frame is { } f ? ThemeAnimator.Frame(theme, f) : theme, width, lastCommandSucceeded: true), width);
 
     public int TerminalWidth => _runtime.Terminal.Width;
 

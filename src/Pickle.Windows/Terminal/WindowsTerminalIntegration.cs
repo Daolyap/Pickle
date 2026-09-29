@@ -155,6 +155,8 @@ public static class TerminalFonts
             BackgroundImage = settings.BackgroundImage,
             BackgroundImageOpacity = settings.BackgroundImageOpacity,
             Padding = settings.Padding,
+            TabProgress = settings.TabProgress,
+            BellAfterSeconds = settings.BellAfterSeconds,
         };
     }
 }

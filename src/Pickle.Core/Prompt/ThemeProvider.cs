@@ -6,10 +6,12 @@ namespace Pickle.Core.Prompt;
 
 /// <summary>
 /// Loads themes from the user's themes folder first, then the embedded built-ins (themes/*.json). An elevated session
-/// shows <c>shell.adminTheme</c> instead of the configured theme, without saving it, until a theme is applied.
+/// shows <c>shell.adminTheme</c> instead of the configured theme, without saving it, until a theme is applied. The theme
+/// "auto" shows <c>lightTheme</c> or <c>darkTheme</c> by the system's appearance, checked again at every prompt.
 /// </summary>
 public sealed class ThemeProvider : IThemeProvider
 {
+    public const string Auto = "auto";
     private const string ResourcePrefix = "Pickle.Themes.";
     private readonly PicklePaths _paths;
     private readonly IConfigStore _config;
@@ -18,15 +20,16 @@ public sealed class ThemeProvider : IThemeProvider
     private Theme _current;
     private bool _adminOverride;
 
-    public ThemeProvider(PicklePaths paths, IConfigStore config, IPickleLogger log, bool elevated = false)
+    public ThemeProvider(PicklePaths paths, IConfigStore config, IPickleLogger log, bool elevated = false, Func<bool?>? prefersLight = null)
     {
         _paths = paths;
         _config = config;
         _log = log;
         _elevated = elevated;
+        PrefersLight = prefersLight ?? SystemAppearance.PrefersLight;
         var admin = AdminTheme(config.Current);
         _adminOverride = admin is not null;
-        _current = admin ?? Load(config.Current.Theme) ?? Load("pickle") ?? new Theme { Name = "pickle" };
+        _current = admin ?? Configured(config.Current) ?? Load("pickle") ?? new Theme { Name = "pickle" };
         config.Changed += (_, e) =>
         {
             if (_elevated && (e.Path is null || e.Path.Equals("shell.adminTheme", StringComparison.OrdinalIgnoreCase)))
@@ -53,19 +56,24 @@ public sealed class ThemeProvider : IThemeProvider
                 return;
             }
 
-            if (e.Path is null || e.Path.Equals("theme", StringComparison.OrdinalIgnoreCase))
+            if (e.Path is null || e.Path.Equals("theme", StringComparison.OrdinalIgnoreCase)
+                || e.Path.Equals("lightTheme", StringComparison.OrdinalIgnoreCase) || e.Path.Equals("darkTheme", StringComparison.OrdinalIgnoreCase))
             {
-                var name = e.Config.Theme;
-                if (!string.Equals(name, _current.Name, StringComparison.OrdinalIgnoreCase) && Load(name) is { } theme)
-                {
-                    _current = theme;
-                    ThemeChanged?.Invoke(this, theme);
-                }
+                Switch(Configured(e.Config));
             }
         };
     }
 
     public Theme Current => _current;
+
+    /// <summary>True when the configured theme is "auto".</summary>
+    public bool FollowsSystem => IsAuto(_config.Current.Theme);
+
+    /// <summary>What "auto" sees now: true for light mode, false for dark, null when the system doesn't say.</summary>
+    public bool? SystemPrefersLight => PrefersLight();
+
+    /// <summary>The light/dark check (replaceable in tests).</summary>
+    internal Func<bool?> PrefersLight { get; set; }
 
     /// <summary>True while an elevated session shows <c>shell.adminTheme</c> in place of the configured theme.</summary>
     public bool AdminThemeActive => _adminOverride;
@@ -146,11 +154,39 @@ public sealed class ThemeProvider : IThemeProvider
 
     public void Apply(string name)
     {
-        var theme = Load(name) ?? throw new ArgumentException($"Theme '{name}' not found. Available: {string.Join(", ", Available)}");
+        var auto = IsAuto(name);
+        var theme = (auto ? AutoTheme(_config.Current) : Load(name))
+            ?? throw new ArgumentException($"Theme '{name}' not found. Available: {string.Join(", ", Available)}, or auto");
         _current = theme;
         _adminOverride = false;
-        _config.Update(c => c.Theme = theme.Name);
+        _config.Update(c => c.Theme = auto ? Auto : theme.Name);
         ThemeChanged?.Invoke(this, theme);
+    }
+
+    /// <summary>With theme "auto", switches when the system's light/dark mode changed since the last check.</summary>
+    public void RefreshAppearance()
+    {
+        if (!_adminOverride && FollowsSystem)
+        {
+            Switch(AutoTheme(_config.Current));
+        }
+    }
+
+    public static bool IsAuto(string? name) => string.Equals(name?.Trim(), Auto, StringComparison.OrdinalIgnoreCase);
+
+    private Theme? Configured(PickleConfig config) => IsAuto(config.Theme) ? AutoTheme(config) : Load(config.Theme);
+
+    private Theme? AutoTheme(PickleConfig config) => PrefersLight() == true
+        ? Load(config.LightTheme) ?? Load("solarized-light")
+        : Load(config.DarkTheme) ?? Load("pickle");
+
+    private void Switch(Theme? theme)
+    {
+        if (theme is not null && !string.Equals(theme.Name, _current.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            _current = theme;
+            ThemeChanged?.Invoke(this, theme);
+        }
     }
 
     private Theme? AdminTheme(PickleConfig config) =>

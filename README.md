@@ -42,6 +42,10 @@ first-class Windows tooling on top.
 | Fedora / RHEL | Download `pickle-<version>-1.x86_64.rpm` from [Releases](https://github.com/Daolyap/Pickle/releases), then `sudo dnf install ./pickle-*.x86_64.rpm` |
 | Other Linux | Download `pickle-<version>-linux-x64.tar.gz`, extract `pickle` somewhere on your `PATH` (needs `libicu`) |
 
+`pk version check` tells you when a newer release is out; `pk version update` installs it for the portable exe and
+the MSI (downloaded from the GitHub release and checked against its `SHA256SUMS.txt`). Scoop, winget and RPM installs
+update through their package manager.
+
 PowerShell 7 does **not** need to be installed — Pickle ships the engine. If `pwsh` is installed, its modules are
 picked up too, and `pk config set shell.loadPwshProfile true` loads your existing profile.
 

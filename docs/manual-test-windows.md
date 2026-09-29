@@ -57,6 +57,10 @@ after installing a build.
 - [ ] Alt+E opens the theme gallery: animated themes move in the preview, Enter applies, F2/F3 set auto's themes.
 - [ ] Alt+H lists the hosts in `%USERPROFILE%\.ssh\config` and `known_hosts`; Enter connects, F2 opens a new
       Windows Terminal tab and F3 a split pane running `ssh <host>`.
+- [ ] Portable exe of an older release: `pk version check` names the newer one; `pk version update` downloads it, the
+      file is replaced, and the next Pickle reports the new version (the `.old` copy is gone after that start).
+- [ ] MSI install of an older release: `pk version update` starts the new MSI and Pickle closes; the upgrade completes.
+- [ ] `pk doctor` shows a Startup line; `pk doctor --startup` lists the phases.
 - [ ] `pk bugreport` writes a zip; its config and logs have no tokens, passwords or your user name.
 - [ ] `pk config set terminal.bellAfterSeconds 3`, run `Start-Sleep 5` and switch to another window: the taskbar
       button flashes when it finishes.

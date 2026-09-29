@@ -1,31 +1,213 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Pickle.Abstractions;
 using Pickle.Core.Config;
 using Pickle.Core.Hosting;
 using Pickle.Core.Plugins;
+using Pickle.Core.Update;
 
 namespace Pickle.Core.Commands;
 
 /// <summary>Small `pk` commands owned by Core itself. Workstreams add their own IPickleCommand classes next to their features.</summary>
-public sealed class VersionCommand : IPickleCommand
+/// <summary>
+/// <c>pk version</c>, <c>pk version check</c> (is there a newer release?) and <c>pk version update</c> (install it, for
+/// portable and MSI installs; Scoop, winget and package installs are pointed at their package manager).
+/// </summary>
+public sealed class VersionCommand(PickleRuntime? runtime = null, Func<SelfUpdater>? updater = null) : IPickleCommand
 {
     public string Name => "version";
 
-    public string Description => "Show Pickle, PowerShell and .NET versions";
+    public string Description => "Show Pickle, PowerShell and .NET versions; check for and install updates";
 
-    public string Usage => "pk version";
+    public string Usage => "pk version [check | update [--yes]]";
 
-    public ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
+    /// <summary>Where the running pickle is (replaceable in tests).</summary>
+    internal Func<string?> ProcessPath { get; set; } = () => Environment.ProcessPath;
+
+    /// <summary>The MSI's install folder from the registry, if it installed Pickle (replaceable in tests).</summary>
+    internal Func<string?> MsiInstallDir { get; set; } = ReadMsiInstallDir;
+
+    /// <summary>Starts the MSI installer (replaceable in tests).</summary>
+    internal Action<string> StartInstaller { get; set; } = RunMsiexec;
+
+    public async ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
-        context.WriteObject(new
+        switch (args.FirstOrDefault()?.ToLowerInvariant())
         {
-            Pickle = PickleRuntime.Version,
-            PowerShell = PickleRuntime.PowerShellVersion,
-            DotNet = Environment.Version.ToString(),
-            OS = RuntimeInformation.OSDescription,
-            ConfigDir = context.Pickle.Paths.ConfigDir,
-        });
-        return ValueTask.FromResult(0);
+            case null:
+                context.WriteObject(new
+                {
+                    Pickle = PickleRuntime.Version,
+                    PowerShell = PickleRuntime.PowerShellVersion,
+                    DotNet = Environment.Version.ToString(),
+                    OS = RuntimeInformation.OSDescription,
+                    ConfigDir = context.Pickle.Paths.ConfigDir,
+                });
+                return 0;
+            case "check":
+                return await CheckAsync(context, cancellationToken).ConfigureAwait(false);
+            case "update":
+                return await UpdateAsync(context, args.Skip(1).Any(a => a is "--yes" or "-y"), cancellationToken).ConfigureAwait(false);
+            default:
+                context.WriteError($"Unknown subcommand '{args[0]}'. Usage: {Usage}");
+                return 2;
+        }
+    }
+
+    private async Task<int> CheckAsync(PickleCommandContext context, CancellationToken cancellationToken)
+    {
+        using var update = (updater ?? (() => new SelfUpdater()))();
+        if (await LatestOrErrorAsync(context, update, cancellationToken).ConfigureAwait(false) is not { } latest)
+        {
+            return 1;
+        }
+
+        var ui = context.Pickle.Themes.Current.Ui;
+        if (!IsNewer(latest))
+        {
+            context.WriteHost(Ansi.Colorize($"Pickle {PickleRuntime.Version} is up to date.", ui.Success));
+            return 0;
+        }
+
+        context.WriteHost($"Pickle {Ansi.Colorize(latest.Version.ToString(3), ui.Accent, bold: true)} is available (you have {PickleRuntime.Version}): {latest.Page}");
+        context.WriteHost(Ansi.Colorize("Update with: " + UpdateHint(Kind()), ui.Muted));
+        return 0;
+    }
+
+    private async Task<int> UpdateAsync(PickleCommandContext context, bool yes, CancellationToken cancellationToken)
+    {
+        var kind = Kind();
+        if (kind is not (InstallKind.Portable or InstallKind.Msi))
+        {
+            context.WriteHost($"This Pickle is managed by {kind switch { InstallKind.Scoop => "Scoop", InstallKind.Winget => "winget", InstallKind.Package => "your package manager", _ => "a build from source" }}. Update it with: {UpdateHint(kind)}");
+            return 0;
+        }
+
+        if (kind == InstallKind.Msi && !OperatingSystem.IsWindows())
+        {
+            context.WriteError("MSI installs only exist on Windows.");
+            return 1;
+        }
+
+        using var update = (updater ?? (() => new SelfUpdater()))();
+        if (await LatestOrErrorAsync(context, update, cancellationToken).ConfigureAwait(false) is not { } latest)
+        {
+            return 1;
+        }
+
+        if (!IsNewer(latest))
+        {
+            context.WriteHost($"Pickle {PickleRuntime.Version} is up to date.");
+            return 0;
+        }
+
+        var asset = SelfUpdater.AssetName(kind, latest.Version, SelfUpdater.CurrentRid)!;
+        if (!yes && !context.Confirm($"Update Pickle {PickleRuntime.Version} to {latest.Version.ToString(3)} ({asset})?", false))
+        {
+            context.WriteHost(context.Interactive ? "Not updated." : "Not updated: pass --yes to update without asking.");
+            return 1;
+        }
+
+        string file;
+        try
+        {
+            file = await update.DownloadVerifiedAsync(latest, asset, Path.Combine(context.Pickle.Paths.CacheDir, "update", latest.Tag), null, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or HttpRequestException or IOException or UnauthorizedAccessException)
+        {
+            context.WriteError("Update failed: " + ex.Message);
+            return 1;
+        }
+
+        var ui = context.Pickle.Themes.Current.Ui;
+        if (kind == InstallKind.Msi)
+        {
+            StartInstaller(file);
+            context.WriteHost(Ansi.Colorize($"Verified {asset}. The installer is starting; Pickle closes now so it can replace its files.", ui.Success));
+            runtime?.RequestExit(0);
+            return 0;
+        }
+
+        try
+        {
+            var executable = asset.EndsWith(".tar.gz", StringComparison.Ordinal) ? SelfUpdater.ExtractExecutable(file) : file;
+            SelfUpdater.ReplaceExecutable(ProcessPath()!, executable);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            context.WriteError($"Update failed: {ex.Message} (the downloaded, verified file is {file})");
+            return 1;
+        }
+
+        context.WriteHost(Ansi.Colorize($"Updated to Pickle {latest.Version.ToString(3)}. Start a new Pickle to use it.", ui.Success));
+        return 0;
+    }
+
+    private InstallKind Kind() => SelfUpdater.DetectInstallKind(ProcessPath(), MsiInstallDir());
+
+    private static bool IsNewer(ReleaseInfo latest) =>
+        SelfUpdater.ParseVersion(PickleRuntime.Version) is not { } current || latest.Version > current;
+
+    private static async Task<ReleaseInfo?> LatestOrErrorAsync(PickleCommandContext context, SelfUpdater update, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (await update.LatestAsync(cancellationToken).ConfigureAwait(false) is { } latest)
+            {
+                return latest;
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            context.WriteError("Couldn't reach GitHub: " + ex.Message);
+            return null;
+        }
+
+        context.WriteError("Couldn't find the latest Pickle release on GitHub.");
+        return null;
+    }
+
+    private static string UpdateHint(InstallKind kind) => kind switch
+    {
+        InstallKind.Scoop => "scoop update pickle",
+        InstallKind.Winget => "winget upgrade Daolyap.Pickle",
+        InstallKind.Package => "download the new .rpm from the release page and run sudo dnf upgrade ./pickle-*.rpm",
+        InstallKind.Development => "git pull, then rebuild",
+        _ => "pk version update",
+    };
+
+    private static string? ReadMsiInstallDir()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        try
+        {
+            using var hklm = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64);
+            using var key = hklm.OpenSubKey(@"Software\Pickle");
+            return key?.GetValue("InstallDir") as string;
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+        {
+            return null;
+        }
+    }
+
+    private static void RunMsiexec(string msi)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        // By full path: never a msiexec planted in the current directory.
+        var psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "msiexec.exe")) { UseShellExecute = false };
+        psi.ArgumentList.Add("/i");
+        psi.ArgumentList.Add(msi);
+        Process.Start(psi)?.Dispose();
     }
 }
 

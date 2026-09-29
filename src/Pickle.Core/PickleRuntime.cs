@@ -156,7 +156,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public void InitializeComponents()
     {
         Startup.Mark("runtime");
-        CommandRegistry.Register(new Commands.VersionCommand());
+        CommandRegistry.Register(new Commands.VersionCommand(this));
         CommandRegistry.Register(new Commands.SetupCommand(this));
         foreach (var component in Components.OfType<IRuntimeComponent>())
         {

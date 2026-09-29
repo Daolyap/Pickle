@@ -78,6 +78,8 @@ graph LR
 | Prompt, themes, `$PSStyle` | `Core/Prompt/` (segments in `Segments/`), `themes/*.json`; animation frames in `ThemeAnimator` (redrawn from the line editor's idle loop), light/dark in `SystemAppearance`, `pk theme import` in `ThemeImport` + `Abstractions/Services/TerminalSchemes.cs` (Windows Terminal schemes: `Windows/Terminal/WindowsTerminalSchemes.cs`). Guide: [themes.md](themes.md) |
 | Theme gallery (Alt+E, `pk theme gallery`) | `Tui/Panels/Themes/` (previews via `IThemePreviewer`, drawn by `Tui/Widgets/AnsiView.cs`) |
 | SSH hosts (Alt+H, `pk ssh`) | `Tui/Panels/Ssh/` (`SshHosts` reads ~/.ssh/config with Include, and known_hosts) |
+| `pk version check/update` | `Core/Update/SelfUpdater.cs` (GitHub latest release, SHA256SUMS check, portable swap or MSI) |
+| Startup timings (`pk doctor --startup`) | `Core/Hosting/StartupTimings.cs` |
 | `pk bugreport` | `Core/Commands/BugReportCommand.cs` (report, redacted config and logs in a zip) |
 | Tab/taskbar progress, long-command bell | `Core/Hosting/TabProgress.cs` (OSC 9;4 from the REPL and `ProgressPane`) |
 | Aliases | `Core/Aliases/` (`aliases.json` → PowerShell functions), `Cmdlets/AliasCmdlets.cs` |

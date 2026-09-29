@@ -13,6 +13,7 @@ public static class PickleApp
     {
         paths ??= PicklePaths.Resolve();
         paths.EnsureCreated();
+        Update.SelfUpdater.CleanUpAfterUpdate(Environment.ProcessPath);
         var log = new FileLogger(paths.LogDir, FileLogger.ResolveLevel(options.LogLevel));
         terminal ??= new ConsoleTerminal();
 

@@ -177,6 +177,19 @@ public sealed class SelfUpdaterTests : IDisposable
         Assert.True(t.Runtime.ExitRequested);
     }
 
+    [Fact]
+    public async Task TheDailyCheckCachesTheLatestReleaseForTheBanner()
+    {
+        using var t = TestPickle.Create();
+        UpdateCheck.Register(t.Runtime, () => new SelfUpdater(new FakeReleaseServer("99.0.0")));
+
+        await t.Runtime.Background.RunOnceAsync(CancellationToken.None);
+
+        Assert.Equal("99.0.0", UpdateCheck.Newer(t.Runtime.Background, PickleRuntime.Version)?.Version);
+        Assert.Contains("Pickle 99.0.0 is available · pk version update", Pickle.Core.Hosting.StartupNotices.Lines(t.Runtime, DateTimeOffset.UtcNow));
+        Assert.Null(UpdateCheck.Newer(t.Runtime.Background, "99.0.0"));
+    }
+
     private sealed class FakeReleaseServer : HttpMessageHandler
     {
         private readonly string _version;

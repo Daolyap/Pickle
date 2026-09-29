@@ -46,6 +46,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         context.Commands.Register(new FontCommand());
 
         Terminal.WindowsTerminalIntegration.Register(context);
+        RegisterUpgradeCheck(context);
     }
 
     private static IWindowsUpdateService CreateWindowsUpdateService(IPickleContext context)
@@ -90,5 +91,27 @@ public sealed class WindowsPlugin : IPicklePlugin
         {
             services.Add(create());
         }
+    }
+
+    // winget takes seconds and real CPU to list upgrades, so only the first running Pickle asks, every few hours; the
+    // winget panel and the startup notice show the cached list at once.
+    private static void RegisterUpgradeCheck(IPickleContext context)
+    {
+        if (!context.Config.Current.Shell.CheckForUpdates
+            || context.Services.Get<IBackgroundWork>() is not { } background
+            || context.Services.Get<IWingetService>() is not { IsSupported: true } winget)
+        {
+            return;
+        }
+
+        background.Register(new BackgroundJob(WingetCache.UpgradesKey, async ct =>
+        {
+            var upgrades = await winget.ListUpgradesAsync(context.Config.Current.Winget.IncludeUnknownVersions, ct).ConfigureAwait(false);
+            background.Write(WingetCache.UpgradesKey, upgrades.ToList());
+        })
+        {
+            Interval = TimeSpan.FromHours(4),
+            InitialDelay = TimeSpan.FromMinutes(1),
+        });
     }
 }

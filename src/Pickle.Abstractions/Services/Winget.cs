@@ -35,6 +35,12 @@ public sealed record WingetOperationResult(bool Success, string Message, int? Ex
     public string? Output { get; init; }
 }
 
+/// <summary><see cref="IBackgroundWork"/> cache key of the latest <c>List&lt;WingetPackage&gt;</c> of available upgrades.</summary>
+public static class WingetCache
+{
+    public const string UpgradesKey = "winget-upgrades";
+}
+
 public enum WingetScope
 {
     Any,

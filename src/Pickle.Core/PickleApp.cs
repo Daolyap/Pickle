@@ -47,6 +47,7 @@ public static class PickleApp
         if (!options.NoLogo && runtime.Config.Current.Shell.ShowStartupBanner)
         {
             StartupBanner.Write(runtime);
+            StartupNotices.Write(runtime);
         }
 
         runtime.FirstRun.Run(runtime);

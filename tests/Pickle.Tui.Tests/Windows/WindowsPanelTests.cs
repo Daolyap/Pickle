@@ -212,6 +212,23 @@ public sealed class WindowsPanelTests : IDisposable
     }
 
     [Fact]
+    public void WingetPanelShowsTheCachedUpgradesAndSavesTheFreshList()
+    {
+        var background = _t.Runtime.Services.Require<IBackgroundWork>();
+        background.Write(WingetCache.UpgradesKey, new List<WingetPackage> { new("Old.Cached", "Cached", "1", "2", "winget") });
+        _winget.UpgradeDelay = TimeSpan.FromMilliseconds(500);
+        using var panel = Hooked(new WingetPanel(Context));
+        var sawCached = false;
+        Run(
+            panel,
+            When(() => panel.UpgradeRows.Count > 0, () => sawCached = panel.UpgradeRows[0].Id == "Old.Cached"),
+            Wait(() => panel.UpgradeRows.Any(p => p.Id == "Git.Git")));
+
+        Assert.True(sawCached);
+        Assert.Equal(["Git.Git"], background.Read<List<WingetPackage>>(WingetCache.UpgradesKey)!.Value.Select(p => p.Id));
+    }
+
+    [Fact]
     public void WingetSearchRunsWhileTypingAndLeavesFocusInTheBox()
     {
         var pause = WingetPanel.TypingPause;

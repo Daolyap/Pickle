@@ -175,6 +175,12 @@ public sealed class WingetPanel : WindowsPanelBase
 
     protected override void Opened()
     {
+        // The last list any Pickle found (the background check), shown until the fresh one arrives.
+        if (Service<IBackgroundWork>()?.Read<List<WingetPackage>>(WingetCache.UpgradesKey) is { Value.Count: > 0 } cached)
+        {
+            ApplyUpgrades(cached.Value);
+        }
+
         Refresh();
         _updates?.Start();
     }
@@ -189,7 +195,14 @@ public sealed class WingetPanel : WindowsPanelBase
         Load(_winget.GetBackendAsync, ApplyBackend, "detecting winget…");
         Load(_winget.ListInstalledAsync, ApplyInstalled, "loading packages…");
         var includeUnknown = Pickle.Config.Current.Winget.IncludeUnknownVersions;
-        Load(ct => _winget.ListUpgradesAsync(includeUnknown, ct), ApplyUpgrades, "checking upgrades…");
+        Load(
+            ct => _winget.ListUpgradesAsync(includeUnknown, ct),
+            upgrades =>
+            {
+                ApplyUpgrades(upgrades);
+                SaveUpgrades(upgrades);
+            },
+            "checking upgrades…");
         Load(_winget.ListSourcesAsync, ApplySources, "loading sources…");
     }
 
@@ -218,6 +231,18 @@ public sealed class WingetPanel : WindowsPanelBase
     {
         _upgrades = [.. packages];
         _upgradesTable.SetItems(_upgrades);
+    }
+
+    private void SaveUpgrades(IReadOnlyList<WingetPackage> upgrades)
+    {
+        try
+        {
+            Service<IBackgroundWork>()?.Write(WingetCache.UpgradesKey, upgrades.ToList());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Pickle.Log.Debug("winget", $"upgrade cache not saved: {ex.Message}");
+        }
     }
 
     internal void ApplySources(IReadOnlyList<WingetSource> sources)

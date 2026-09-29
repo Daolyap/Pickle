@@ -181,6 +181,18 @@ public class CompletionEngineTests
     }
 
     [Fact]
+    public async Task WaitsBrieflyForABackgroundCallHoldingTheRunspace()
+    {
+        using var t = Started();
+        Assert.True(t.Runtime.Engine.TryEnterMain(TimeSpan.Zero));
+        _ = Task.Delay(150).ContinueWith(_ => t.Runtime.Engine.ExitMain(), TaskScheduler.Default);
+
+        var set = await Complete(t, "Get-Chil");
+
+        Assert.Contains(set.Items, i => i.CompletionText == "Get-ChildItem");
+    }
+
+    [Fact]
     public async Task TimesOutAndLeavesTheRunspaceUsable()
     {
         using var t = Started();

@@ -80,6 +80,9 @@ graph LR
 | SSH hosts (Alt+H, `pk ssh`) | `Tui/Panels/Ssh/` (`SshHosts` reads ~/.ssh/config with Include, and known_hosts) |
 | `pk version check/update` | `Core/Update/SelfUpdater.cs` (GitHub latest release, SHA256SUMS check, portable swap or MSI) |
 | Startup timings (`pk doctor --startup`) | `Core/Hosting/StartupTimings.cs` |
+| Background jobs in the first instance, shared cache, banner notices | `Core/Hosting/BackgroundWork.cs` (`IBackgroundWork`, primary.lock), `StartupNotices.cs`, `Core/Update/UpdateCheck.cs`; winget job in `Windows/WindowsPlugin.cs` |
+| Run-as-administrator offer after access-denied failures | `Core/Hosting/ElevationOffer.cs` (from `Repl.ExecuteLine`, through the `sudo` rewriter) |
+| Panel input fixes: paste, click focus, mouse wheel | `Tui/FocusSync.cs`, `Tui/WheelScroll.cs` (attached by `PanelHost`); bracketed paste at the prompt in `Core/Input/LineEditor.cs` |
 | `pk bugreport` | `Core/Commands/BugReportCommand.cs` (report, redacted config and logs in a zip) |
 | Tab/taskbar progress, long-command bell | `Core/Hosting/TabProgress.cs` (OSC 9;4 from the REPL and `ProgressPane`) |
 | Aliases | `Core/Aliases/` (`aliases.json` → PowerShell functions), `Cmdlets/AliasCmdlets.cs` |

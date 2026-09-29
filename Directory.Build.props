@@ -8,7 +8,7 @@
     <Deterministic>true</Deterministic>
     <!-- Required by [LibraryImport] source-generated P/Invoke (Win32 console, token and pipe APIs). -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>0.1.0</Version>
+    <Version>0.4.0</Version>
     <Authors>Pickle contributors</Authors>
     <Product>Pickle</Product>
     <Copyright>Copyright (c) Pickle contributors</Copyright>

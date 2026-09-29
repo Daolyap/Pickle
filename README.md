@@ -51,6 +51,7 @@ picked up too, and `pk config set shell.loadPwshProfile true` loads your existin
 pk help                      # all Pickle commands
 pk theme set powerline       # switch theme (also updates the Windows Terminal color scheme)
 pk theme set aurora          # an animated theme
+pk theme gallery             # or Alt+E: every theme previewed live in its own colors
 pk theme auto                # light theme in light mode, dark theme in dark mode
 pk theme import "One Half Dark"   # any Windows Terminal color scheme as a Pickle theme
 pk alias add gco 'git checkout {branch}' --kind param
@@ -72,7 +73,7 @@ pk plugin new MyTools              # start a plugin (docs/plugins.md)
 
 Keys: **F1** palette · **Ctrl+R** history · **Tab** completion · **→** accept suggestion · **Ctrl+T** files ·
 **F2** wizard · **Alt+G** git · **Alt+W** winget · **Alt+U** updates · **Alt+J** jobs · **Alt+S** scheduler · **Alt+,** settings ·
-**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) · **Alt+I** dashboard (`pk dashboard`) ·
+**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) · **Alt+I** dashboard (`pk dashboard`) · **Alt+E** theme gallery (`pk theme gallery`) ·
 **Alt+X** Windows Sandbox (`pk sandbox`).
 
 ## Configuration

@@ -106,6 +106,16 @@ public class ThemeTests
     }
 
     [Fact]
+    public void PkThemeGalleryFallsBackToTextPreviewsWithoutAPanel()
+    {
+        using var t = TestPickle.Create(width: 100, height: 200, start: true);
+        t.Run("pk theme gallery");
+        var screen = t.Terminal.GetScreenText();
+        Assert.Contains("aurora", screen, StringComparison.Ordinal);
+        Assert.Contains("tokyo-night", screen, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PkThemeCommands()
     {
         using var t = TestPickle.Create(width: 100, height: 60, start: true);

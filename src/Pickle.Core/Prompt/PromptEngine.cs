@@ -10,7 +10,7 @@ namespace Pickle.Core.Prompt;
 /// Renders the theme's prompt segments (left, right, separators, transient prompt), keeps slow segments off the
 /// typing path via <see cref="SegmentCache"/>, and mirrors the theme into $PSStyle.
 /// </summary>
-public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposable
+public sealed class PromptEngine : IPromptRenderer, IThemePreviewer, IRuntimeComponent, IDisposable
 {
     private readonly PickleRuntime _runtime;
     private readonly CancellationTokenSource _lifetime = new();
@@ -48,6 +48,10 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
         }
 
         _runtime.CommandRegistry.Register(new ThemeCommand(this));
+        if (_runtime.ServiceRegistry.Get<IThemePreviewer>() is null)
+        {
+            _runtime.ServiceRegistry.Add<IThemePreviewer>(this);
+        }
         _postExecuteHook ??= _runtime.Hooks.Register(HookKind.PostExecute, (_, _) =>
         {
             InvalidateSegments();
@@ -152,6 +156,9 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
     /// <summary>Sample prompt for a theme (fixed data, independent of the current directory).</summary>
     public PromptRender RenderPreview(Theme theme, int width, bool lastCommandSucceeded = false) =>
         new ThemePreview(OperatingSystem.IsWindows()).Render(ForTerminal(theme), width, lastCommandSucceeded);
+
+    public IReadOnlyList<string> Preview(Theme theme, int width, long? frame = null) =>
+        ThemePreview.ToLines(RenderPreview(frame is { } f ? ThemeAnimator.Frame(theme, f) : theme, width, lastCommandSucceeded: true), width);
 
     public int TerminalWidth => _runtime.Terminal.Width;
 

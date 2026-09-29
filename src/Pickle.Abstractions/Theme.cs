@@ -181,3 +181,13 @@ public interface IThemeProvider
     /// <summary>Switch themes (persists <see cref="PickleConfig.Theme"/>).</summary>
     void Apply(string name);
 }
+
+/// <summary>Sample prompts for any theme, as ANSI lines (the theme gallery, <c>pk theme preview</c>).</summary>
+public interface IThemePreviewer
+{
+    /// <summary>
+    /// A fixed sample prompt (a git repo, a failed command's status, a clock) for <paramref name="theme"/> at
+    /// <paramref name="width"/> columns; for an animated theme, as it looks at <paramref name="frame"/> (null: its own colors).
+    /// </summary>
+    IReadOnlyList<string> Preview(Theme theme, int width, long? frame = null);
+}

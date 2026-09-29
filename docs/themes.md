@@ -5,6 +5,7 @@ colors for panels and menus, and the prompt. Built-in themes live in `themes/` i
 folder (`pk paths`) and override a built-in one of the same name.
 
 ```powershell
+pk theme gallery                    # Alt+E: browse themes with live previews; Enter applies, F2/F3 set auto's light/dark
 pk theme list                       # every theme, the current one marked
 pk theme preview aurora nord        # sample prompts
 pk theme set synthwave              # switch (persists "theme" in config.json)

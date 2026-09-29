@@ -13,7 +13,7 @@ public sealed class ThemeCommand(PromptEngine engine) : IPickleCommand
     public string Description => "List, switch, inspect and preview color themes";
 
     public string Usage =>
-        "pk theme list | set <name|auto> | auto [<light> <dark>] | show [name] | preview [names…]\n"
+        "pk theme list | set <name|auto> | auto [<light> <dark>] | show [name] | preview [names…] | gallery\n"
         + "       pk theme import <scheme name | file.json> [--name <theme>] [--layout <theme>] [--scheme <name>] [--force] | import --list";
 
     public ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
@@ -27,6 +27,7 @@ public sealed class ThemeCommand(PromptEngine engine) : IPickleCommand
             "import" => Import(context, args.Skip(1).ToList()),
             "show" => Show(context, args.Count > 1 ? args[1] : null),
             "preview" => Preview(context, args.Skip(1).ToList()),
+            "gallery" => Gallery(context),
             "help" or "-h" or "--help" => Help(context),
             _ => Unknown(context, args[0]),
         };
@@ -303,6 +304,19 @@ public sealed class ThemeCommand(PromptEngine engine) : IPickleCommand
         }
 
         return 0;
+    }
+
+    // The gallery panel when there's a terminal to show it on (Alt+E), else the text preview of every theme.
+    private int Gallery(PickleCommandContext context)
+    {
+        if (context.Pickle.Services.Get<IPanelHost>() is { } host && context.Pickle.Shell.IsInteractive
+            && context.Pickle.Panels.Get("themes") is not null)
+        {
+            host.Show("themes");
+            return 0;
+        }
+
+        return Preview(context, []);
     }
 
     private IReadOnlyList<string> PreviewLines(Theme theme, int width) =>

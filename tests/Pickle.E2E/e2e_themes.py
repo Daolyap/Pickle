@@ -61,3 +61,20 @@ def test_theme_gallery_opens_with_alt_e_and_enter_applies(p):
         s.press("enter")
         time.sleep(0.8)
         s.run("(Get-PickleTheme).Name + '-applied'", "nord-applied", timeout=15)
+
+
+def test_ssh_panel_lists_config_hosts_and_f4_edits_the_command(p):
+    import os
+    import tempfile
+    home = tempfile.mkdtemp(prefix="pickle-e2e-home-")
+    os.makedirs(os.path.join(home, ".ssh"))
+    with open(os.path.join(home, ".ssh", "config"), "w") as f:
+        f.write("Host demo-box\n  HostName 192.0.2.10\n  User pi\n")
+    with PickleSession(p, env={"HOME": home}) as s:
+        s.wait_for_prompt()
+        time.sleep(0.3)
+        s.press(alt("h"))
+        s.wait_for("SSH  ·  Esc to close", timeout=20)
+        s.wait_for("demo-box", timeout=10)
+        s.press("\x1bOS")  # F4
+        s.wait_for("ssh demo-box", timeout=10)

@@ -54,6 +54,10 @@ after installing a build.
 - [ ] In Windows Terminal, `Start-Sleep 5` shows a progress ring on the tab and taskbar button;
       `1..100 | % { Write-Progress -Activity x -PercentComplete $_; Start-Sleep -Milliseconds 30 }` fills it;
       `Get-Item nope` turns the tab red until the next command.
+- [ ] Alt+E opens the theme gallery: animated themes move in the preview, Enter applies, F2/F3 set auto's themes.
+- [ ] Alt+H lists the hosts in `%USERPROFILE%\.ssh\config` and `known_hosts`; Enter connects, F2 opens a new
+      Windows Terminal tab and F3 a split pane running `ssh <host>`.
+- [ ] `pk bugreport` writes a zip; its config and logs have no tokens, passwords or your user name.
 - [ ] `pk config set terminal.bellAfterSeconds 3`, run `Start-Sleep 5` and switch to another window: the taskbar
       button flashes when it finishes.
 

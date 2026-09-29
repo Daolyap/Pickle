@@ -16,7 +16,7 @@ first-class Windows tooling on top.
 | 🔎 **Search** | Fuzzy history (Ctrl+R) scoped to all / this directory / this session; fuzzy completion menu with descriptions |
 | 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, aws/azure/gcloud, docker, venv, node, .NET/Go/Rust, battery…) and 18 themes — dracula, nord, gruvbox, catppuccin, tokyo-night, rose-pine, a light one, and **animated** aurora, synthwave, matrix, ember and prism; follows the system's light/dark mode (`pk theme auto`), imports any Windows Terminal color scheme (`pk theme import`), drives `$PSStyle` and your Windows Terminal colors; a red admin theme and logo when elevated ([themes guide](docs/themes.md)) |
 | 📈 **Tab progress** | Windows Terminal's tab and taskbar button show a progress ring while a command runs, the real percentage for `Write-Progress`, and red when it failed; optional bell after long commands (`terminal.bellAfterSeconds`) |
-| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), system dashboard (Alt+I), disks with partitions (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), Windows Sandbox (Alt+X), settings (Alt+,) |
+| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), system dashboard (Alt+I), theme gallery (Alt+E), SSH hosts (Alt+H), disks with partitions (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), Windows Sandbox (Alt+X), settings (Alt+,) |
 | 🛰️ **Network tools** | Built in, nothing to install: port scan (`pk scan 10.0.0.0/24 -p top100`), host discovery with MACs (`pk sweep`), DNS lookups against any server (`pk dns`), `pk trace`, `pk whois`, TLS certificate checks (`pk cert`), `pk http` timings, `pk subnet`, Wake-on-LAN, `pk ip` |
 | 📥 **Missing tools** | Type `7z …` or `nmap …` without them installed and Pickle offers to install first — just for you, all users or this session only, added to PATH — instead of a broken command (`pk tool install <name>`, ~100 known tools from zoxide to Sysinternals: `pk tool list`) |
 | 📊 **System** | `pk dashboard` (Alt+I): OS, uptime, CPU/memory/swap history, disks, network, battery, top processes and pending restarts at a glance; `pk devious` fills the screen hacker-movie style with real data from your machine |
@@ -74,7 +74,7 @@ pk plugin new MyTools              # start a plugin (docs/plugins.md)
 
 Keys: **F1** palette · **Ctrl+R** history · **Tab** completion · **→** accept suggestion · **Ctrl+T** files ·
 **F2** wizard · **Alt+G** git · **Alt+W** winget · **Alt+U** updates · **Alt+J** jobs · **Alt+S** scheduler · **Alt+,** settings ·
-**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) · **Alt+I** dashboard (`pk dashboard`) · **Alt+E** theme gallery (`pk theme gallery`) ·
+**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) · **Alt+I** dashboard (`pk dashboard`) · **Alt+E** theme gallery (`pk theme gallery`) · **Alt+H** SSH hosts (`pk ssh`) ·
 **Alt+X** Windows Sandbox (`pk sandbox`).
 
 ## Configuration

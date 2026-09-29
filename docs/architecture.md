@@ -77,6 +77,8 @@ graph LR
 | Tab completion + menu | `Core/Completion/` |
 | Prompt, themes, `$PSStyle` | `Core/Prompt/` (segments in `Segments/`), `themes/*.json`; animation frames in `ThemeAnimator` (redrawn from the line editor's idle loop), light/dark in `SystemAppearance`, `pk theme import` in `ThemeImport` + `Abstractions/Services/TerminalSchemes.cs` (Windows Terminal schemes: `Windows/Terminal/WindowsTerminalSchemes.cs`). Guide: [themes.md](themes.md) |
 | Theme gallery (Alt+E, `pk theme gallery`) | `Tui/Panels/Themes/` (previews via `IThemePreviewer`, drawn by `Tui/Widgets/AnsiView.cs`) |
+| SSH hosts (Alt+H, `pk ssh`) | `Tui/Panels/Ssh/` (`SshHosts` reads ~/.ssh/config with Include, and known_hosts) |
+| `pk bugreport` | `Core/Commands/BugReportCommand.cs` (report, redacted config and logs in a zip) |
 | Tab/taskbar progress, long-command bell | `Core/Hosting/TabProgress.cs` (OSC 9;4 from the REPL and `ProgressPane`) |
 | Aliases | `Core/Aliases/` (`aliases.json` → PowerShell functions), `Cmdlets/AliasCmdlets.cs` |
 | Linux syntax | `Core/Translation/` (rewriters + `Modules/Pickle.Translate` shims + command-not-found) |

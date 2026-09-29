@@ -135,7 +135,7 @@
           "type": "string",
           "enum": ["auto", "on", "off"],
           "default": "auto",
-          "description": "Animated themes: animate (auto: except over SSH, with NO_COLOR / TERM=dumb, or with Windows' "Show animations" turned off), always (on), or keep their own colors still (off). Animation pauses after a few minutes without input."
+          "description": "Animated themes: animate (auto: except over SSH, with NO_COLOR / TERM=dumb, or with Windows' \"Show animations\" turned off), always (on), or keep their own colors still (off). Animation pauses after a few minutes without input."
         }
       }
     },

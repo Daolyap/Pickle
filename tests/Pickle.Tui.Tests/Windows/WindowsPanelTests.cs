@@ -153,7 +153,7 @@ public sealed class WindowsPanelTests : IDisposable
             Wait(() => panel.UpgradeLog.Contains('✓', StringComparison.Ordinal)));
 
         Assert.Contains("upgrade Git.Git", _winget.Calls);
-        Assert.Contains(_asked, a => a.Message.Contains("Git  2.45.1 → 2.46.0", StringComparison.Ordinal));
+        Assert.Contains(_choices, c => c.Message.Contains("Git  2.45.1 → 2.46.0", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -193,6 +193,22 @@ public sealed class WindowsPanelTests : IDisposable
         Assert.False(_wu.Queries[0].IncludeOptional);
         Assert.True(_wu.Queries[^1].IncludeOptional);
         Assert.Contains(updates.Rows, u => u.Title == "Feature preview");
+    }
+
+    [Fact]
+    public void WingetPanelUpgradesAsAdministratorInOneBatch()
+    {
+        _winget.Installed.Add(new WingetPackage("7zip.7zip", "7-Zip", "23.01", "24.08", "winget"));
+        using var panel = Hooked(new WingetPanel(Context));
+        _choice = 1;
+        Run(
+            panel,
+            When(() => panel.UpgradeRows.Count == 2, () => panel.UpgradeSelected(all: true)),
+            Wait(() => _winget.Calls.Any(c => c.StartsWith("upgrade-elevated", StringComparison.Ordinal))));
+
+        Assert.Contains(_choices, c => c.Title == "Upgrade packages" && c.Buttons.Contains("As _administrator"));
+        Assert.Contains(_winget.Calls, c => c is "upgrade-elevated Git.Git,7zip.7zip" or "upgrade-elevated 7zip.7zip,Git.Git");
+        Assert.DoesNotContain(_winget.Calls, c => c.StartsWith("upgrade ", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -247,6 +263,7 @@ public sealed class WindowsPanelTests : IDisposable
     public void WingetPanelDeclinedConfirmationDoesNothing()
     {
         using var panel = Hooked(new WingetPanel(Context), answer: false);
+        _choice = 2;
         Run(
             panel,
             When(() => panel.UpgradeRows.Count == 1, () =>
@@ -313,7 +330,7 @@ public sealed class WindowsPanelTests : IDisposable
             Wait(() => panel.UpgradeLog.Contains('✓', StringComparison.Ordinal)));
 
         Assert.Equal(["upgrade Git.Git"], _winget.Calls);
-        Assert.Contains(_asked, a => a.Message.Contains("1 package(s) selected in Installed", StringComparison.Ordinal) && a.Message.Contains("1 selected package(s) have no upgrade", StringComparison.Ordinal));
+        Assert.Contains(_choices, c => c.Message.Contains("1 package(s) selected in Installed", StringComparison.Ordinal) && c.Message.Contains("1 selected package(s) have no upgrade", StringComparison.Ordinal));
     }
 
     [Fact]

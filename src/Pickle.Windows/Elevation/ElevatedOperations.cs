@@ -11,6 +11,9 @@ internal interface IElevatedExecutor
 {
     Task<ElevatedResponse> RepairWingetSourceAsync(IProgress<string> progress, CancellationToken cancellationToken);
 
+    /// <summary>Whether the account the helper runs as has winget's source package (an admin account may never have run winget).</summary>
+    Task<bool> HasWingetSourceAsync(CancellationToken cancellationToken);
+
     /// <summary>Runs winget.exe with arguments built by <see cref="ElevatedOperations.BuildWingetArguments"/>.</summary>
     Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken);
 
@@ -169,11 +172,13 @@ internal static class ElevatedOperations
                     return await executor.RepairWingetSourceAsync(progress, timeout.Token).ConfigureAwait(false);
 
                 case ElevatedOperationKind.WingetUpgrade when operation.All:
+                    await EnsureWingetSourceAsync(executor, progress, timeout.Token).ConfigureAwait(false);
                     return await executor.RunWingetAsync(BuildWingetArguments(operation.Kind, null), progress, timeout.Token).ConfigureAwait(false);
 
                 case ElevatedOperationKind.WingetUpgrade:
                 case ElevatedOperationKind.WingetInstall:
                 case ElevatedOperationKind.WingetUninstall:
+                    await EnsureWingetSourceAsync(executor, progress, timeout.Token).ConfigureAwait(false);
                     var responses = new List<(string Id, ElevatedResponse Response)>();
                     foreach (var id in operation.Ids)
                     {
@@ -211,6 +216,23 @@ internal static class ElevatedOperations
         catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
         {
             return new ElevatedResponse(false, $"{operation.Kind} failed: {ex.Message}", ex.HResult);
+        }
+    }
+
+    // winget run as another (administrator) account fails with "no sources" until the source package is registered
+    // there; do that once, in the same UAC session, rather than leaving it to a separate "Repair as admin".
+    private static async Task EnsureWingetSourceAsync(IElevatedExecutor executor, IProgress<string> progress, CancellationToken cancellationToken)
+    {
+        if (await executor.HasWingetSourceAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        progress.Report("Adding the winget source for the administrator account…");
+        var repair = await executor.RepairWingetSourceAsync(progress, cancellationToken).ConfigureAwait(false);
+        if (!repair.Success)
+        {
+            progress.Report("Adding the winget source failed: " + repair.Message);
         }
     }
 }

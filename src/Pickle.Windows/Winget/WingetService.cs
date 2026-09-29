@@ -287,13 +287,19 @@ public sealed class WingetService : IWingetService
         return IsSupported ? ChangeAsync("uninstall", id, new WingetInstallOptions(), progress, cancellationToken) : Task.FromResult(Unsupported());
     }
 
-    public async Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default)
+    public Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        ElevatedBatchAsync(ElevatedOperationKind.WingetUninstall, "uninstall", ids, progress, cancellationToken);
+
+    public Task<WingetOperationResult> UpgradeElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        ElevatedBatchAsync(ElevatedOperationKind.WingetUpgrade, "upgrade", ids, progress, cancellationToken);
+
+    private async Task<WingetOperationResult> ElevatedBatchAsync(ElevatedOperationKind kind, string verb, IReadOnlyList<string> ids, IProgress<WingetProgress>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);
         var valid = ids.Select(WindowsIds.RequireWingetId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (valid.Count == 0)
         {
-            return new WingetOperationResult(true, "Nothing to uninstall.", 0);
+            return new WingetOperationResult(true, $"Nothing to {verb}.", 0);
         }
 
         if (!IsSupported)
@@ -306,7 +312,7 @@ public sealed class WingetService : IWingetService
             return new WingetOperationResult(false, "Elevation is not available in this session.", 1);
         }
 
-        return await ViaBrokerAsync(broker, ElevatedOperationKind.WingetUninstall, valid, "uninstall", null, progress, cancellationToken).ConfigureAwait(false);
+        return await ViaBrokerAsync(broker, kind, valid, verb, null, progress, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default) =>

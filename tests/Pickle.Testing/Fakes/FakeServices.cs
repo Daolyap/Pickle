@@ -82,6 +82,8 @@ public sealed class FakeWingetService : IWingetService
     public Task<WingetOperationResult> UninstallAsync(string id, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("uninstall " + id, progress);
     public Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
         Ok("uninstall-elevated " + string.Join(',', ids), progress);
+    public Task<WingetOperationResult> UpgradeElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        Ok("upgrade-elevated " + string.Join(',', ids), progress);
     public Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<WingetSource>>(Sources);
     public Task<WingetOperationResult> RepairSourceAsync(bool elevated, CancellationToken cancellationToken = default) => Ok(elevated ? "repair-source elevated" : "repair-source");
 

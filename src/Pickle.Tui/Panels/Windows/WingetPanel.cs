@@ -14,7 +14,7 @@ namespace Pickle.Tui.Panels.Windows;
 public sealed class WingetPanel : WindowsPanelBase
 {
     private const string SelectionHelp = "Space/click tick · Shift+click or Shift+↑↓ range · Ctrl+A all";
-    private static readonly string[] ScopeLabels = ["Any", "User", "Machine"];
+    private static readonly string[] ScopeLabels = ["Any", "User", "Machine (admin)"];
 
     private readonly IWingetService? _winget;
     private readonly Label _backend;
@@ -284,16 +284,32 @@ public sealed class WingetPanel : WindowsPanelBase
         }
 
         var note = skipped > 0 ? $"\n\n{skipped} selected package(s) have no upgrade and are skipped." : string.Empty;
-        if (!Ask("Upgrade packages", $"Upgrade {targets.Count} package(s) {from}?\n\n{PackageList(targets, p => $"{p.Name}  {p.InstalledVersion} → {p.AvailableVersion}")}{note}"))
+        var choice = Choose(
+            "Upgrade packages",
+            $"Upgrade {targets.Count} package(s) {from}?\n\n{PackageList(targets, p => $"{p.Name}  {p.InstalledVersion} → {p.AvailableVersion}")}{note}\n\n" +
+            "As administrator: one UAC prompt for all of them instead of one per installer.",
+            "_Upgrade",
+            "As _administrator",
+            "_Cancel");
+        if (choice is not (0 or 1))
         {
             return;
         }
 
+        var elevated = choice == 1;
         _upgradeLog.Content = string.Empty;
         var includeUnknown = Pickle.Config.Current.Winget.IncludeUnknownVersions;
         Load(
             async ct =>
             {
+                if (elevated)
+                {
+                    var ids = targets.Select(p => p.Id).ToList();
+                    Ui(() => AppendLog(_upgradeLog, $"→ {string.Join(", ", ids)} (administrator)"));
+                    var elevatedProgress = new UiProgress<WingetProgress>(this, p => AppendLog(_upgradeLog, $"   {p.Stage}{(p.Message is { } m ? ": " + m : string.Empty)}"));
+                    return [await _winget.UpgradeElevatedAsync(ids, elevatedProgress, ct).ConfigureAwait(false)];
+                }
+
                 var results = new List<WingetOperationResult>();
                 foreach (var package in targets)
                 {

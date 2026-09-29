@@ -92,6 +92,13 @@ public interface IWingetService
     Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
         Task.FromResult(new WingetOperationResult(false, "Uninstalling with administrator rights is not supported by this winget service.", 1));
 
+    /// <summary>
+    /// Upgrades <paramref name="ids"/> with administrator rights: one UAC prompt for all of them (through the elevation
+    /// broker) instead of one per installer.
+    /// </summary>
+    Task<WingetOperationResult> UpgradeElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        Task.FromResult(new WingetOperationResult(false, "Upgrading with administrator rights is not supported by this winget service.", 1));
+
     Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>

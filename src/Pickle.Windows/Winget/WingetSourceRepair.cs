@@ -67,9 +67,20 @@ internal static partial class WingetSourceRepair
 
     private const uint HigherVersionInstalled = 0x80073D06;
 
+    /// <summary>Exits 0 when the account it runs as has winget's source package registered.</summary>
+    public const string CheckScript = """
+        $ErrorActionPreference = 'Stop'
+        Import-Module (Join-Path ([Environment]::SystemDirectory) 'WindowsPowerShell\v1.0\Modules\Appx\Appx.psd1') -ErrorAction Stop
+        if (Get-AppxPackage -Name 'Microsoft.Winget.Source*') { exit 0 } else { exit 1 }
+        """;
+
     /// <summary><c>powershell.exe</c> arguments: the script travels as -EncodedCommand (no command-line quoting).</summary>
-    public static IReadOnlyList<string> Arguments() =>
-        ["-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(Script))];
+    public static IReadOnlyList<string> Arguments() => Encoded(Script);
+
+    public static IReadOnlyList<string> CheckArguments() => Encoded(CheckScript);
+
+    private static IReadOnlyList<string> Encoded(string script) =>
+        ["-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(Encoding.Unicode.GetBytes(script))];
 
     /// <summary>
     /// Environment for the Windows PowerShell child: Pickle prepends PowerShell 7's module folders to PSModulePath, which

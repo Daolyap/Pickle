@@ -148,7 +148,12 @@ public class PluginLoadingTests
         var loaded = AppDomain.CurrentDomain.GetAssemblies().Last(a => a.GetName().Name == "SampleDotnetPlugin");
         Assert.IsType<PluginLoadContext>(System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(loaded));
     }
+}
 
+// Changes PSModulePath for the whole process, which every runtime starting in parallel also rewrites.
+[Collection(ProcessWideStateCollection.Name)]
+public class PluginModulePathTests
+{
     [Fact]
     public void ModulesOnPSModulePathWithPickleKeyAreDiscovered()
     {
@@ -164,7 +169,7 @@ public class PluginLoadingTests
         try
         {
             using var t = TestPickle.Create(start: true);
-            var info = Manager(t).Find(name);
+            var info = ((PluginManager)t.Runtime.Plugins).Find(name);
             Assert.NotNull(info);
             Assert.Equal(PluginStatus.Loaded, info.Status);
             Assert.Equal(["probe"], t.Run("Get-" + name));

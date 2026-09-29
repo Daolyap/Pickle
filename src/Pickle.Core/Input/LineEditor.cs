@@ -42,6 +42,7 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
     private char? _pendingHighSurrogate;
     private bool _burst;
     private bool _inBurst;
+    private readonly Queue<ConsoleKeyInfo> _replay = new();
     private HistoryNavigator? _history;
     private bool _keepHistory;
     private int _renderedHighlightVersion;
@@ -175,6 +176,11 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
 
     private ConsoleKeyInfo NextKey(CancellationToken cancellationToken)
     {
+        if (_replay.TryDequeue(out var replayed))
+        {
+            return replayed;
+        }
+
         while (!_runtime.Terminal.WaitForInput(IdlePoll, cancellationToken))
         {
             OnIdle();
@@ -247,7 +253,12 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
         // Requests queued while we waited apply before the key (terminals that can't poll never report idle).
         DrainRequests();
         var terminal = _runtime.Terminal;
-        var more = terminal.KeyAvailable;
+        if (IsEscape(key) && _replay.Count == 0 && ReadBracketedPaste(cancellationToken))
+        {
+            return;
+        }
+
+        var more = _replay.Count > 0 || terminal.KeyAvailable;
         if (!more && _burst && key.Key == ConsoleKey.Enter)
         {
             more = terminal.WaitForInput(PasteGrace, cancellationToken) && terminal.KeyAvailable;
@@ -854,6 +865,114 @@ public sealed partial class LineEditor : ILineEditor, IEditorBuffer, IRuntimeCom
 
         // Ctrl or Alt alone makes a shortcut; both together is AltGr, which types characters on many layouts.
         return key.Modifiers.HasFlag(ConsoleModifiers.Control) == key.Modifiers.HasFlag(ConsoleModifiers.Alt);
+    }
+
+    // A terminal with bracketed paste on (a native program can leave it on) wraps a paste in ESC[200~ … ESC[201~.
+    // .NET reads the ESC as the Escape key and the rest as typing, so the closing ESC would clear the line. Returns
+    // true when the Escape was a paste marker (the paste is inserted, a stray end marker dropped); otherwise the keys
+    // read ahead are replayed.
+    private bool ReadBracketedPaste(CancellationToken cancellationToken)
+    {
+        var marker = ReadMarker(out var readAhead, cancellationToken);
+        if (marker == PasteEnd)
+        {
+            return true;
+        }
+
+        if (marker != PasteStart)
+        {
+            foreach (var key in readAhead)
+            {
+                _replay.Enqueue(key);
+            }
+
+            return false;
+        }
+
+        var text = new StringBuilder();
+        while (WaitForKey(cancellationToken))
+        {
+            var key = _runtime.Terminal.ReadKey(cancellationToken);
+            if (IsEscape(key))
+            {
+                if (ReadMarker(out readAhead, cancellationToken) == PasteEnd)
+                {
+                    break;
+                }
+
+                foreach (var ahead in readAhead)
+                {
+                    AppendPasted(text, ahead);
+                }
+
+                continue;
+            }
+
+            AppendPasted(text, key);
+        }
+
+        _burst = false;
+        _history = null;
+        if (text.Length > 0)
+        {
+            InsertText(NormalizeNewlines(text.ToString()), EditKind.Paste);
+            if (_overlay is { } open)
+            {
+                try
+                {
+                    open.OnBufferChanged(this);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    OverlayFailed(open, ex);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private const string PasteStart = "[200~";
+    private const string PasteEnd = "[201~";
+
+    private string? ReadMarker(out List<ConsoleKeyInfo> readAhead, CancellationToken cancellationToken)
+    {
+        readAhead = [];
+        var read = new StringBuilder();
+        while (read.Length < PasteStart.Length && WaitForKey(cancellationToken))
+        {
+            var key = _runtime.Terminal.ReadKey(cancellationToken);
+            readAhead.Add(key);
+            read.Append(key.KeyChar);
+            var soFar = read.ToString();
+            if (!PasteStart.StartsWith(soFar, StringComparison.Ordinal) && !PasteEnd.StartsWith(soFar, StringComparison.Ordinal))
+            {
+                return null;
+            }
+        }
+
+        return read.ToString() is PasteStart or PasteEnd ? read.ToString() : null;
+    }
+
+    private static bool IsEscape(ConsoleKeyInfo key) => key.Key == ConsoleKey.Escape || key.KeyChar == '\u001b';
+
+    private bool WaitForKey(CancellationToken cancellationToken) =>
+        _runtime.Terminal.KeyAvailable || (_runtime.Terminal.WaitForInput(PasteGrace, cancellationToken) && _runtime.Terminal.KeyAvailable);
+
+    private static void AppendPasted(StringBuilder text, ConsoleKeyInfo key)
+    {
+        if (key.Key == ConsoleKey.Enter || key.KeyChar is '\r' or '\n')
+        {
+            text.Append('\n');
+        }
+        else if (key.Key == ConsoleKey.Tab || key.KeyChar == '\t')
+        {
+            text.Append('\t');
+        }
+        else if (key.KeyChar != '\0' && !char.IsControl(key.KeyChar))
+        {
+            text.Append(key.KeyChar);
+        }
     }
 
     private static bool IsLiteralPasteKey(ConsoleKeyInfo key) =>

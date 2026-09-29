@@ -133,7 +133,11 @@ public sealed class PanelHost : IPanelHost
         {
             using var app = ApplicationFactory();
             app.Init(DriverName);
-            app.SessionBegun += (_, e) => StyleSession(e.State.Runnable);
+            app.SessionBegun += (_, e) =>
+            {
+                StyleSession(e.State.Runnable);
+                FocusSync.Track(e.State.Runnable);
+            };
             object? view = null;
             try
             {

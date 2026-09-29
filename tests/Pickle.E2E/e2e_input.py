@@ -64,3 +64,21 @@ def test_clicking_a_network_tools_text_box_lets_you_type_in_it(p):
         s.press(",8080")
         s.wait_for("top100,8080", timeout=5)
         s.press("\x1b")
+
+
+def test_the_wheel_scrolls_a_wizard_form(p):
+    with PickleSession(p, cols=120, rows=35) as s:
+        s.wait_for_prompt()
+        time.sleep(0.3)
+        s.press("pk wizard nmap\r")
+        s.wait_for("── Targets ──", timeout=20)
+        time.sleep(1.0)
+        _, y = _find(s, "── Targets ──")
+        for _ in range(3):
+            s.press(f"\x1b[<65;40;{y + 3}M")
+            time.sleep(0.1)
+        deadline = time.time() + 5
+        while "── Targets ──" in s.text() and time.time() < deadline:
+            time.sleep(0.1)
+        assert "── Targets ──" not in s.text(), "the form did not scroll"
+        s.press("\x1b")

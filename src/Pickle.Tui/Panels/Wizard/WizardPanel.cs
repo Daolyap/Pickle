@@ -83,6 +83,8 @@ internal sealed class WizardPanel : PanelWindow
     /// <summary>Editor for a value key (option id, or "optionId.sub" for template fields).</summary>
     internal View? Editor(string key) => _editors.GetValueOrDefault(key);
 
+    internal View? Form => _form;
+
     /// <summary>Test hook replacing the alias-name dialog.</summary>
     internal Func<string?>? AskAliasName { get; set; }
 
@@ -550,7 +552,7 @@ internal sealed class WizardPanel : PanelWindow
                     continue;
                 }
 
-                var header = new Label { Text = "── " + section.Title + " ──", X = 0, Width = Dim.Fill() };
+                var header = new Label { Text = "── " + section.Title + " ──", X = 0, Width = Dim.Fill(), Height = 1 };
                 _form.Add(header);
                 _formItems.Add(new FormItem(header, 1, null, section));
                 foreach (var option in section.Options)
@@ -579,12 +581,13 @@ internal sealed class WizardPanel : PanelWindow
             : option.Type == WizardOptionType.Flag ? 1
             : Box;
 
-        // Boxed editors put their text on the box's middle row; labels line up with it.
+        // Boxed editors put their text on the box's middle row; labels line up with it. Everything here has a fixed
+        // size: an auto-sized label is measured (word-wrapped) again on every layout, which made scrolling crawl.
         var labelY = height == 1 ? 0 : 1;
         var row = new View { X = 0, Width = Dim.Fill(), Height = height, CanFocus = true };
         var label = option.Label + (option.Required ? " *" : string.Empty);
-        row.Add(new Label { Text = label.Length > LabelWidth ? label[..(LabelWidth - 1)] + "…" : label, X = 0, Y = labelY, Width = LabelWidth });
-        var marker = new Label { Text = string.Empty, X = LabelWidth, Y = labelY, Width = 2, Id = "marker" };
+        row.Add(new Label { Text = label.Length > LabelWidth ? label[..(LabelWidth - 1)] + "…" : label, X = 0, Y = labelY, Width = LabelWidth, Height = 1 });
+        var marker = new Label { Text = string.Empty, X = LabelWidth, Y = labelY, Width = 2, Height = 1, Id = "marker" };
         row.Add(marker);
         var x = LabelWidth + 2;
         var value = _values.GetValueOrDefault(option.Id);
@@ -595,7 +598,7 @@ internal sealed class WizardPanel : PanelWindow
             {
                 var key = option.Id + "." + template.Placeholders[i];
                 var optional = !template.RequiredPlaceholders.Contains(template.Placeholders[i]);
-                row.Add(new Label { Text = Humanize(template.Placeholders[i]) + (optional ? " (opt.)" : string.Empty), X = x, Y = (i * Box) + 1, Width = 22 });
+                row.Add(new Label { Text = Humanize(template.Placeholders[i]) + (optional ? " (opt.)" : string.Empty), X = x, Y = (i * Box) + 1, Width = 22, Height = 1 });
                 var field = InputBox.Boxed(new TextField { X = x + 22, Y = i * Box, Width = Dim.Fill(1), Text = _values.GetValueOrDefault(key) ?? string.Empty });
                 Bind(field, key, option);
                 row.Add(field);
@@ -612,6 +615,8 @@ internal sealed class WizardPanel : PanelWindow
                 {
                     X = x,
                     Y = 0,
+                    Width = Dim.Fill(1),
+                    Height = 1,
                     Text = option.Flag ?? string.Empty,
                     Value = WizardEngine.IsTrue(value) ? CheckState.Checked : CheckState.UnChecked,
                 };

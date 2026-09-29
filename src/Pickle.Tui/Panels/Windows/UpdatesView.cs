@@ -64,6 +64,8 @@ public sealed partial class UpdatesView : View
     private readonly TextPane _details;
     private readonly TextPane _log;
     private List<WindowsUpdateInfo> _rows = [];
+    private int _searchVersion;
+    private bool _searched;
 
     public UpdatesView(WindowsPanelBase owner, IWindowsUpdateService service)
     {
@@ -108,12 +110,27 @@ public sealed partial class UpdatesView : View
         _log.Height = 6;
         Add(_status, check, _drivers, _optional, install, kb, _table, _details, _log);
         SetRows([]);
+
+        // What's listed follows the boxes: ticking Drivers or Optional searches again, and the list searches by
+        // itself the first time it's shown (as a tab it may never be).
+        _drivers.ValueChanged += (_, _) => Check();
+        _optional.ValueChanged += (_, _) => Check();
+        DrawComplete += (_, _) =>
+        {
+            if (!_searched)
+            {
+                _searched = true;
+                _owner.Ui(Check);
+            }
+        };
     }
 
     /// <summary>The listed updates in display order (security/critical first).</summary>
     internal IReadOnlyList<WindowsUpdateInfo> Rows => _rows;
 
     internal SelectionTable<WindowsUpdateInfo> Table => _table;
+
+    internal CheckBox OptionalBox => _optional;
 
     internal string StatusText => _status.Text;
 
@@ -126,6 +143,8 @@ public sealed partial class UpdatesView : View
 
     public void Check()
     {
+        _searched = true;
+        var version = ++_searchVersion;
         var query = new WindowsUpdateQuery(_drivers.Value == CheckState.Checked, _optional.Value == CheckState.Checked);
         _log.Content = "Searching Windows Update (the first search after a restart can take a few minutes)…";
         var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => _log.Content = Describe(p));
@@ -133,6 +152,12 @@ public sealed partial class UpdatesView : View
             ct => _service.SearchAsync(query, progress, ct),
             updates =>
             {
+                // Toggling a box while a search runs starts another; only the newest one's results count.
+                if (version != _searchVersion)
+                {
+                    return;
+                }
+
                 SetRows(updates);
                 _log.Content = updates.Count == 0 ? "No updates available." : $"{updates.Count} update(s) available.";
             },

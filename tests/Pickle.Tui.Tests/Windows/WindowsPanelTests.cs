@@ -180,6 +180,50 @@ public sealed class WindowsPanelTests : IDisposable
     }
 
     [Fact]
+    public void UpdatesListSearchesByItselfAndAgainWhenOptionalIsTicked()
+    {
+        using var panel = Hooked(new UpdatesPanel(Context));
+        var updates = panel.Updates!;
+        Run(
+            panel,
+            Wait(() => updates.Rows.Count == 2),
+            Do(() => updates.OptionalBox.Value = CheckState.Checked),
+            Wait(() => updates.Rows.Count == 3));
+
+        Assert.False(_wu.Queries[0].IncludeOptional);
+        Assert.True(_wu.Queries[^1].IncludeOptional);
+        Assert.Contains(updates.Rows, u => u.Title == "Feature preview");
+    }
+
+    [Fact]
+    public void WingetSearchRunsWhileTypingAndLeavesFocusInTheBox()
+    {
+        var pause = WingetPanel.TypingPause;
+        WingetPanel.TypingPause = TimeSpan.FromMilliseconds(20);
+        try
+        {
+            using var panel = Hooked(new WingetPanel(Context));
+            var focused = false;
+            Run(
+                panel,
+                Do(() =>
+                {
+                    panel.ActiveTab = "Search";
+                    panel.QueryField.SetFocus();
+                    panel.Query = "7z";
+                }),
+                When(() => panel.SearchResults.Count == 1, () => focused = panel.QueryField.HasFocus));
+
+            Assert.Equal("7zip.7zip", panel.SearchResults[0].Id);
+            Assert.True(focused);
+        }
+        finally
+        {
+            WingetPanel.TypingPause = pause;
+        }
+    }
+
+    [Fact]
     public void WingetPanelOffersModuleInstallAndSourceRepair()
     {
         _winget.Backend = WingetBackend.Cli;
@@ -478,9 +522,9 @@ public sealed class WindowsPanelTests : IDisposable
         _wu.Available.Add(Update("33333333-2222-3333-4444-555555555555", "Realtek Audio Driver", driver: true));
         using var panel = Hooked(new UpdatesPanel(Context));
         var updates = panel.Updates!;
+        var searches = 0;
         Run(
             panel,
-            Do(updates.Check),
             When(() => updates.Rows.Count == 3, () =>
             {
                 Assert.Equal([true, false, false], Ticks(updates.Table));
@@ -488,9 +532,10 @@ public sealed class WindowsPanelTests : IDisposable
                 Click(updates.Table, 2, MouseFlags.Shift);
                 Assert.Equal([true, true, true], Ticks(updates.Table));
                 Click(updates.Table, 0);
+                searches = _wu.Queries.Count;
                 updates.Check();
             }),
-            Wait(() => _wu.Queries.Count == 2),
+            Wait(() => _wu.Queries.Count > searches && updates.LogText.Contains("available", StringComparison.Ordinal)),
             Do(() =>
             {
                 Assert.Equal([false, true, true], Ticks(updates.Table));
@@ -527,7 +572,9 @@ public sealed class WindowsPanelTests : IDisposable
 
         Assert.Equal(["0a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9"], _wu.Installed);
         Assert.Contains(_told, t => t.Message.Contains("'nope' is not a KB number", StringComparison.Ordinal));
-        Assert.All(_wu.Queries, q => Assert.True(q.IncludeOptional && q.IncludeDrivers));
+        // The KB lookup searches everything; the list's own automatic search follows its boxes (drivers, no optional).
+        Assert.Contains(_wu.Queries, q => q.IncludeOptional && q.IncludeDrivers);
+        Assert.All(_wu.Queries, q => Assert.True(q.IncludeDrivers));
         Assert.Contains(_asked, a => a.Message.Contains("KB5031455  2026-09 Cumulative Update", StringComparison.Ordinal));
     }
 

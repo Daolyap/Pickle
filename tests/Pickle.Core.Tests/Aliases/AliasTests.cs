@@ -52,6 +52,16 @@ public class AliasTests
     }
 
     [Fact]
+    public void PlaceholdersInsideSingleQuotesAreFilledIn()
+    {
+        using var t = TestPickle.Create(start: true);
+        t.Runtime.Aliases.Set(new AliasDefinition { Name = "scan", Kind = AliasKind.Parameterized, Body = "Write-Output -oN out.txt '{targets}' 'it''s {n=1} $HOME'" });
+
+        Assert.Equal(["-oN", "out.txt", "10.0.0.0/24,10.1.1.1", "it's 7 $HOME"], t.Run("scan \"10.0.0.0/24,10.1.1.1\" 7"));
+        Assert.Equal(["-oN", "out.txt", "a b", "it's 1 $HOME"], t.Run("scan 'a b'"));
+    }
+
+    [Fact]
     public void ParameterizedAliasReportsMissingArgument()
     {
         using var t = TestPickle.Create(start: true);

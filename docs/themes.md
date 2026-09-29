@@ -99,8 +99,8 @@ Add `prompt.animation` to make the prompt move while Pickle waits for input:
 The `status` and `admin` segments always keep their colors, and any segment can opt out with
 `"options": { "animate": "false" }` (the animated themes do this for the dark clock block). Only the prompt redraws, and
 only the cells that changed. Animation pauses after five minutes without a key press. `prompt.animation` in config.json
-turns it off (`off`), forces it (`on`), or with `auto` (the default) animates except over SSH or when `NO_COLOR` or
-`TERM=dumb` is set.
+turns it off (`off`), forces it (`on`), or with `auto` (the default) animates except over SSH, when `NO_COLOR` or
+`TERM=dumb` is set, or when Windows' "Show animations in Windows" (Settings → Accessibility → Visual effects) is off.
 
 ## Light and dark
 

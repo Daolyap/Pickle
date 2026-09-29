@@ -98,14 +98,21 @@ public sealed class PromptEngine : IPromptRenderer, IRuntimeComponent, IDisposab
             ? ThemeAnimator.FrameAt(animation, Clock())
             : null;
 
-    /// <summary><c>prompt.animation</c>: "on", "off", or "auto" (off over SSH and on terminals that ask for no color).</summary>
+    /// <summary>
+    /// <c>prompt.animation</c>: "on", "off", or "auto" (off over SSH, on terminals that ask for no color, and when Windows'
+    /// "Show animations" is off).
+    /// </summary>
     public bool AnimationEnabled => _runtime.Config.Current.Prompt.Animation?.Trim().ToLowerInvariant() switch
     {
         "on" or "true" or "always" => true,
         "off" or "false" or "never" => false,
         _ => !IsSet("SSH_CONNECTION") && !IsSet("SSH_CLIENT") && !IsSet("SSH_TTY") && !IsSet("NO_COLOR")
-            && !string.Equals(Environment.GetEnvironmentVariable("TERM"), "dumb", StringComparison.Ordinal),
+            && !string.Equals(Environment.GetEnvironmentVariable("TERM"), "dumb", StringComparison.Ordinal)
+            && SystemAllowsAnimation() != false,
     };
+
+    /// <summary>The desktop's own animation setting (replaceable in tests).</summary>
+    internal Func<bool?> SystemAllowsAnimation { get; set; } = SystemAppearance.AnimationsEnabled;
 
     private static bool IsSet(string variable) => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(variable));
 

@@ -141,6 +141,18 @@ public class PromptEngineTests
         Assert.StartsWith("\n", engine.Render(Context()).Left, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("auto", false, false)]
+    [InlineData("on", false, true)]
+    [InlineData("off", true, false)]
+    public void AutoAnimationFollowsTheDesktopsAnimationSetting(string setting, bool desktopAllows, bool expected)
+    {
+        using var t = TestPickle.Create(configure: c => c.Prompt.Animation = setting);
+        var engine = (PromptEngine)t.Runtime.Prompt;
+        engine.SystemAllowsAnimation = () => desktopAllows;
+        Assert.Equal(expected, engine.AnimationEnabled);
+    }
+
     [Fact]
     public void RerenderKeepsTheFirstPromptWithoutTheBlankLine()
     {

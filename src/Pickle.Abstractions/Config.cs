@@ -75,7 +75,8 @@ public sealed class PromptSettings
     public string Icons { get; set; } = "auto";
 
     /// <summary>
-    /// Animated themes: "auto" (animate, except over SSH or with NO_COLOR/TERM=dumb), "on" or "off" (the theme's own colors, still).
+    /// Animated themes: "auto" (animate, except over SSH, with NO_COLOR/TERM=dumb, or with Windows' "Show animations" off),
+    /// "on" or "off" (the theme's own colors, still).
     /// Animation pauses after a few minutes without a key press.
     /// </summary>
     public string Animation { get; set; } = "auto";

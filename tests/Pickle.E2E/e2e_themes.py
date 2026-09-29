@@ -2,7 +2,7 @@
 
 import time
 
-from pty_harness import PickleSession
+from pty_harness import PickleSession, alt
 
 
 def _prompt_colors(s, samples=12, interval=0.25):
@@ -47,3 +47,17 @@ def test_tab_progress_reaches_the_terminal_without_touching_the_screen(p):
         assert b"\x1b]9;4;0;0\x07" in raw, "no clear sequence"
         assert b"\x1b]9;4;2;100\x07" in raw, "no error sequence"
         assert "9;4" not in s.text(), "the sequence leaked onto the screen"
+
+
+def test_theme_gallery_opens_with_alt_e_and_enter_applies(p):
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        time.sleep(0.3)
+        s.press(alt("e"))
+        s.wait_for("Themes  ·  Esc to close", timeout=20)
+        s.wait_for("aurora", timeout=10)
+        s.type("nord")
+        time.sleep(0.5)
+        s.press("enter")
+        time.sleep(0.8)
+        s.run("(Get-PickleTheme).Name + '-applied'", "nord-applied", timeout=15)

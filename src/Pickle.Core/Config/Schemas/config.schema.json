@@ -223,6 +223,11 @@
           "default": "admin",
           "description": "Theme used while Pickle runs as administrator (red, with an ADMIN badge) without changing 'theme'; \"none\" keeps your normal theme."
         },
+        "offerElevation": {
+          "type": "boolean",
+          "default": true,
+          "description": "When a command fails because it needs administrator rights, offer to run it again as administrator (Windows)."
+        },
         "firstRunCompleted": {
           "type": "boolean",
           "default": false,

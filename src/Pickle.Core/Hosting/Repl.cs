@@ -122,8 +122,27 @@ public sealed class Repl
             RaiseHook(new HookEvent(HookKind.DirectoryChanged, line, _runtime.Engine.CurrentDirectory, cwdBefore));
         }
 
+        if (ShouldOfferElevation(line, result) && ElevationOffer.Ask(_runtime.Terminal, _runtime.Themes.Current))
+        {
+            return ExecuteLine(ElevationOffer.SudoLine(line), echo: false);
+        }
+
         return result;
     }
+
+    /// <summary>Elevated re-runs go through the Windows-only sudo rewriter (tests turn it on elsewhere).</summary>
+    internal bool CanElevate { get; set; } = OperatingSystem.IsWindows();
+
+    private bool ShouldOfferElevation(string line, ExecutionResult result) =>
+        CanElevate
+        && !result.Success
+        && !result.Interrupted
+        && !_runtime.IsElevated
+        && _runtime.Config.Current.Shell.OfferElevation
+        && _runtime.Shell.IsInteractive
+        && _runtime.Terminal.IsInteractive
+        && !line.TrimStart().StartsWith("sudo", StringComparison.OrdinalIgnoreCase)
+        && ElevationOffer.IsPermissionFailure(_runtime.Engine.LastNewError, result.ExitCode);
 
     // ───────────── Nested prompts ─────────────
 

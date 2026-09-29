@@ -116,6 +116,9 @@ public sealed class ShellSettings
     /// <summary>Theme for sessions running as administrator (not saved as <see cref="PickleConfig.Theme"/>); "none" keeps the normal one.</summary>
     public string AdminTheme { get; set; } = "admin";
 
+    /// <summary>When a command fails because it needs administrator rights, offer to run it again elevated (Windows).</summary>
+    public bool OfferElevation { get; set; } = true;
+
     public bool FirstRunCompleted { get; set; } = false;
 
     /// <summary>The newest setup whose questions were asked (see <c>pk setup</c>); newer offers are asked once.</summary>

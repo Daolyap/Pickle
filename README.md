@@ -67,6 +67,7 @@ pk tool install jq --temp          # a tool for this session only
 pk dashboard                       # live system overview (Alt+I)
 pk font install                    # Cascadia Code Nerd Font for the prompt icons
 pk setup                           # run the first-start setup again
+pk bugreport                       # a zip for an issue: versions, pk doctor, config and logs, secrets removed
 pk sandbox run "Test an installer" # throwaway Windows with Downloads shared read-only
 pk plugin new MyTools              # start a plugin (docs/plugins.md)
 ```

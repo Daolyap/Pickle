@@ -12,6 +12,7 @@ namespace Pickle.Core.Hosting;
 public sealed class Repl
 {
     private readonly PickleRuntime _runtime;
+    private bool _firstPromptShown;
     private readonly MissingToolPrompt _missingTools;
     private int _nestedDepth;
     private int _exitNestedRequested;
@@ -38,6 +39,11 @@ public sealed class Repl
                 var promptContext = _runtime.CreatePromptContext();
                 RaiseHook(new HookEvent(HookKind.Prompt, Cwd: promptContext.Cwd));
                 var prompt = _runtime.Prompt.Render(promptContext);
+                if (!_firstPromptShown)
+                {
+                    _firstPromptShown = true;
+                    _runtime.Startup.Mark("first prompt");
+                }
 
                 string? line;
                 _runtime.Terminal.SetEditMode(true);

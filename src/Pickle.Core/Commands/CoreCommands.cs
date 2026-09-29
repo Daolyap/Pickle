@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Pickle.Abstractions;
 using Pickle.Core.Config;
+using Pickle.Core.Hosting;
 using Pickle.Core.Plugins;
 
 namespace Pickle.Core.Commands;
@@ -63,10 +64,15 @@ public sealed class DoctorCommand(PickleRuntime runtime) : IPickleCommand
 
     public string Description => "Check versions, paths, tools, config and plugins for problems";
 
-    public string Usage => "pk doctor";
+    public string Usage => "pk doctor [--startup]";
 
     public async ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
+        if (args.Any(a => a.Equals("--startup", StringComparison.OrdinalIgnoreCase)))
+        {
+            return Startup(context);
+        }
+
         var checks = await RunChecksAsync(cancellationToken).ConfigureAwait(false);
         foreach (var check in checks)
         {
@@ -82,6 +88,22 @@ public sealed class DoctorCommand(PickleRuntime runtime) : IPickleCommand
         return errors > 0 ? 1 : 0;
     }
 
+    private int Startup(PickleCommandContext context)
+    {
+        var ui = runtime.Themes.Current.Ui;
+        var phases = runtime.Startup.Phases;
+        var width = phases.Count == 0 ? 0 : phases.Max(p => p.Phase.Length);
+        var slowest = phases.Count == 0 ? TimeSpan.Zero : phases.Max(p => p.Duration);
+        foreach (var (phase, duration) in phases)
+        {
+            var bar = slowest > TimeSpan.Zero ? new string('█', (int)Math.Round(20 * duration / slowest)) : string.Empty;
+            context.WriteHost(phase.PadRight(width + 2) + StartupTimings.Format(duration).PadLeft(8) + "  " + Ansi.Colorize(bar, ui.Accent));
+        }
+
+        context.WriteHost(Ansi.Colorize("total".PadRight(width + 2) + StartupTimings.Format(runtime.Startup.Total).PadLeft(8), ui.Muted));
+        return 0;
+    }
+
     public async Task<IReadOnlyList<DoctorCheck>> RunChecksAsync(CancellationToken cancellationToken)
     {
         var checks = new List<DoctorCheck>();
@@ -89,6 +111,7 @@ public sealed class DoctorCommand(PickleRuntime runtime) : IPickleCommand
 
         Add(DoctorCheck.Ok, "Pickle", $"{PickleRuntime.Version} · PowerShell {PickleRuntime.PowerShellVersion} · .NET {Environment.Version}");
         Add(DoctorCheck.Info, "OS", $"{RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})");
+        Add(DoctorCheck.Info, "Startup", runtime.Startup.Summary() + " · details: pk doctor --startup");
 
         var paths = runtime.Paths;
         foreach (var (label, dir) in new[] { ("Config dir", paths.ConfigDir), ("Data dir", paths.DataDir) })

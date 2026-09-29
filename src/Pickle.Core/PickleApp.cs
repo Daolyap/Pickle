@@ -49,6 +49,7 @@ public static class PickleApp
         }
 
         runtime.FirstRun.Run(runtime);
+        runtime.Startup.Mark("banner, setup");
         return runtime.Repl.Run();
     }
 

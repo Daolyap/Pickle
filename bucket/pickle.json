@@ -1,16 +1,16 @@
 {
-  "version": "0.2.1",
+  "version": "0.4.0",
   "description": "A PowerShell 7 shell with superpowers: autosuggestions, syntax highlighting, themes, panels, winget and Windows Update management.",
   "homepage": "https://github.com/Daolyap/Pickle",
   "license": "MIT",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/Daolyap/Pickle/releases/download/v0.2.1/pickle-0.2.1-win-x64.zip",
-      "hash": "4b1a4046f6c31904ec2c8a5a8183e4e763fe379009a053a04717123d05c6dba1"
+      "url": "https://github.com/Daolyap/Pickle/releases/download/v0.4.0/pickle-0.4.0-win-x64.zip",
+      "hash": "363d48b3690e443858bf2a190a8fdcea601ceda00625c833c2209486e7ca3dd9"
     },
     "arm64": {
-      "url": "https://github.com/Daolyap/Pickle/releases/download/v0.2.1/pickle-0.2.1-win-arm64.zip",
-      "hash": "ff64fc920c177a882092902514646c04cd04cc1d3113997f2a0c54037386c47e"
+      "url": "https://github.com/Daolyap/Pickle/releases/download/v0.4.0/pickle-0.4.0-win-arm64.zip",
+      "hash": "6908af4976852eb64308c1b3c211e41484495fd58f552b652a6391bc5c743e58"
     }
   },
   "bin": "pickle.exe",

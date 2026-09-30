@@ -66,6 +66,44 @@ def test_clicking_a_network_tools_text_box_lets_you_type_in_it(p):
         s.press("\x1b")
 
 
+def _empty_the_targets_box(s):
+    s.press(alt("t"))
+    s.wait_for("Network tools", timeout=20)
+    s.wait_for("127.0.0.1", timeout=10)
+    time.sleep(0.5)
+    x, y = _find(s, "127.0.0.1")
+    _click(s, x + 20, y)
+    time.sleep(0.5)
+    s.press("end")
+    for _ in range(12):
+        s.press("backspace")
+    deadline = time.time() + 5
+    while "127.0.0" in s.text() and time.time() < deadline:
+        time.sleep(0.1)
+    assert "127.0.0" not in s.text(), "the box did not empty"
+
+
+def test_a_paste_into_a_network_tools_box_shows_without_another_key(p):
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        time.sleep(0.3)
+        _empty_the_targets_box(s)
+        s.press(PASTE_START + "12.12.12.12" + PASTE_END)
+        s.wait_for("│12.12.12.12", timeout=5)
+        s.press("\x1b")
+
+
+def test_a_paste_typed_as_a_burst_of_keys_shows_without_another_key(p):
+    # Where the terminal doesn't bracket pastes (or ConPTY strips the markers) a paste is just fast typing.
+    with PickleSession(p) as s:
+        s.wait_for_prompt()
+        time.sleep(0.3)
+        _empty_the_targets_box(s)
+        s.press("10.20.30.40")
+        s.wait_for("│10.20.30.40", timeout=5)
+        s.press("\x1b")
+
+
 def test_the_wheel_scrolls_a_wizard_form(p):
     with PickleSession(p, cols=120, rows=35) as s:
         s.wait_for_prompt()

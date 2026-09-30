@@ -66,6 +66,17 @@ jobs:
           & $exe -c 'Get-Process | Select-Object -First 1 Name, Id; pk version'
           if ($LASTEXITCODE -ne 0) { throw "pickle -c failed" }
 
+      - name: End-to-end tests (Windows ConPTY)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PYTHONUTF8: 1
+          PICKLE_E2E_RAW: 1
+        run: |
+          pip install --quiet pyte pywinpty
+          python tests/Pickle.E2E/run_e2e.py --pickle src/Pickle/bin/Debug/net10.0/pickle.exe -k e2e_input
+          if ($LASTEXITCODE -ne 0) { throw "end-to-end tests failed" }
+
   package-windows:
     # win-arm64 is built on the x64 agent like in the release, where its pickle.exe cannot run.
     name: Package (${{ matrix.rid }} single file + MSI)

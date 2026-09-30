@@ -135,6 +135,7 @@ public sealed class PanelHost : IPanelHost
             using var app = ApplicationFactory();
             app.Init(DriverName);
             WheelScroll.Attach(app);
+            PasteRepaint.Attach(app);
             app.SessionBegun += (_, e) =>
             {
                 StyleSession(e.State.Runnable);

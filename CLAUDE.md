@@ -14,7 +14,7 @@ C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product,
 | Everything (restore, build with warnings-as-errors, format check, tests) — run before every commit | `scripts/check.sh` (`scripts/check.ps1` on Windows) |
 | Fix formatting | `scripts/check.sh --fix` |
 | Only some tests | `scripts/check.sh --quick --filter LineEditor` |
-| Real-terminal end-to-end tests (pty + pyte) | `scripts/check.sh --e2e` or `python3 tests/Pickle.E2E/run_e2e.py -k vim` |
+| Real-terminal end-to-end tests (pty + pyte; ConPTY via pywinpty on Windows) | `scripts/check.sh --e2e` or `python3 tests/Pickle.E2E/run_e2e.py -k vim` |
 | Run the shell | `dotnet run --project src/Pickle` (or `src/Pickle/bin/Debug/net10.0/pickle`) |
 | Run one command | `pickle -c 'Get-Date'` · headless (stdin lines): `pickle --headless` |
 | Single-file binaries | `scripts/publish.sh win-x64 linux-x64` → `artifacts/publish/<rid>/` (Fedora RPM: `packaging/rpm/build-rpm.sh`) |
@@ -108,7 +108,8 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   First run writes it (commit it!); `PICKLE_UPDATE_SNAPSHOTS=1` re-records. CI fails on missing snapshots.
 - Terminal.Gui: `TuiHarness.InitApp()` (virtual time + headless ANSI driver on every OS — never a bare `app.Init()`,
   which gets the console driver on Windows CI), input injection (`app.InjectKey(...)`), `StopAfterFirstIteration = true`.
-- E2E: add `test_*` functions to `tests/Pickle.E2E/run_e2e.py` (real pty; covers native programs and panels).
+- E2E: add `test_*` functions to `tests/Pickle.E2E/run_e2e.py` or an `e2e_*.py` module (real pty; covers native programs
+  and panels). CI also runs `e2e_input` on Windows in a real ConPTY (keep those tests free of Linux-only commands).
 
 ## Gotchas
 

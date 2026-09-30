@@ -186,8 +186,8 @@ after installing a build.
 
 ## 0.4.0 checks
 
-- Paste (Ctrl+V and right-click) into the theme gallery filter (Alt+E), a wizard field (F2) and the prompt: the text
-  appears at once and in full.
+- Paste (Ctrl+V and right-click) into the theme gallery filter (Alt+E), a wizard field (F2), a Network tools box
+  (Alt+T), a dialog prompt and the prompt: the text appears at once and in full, without pressing another key.
 - Network tools (Alt+T): click into Targets, Ports and Timeout and type; tick a checkbox with the mouse.
 - Wizard (F2 on `nmap`): the mouse wheel scrolls the options, also with the pointer over a text box; scrolling feels
   smooth. In the winget Installed list a wheel notch moves three rows. The nmap wizard's Ports section has

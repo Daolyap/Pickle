@@ -68,8 +68,8 @@ class PickleSession:
         self.env.update({"PICKLE_HOME": self.home, "TERM": "xterm-256color", "COLUMNS": str(cols), "LINES": str(rows)})
         if env:
             self.env.update(env)
-        # adminTheme "none": the same prompt whether or not the tests run as root.
-        cfg = {"shell": {"showStartupBanner": False, "adminTheme": "none"}}
+        # adminTheme "none": the same prompt whether or not the tests run as root; no first-run questions.
+        cfg = {"shell": {"showStartupBanner": False, "adminTheme": "none", "firstRunCompleted": True, "setupVersion": 1000}}
         if config:
             _deep_merge(cfg, config)
         os.makedirs(os.path.join(self.home, "config"), exist_ok=True)

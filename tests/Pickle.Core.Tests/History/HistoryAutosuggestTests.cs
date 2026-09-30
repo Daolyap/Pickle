@@ -138,17 +138,27 @@ public class HistoryAutosuggestTests
 
         index.Suggest("zzz", "/dir/1");
         var best = long.MaxValue;
-        // Best of many: the suite runs in parallel, so any single run can lose the CPU.
-        for (var run = 0; run < 20; run++)
+        var limit = Stopwatch.Frequency * 5 / 1000;
+        // Best of many, in rounds a moment apart: the suite runs in parallel (and CI may run two builds on one
+        // machine), so a whole burst of runs can lose the CPU.
+        for (var round = 0; round < 5 && best >= limit; round++)
         {
-            var sw = Stopwatch.StartNew();
-            Assert.Null(index.Suggest("no-such-prefix", "/dir/3"));
-            Assert.NotNull(index.Suggest("Command-1", "/dir/3"));
-            sw.Stop();
-            best = Math.Min(best, sw.ElapsedTicks);
+            if (round > 0)
+            {
+                Thread.Sleep(100);
+            }
+
+            for (var run = 0; run < 20; run++)
+            {
+                var sw = Stopwatch.StartNew();
+                Assert.Null(index.Suggest("no-such-prefix", "/dir/3"));
+                Assert.NotNull(index.Suggest("Command-1", "/dir/3"));
+                sw.Stop();
+                best = Math.Min(best, sw.ElapsedTicks);
+            }
         }
 
-        Assert.True(TimeSpan.FromTicks(best * TimeSpan.TicksPerSecond / Stopwatch.Frequency).TotalMilliseconds < 5, $"best run took {best * 1000.0 / Stopwatch.Frequency:F2} ms");
+        Assert.True(best < limit, $"best run took {best * 1000.0 / Stopwatch.Frequency:F2} ms");
     }
 
     private static HistoryIndex Index(params HistoryEntry[] entries)

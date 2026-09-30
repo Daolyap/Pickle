@@ -131,6 +131,7 @@ public sealed class PanelHost : IPanelHost
         _running = true;
         try
         {
+            using var pacing = FramePacing.Begin();
             using var app = ApplicationFactory();
             app.Init(DriverName);
             WheelScroll.Attach(app);

@@ -105,6 +105,11 @@ internal sealed class FakeExecutor : IElevatedExecutor
 
     public Task<ElevatedResponse> RepairWingetSourceAsync(IProgress<string> progress, CancellationToken cancellationToken) => Record("repair");
 
+    /// <summary>Whether the (fake) elevated account has winget's source package.</summary>
+    public bool HasSource { get; set; } = true;
+
+    public Task<bool> HasWingetSourceAsync(CancellationToken cancellationToken) => Task.FromResult(HasSource);
+
     public Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken)
     {
         progress.Report("working on " + string.Join(' ', arguments.Take(3)));

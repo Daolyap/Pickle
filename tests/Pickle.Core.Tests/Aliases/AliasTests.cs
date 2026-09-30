@@ -52,6 +52,31 @@ public class AliasTests
     }
 
     [Fact]
+    public void PlaceholdersInsideSingleQuotesAreFilledIn()
+    {
+        using var t = TestPickle.Create(start: true);
+        t.Runtime.Aliases.Set(new AliasDefinition { Name = "scan", Kind = AliasKind.Parameterized, Body = "Write-Output -oN out.txt '{targets}' 'it''s {n=1} $HOME'" });
+
+        Assert.Equal(["-oN", "out.txt", "10.0.0.0/24,10.1.1.1", "it's 7 $HOME"], t.Run("scan \"10.0.0.0/24,10.1.1.1\" 7"));
+        Assert.Equal(["-oN", "out.txt", "a b", "it's 1 $HOME"], t.Run("scan 'a b'"));
+    }
+
+    [Fact]
+    public void PlaceholdersCanBeFilledByName()
+    {
+        using var t = TestPickle.Create(start: true);
+        t.Runtime.Aliases.Set(new AliasDefinition { Name = "scan", Kind = AliasKind.Parameterized, Body = "Write-Output -oN C:\\out\\{OUTPUT}.txt {IP} t={t=4} {*}" });
+
+        Assert.Equal(["-oN", "C:\\out\\home.txt", "10.0.0.0/24", "t=4"], t.Run("scan OUTPUT=\"home\" IP=\"10.0.0.0/24\""));
+        Assert.Equal(["-oN", "C:\\out\\home.txt", "10.0.0.0/24", "t=4"], t.Run("scan ip=10.0.0.0/24 output=home"));
+        Assert.Equal(["-oN", "C:\\out\\home.txt", "10.0.0.1", "t=9", "extra"], t.Run("scan IP=10.0.0.1 home 9 extra"));
+        Assert.Equal(["-oN", "C:\\out\\a.txt", "b", "t=4"], t.Run("scan a b"));
+        Assert.Equal(["-oN", "C:\\out\\a.txt", "b", "t=4"], t.Run("scan -IP b -OUTPUT a"));
+        Assert.Equal(["-oN", "C:\\out\\a.txt", "b", "t=4", "X=1"], t.Run("scan a b 4 X=1"));
+        Assert.Contains("missing required argument <IP>", Assert.Throws<InvalidOperationException>(() => t.Run("scan OUTPUT=home")).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ParameterizedAliasReportsMissingArgument()
     {
         using var t = TestPickle.Create(start: true);

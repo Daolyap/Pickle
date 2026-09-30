@@ -145,4 +145,31 @@ public class ElevatedOperationsTests
         Assert.False(failed.Success);
         Assert.Contains("boom", failed.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task WingetBatchesAddTheSourceForTheAdminAccountFirstWhenItHasNone()
+    {
+        var executor = new FakeExecutor { HasSource = false };
+        var lines = new List<string>();
+        var op = ElevatedOperations.Validate(new ElevatedRequest(ElevatedOperationKind.WingetUpgrade, ["Git.Git"]));
+
+        var response = await ElevatedOperations.ExecuteAsync(op, executor, new SyncProgress<string>(lines.Add), CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Equal("repair", executor.Calls[0]);
+        Assert.StartsWith("winget upgrade --id Git.Git", executor.Calls[1], StringComparison.Ordinal);
+        Assert.Contains("Adding the winget source for the administrator account…", lines);
+
+        executor.HasSource = true;
+        executor.Calls.Clear();
+        await ElevatedOperations.ExecuteAsync(ElevatedOperations.Validate(new ElevatedRequest(ElevatedOperationKind.WingetUpgrade, ["--all"])), executor, new SyncProgress<string>(_ => { }), CancellationToken.None);
+        Assert.DoesNotContain("repair", executor.Calls);
+    }
+
+    [Fact]
+    public void TheSourceCheckIsAFixedScript()
+    {
+        Assert.Contains("Get-AppxPackage -Name 'Microsoft.Winget.Source*'", Pickle.Windows.Winget.WingetSourceRepair.CheckScript, StringComparison.Ordinal);
+        Assert.Equal("-EncodedCommand", Pickle.Windows.Winget.WingetSourceRepair.CheckArguments()[2]);
+    }
 }

@@ -262,9 +262,9 @@ List targets (no packets):
 Services and versions:
   nmap -sV -sC scanme.nmap.org
 All TCP ports:
-  nmap -Pn -sS -p 1-65535 -T4 192.168.1.10
+  nmap -Pn -sS -p- -T4 192.168.1.10
 All TCP ports, rate-limited:
-  nmap -p 1-65535 --open --max-rate 100 192.168.1.10
+  nmap -p- --open --max-rate 100 192.168.1.10
 OS and traceroute:
   nmap --traceroute -O --osscan-guess scanme.nmap.org
 Aggressive and save:

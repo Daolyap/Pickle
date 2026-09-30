@@ -266,6 +266,9 @@ public interface IPickleCommand
     /// <summary>One-line usage, e.g. "pk update check|install [--all] [--kb KB123]".</summary>
     string Usage { get; }
 
+    /// <summary>Example lines shown by <c>pk &lt;name&gt; --help</c> after the usage (optional).</summary>
+    IReadOnlyList<string> Examples => [];
+
     /// <summary>Return a process-style exit code (0 = success).</summary>
     ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken);
 }

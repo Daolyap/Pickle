@@ -1,8 +1,9 @@
 """
-Real-terminal end-to-end harness for Pickle (Linux/macOS).
+Real-terminal end-to-end harness for Pickle.
 
 Spawns the pickle binary inside a pseudo-terminal, feeds its output through pyte (a VT100 emulator) and lets tests
 type keys and assert on the rendered screen — exactly what a user would see. Requires: pip install pyte
+(on Windows also pywinpty, which runs pickle in a real ConPTY like Windows Terminal does).
 
     from pty_harness import PickleSession
     with PickleSession(pickle_path) as s:
@@ -12,7 +13,6 @@ type keys and assert on the rendered screen — exactly what a user would see. R
 """
 
 import os
-import pty
 import select
 import shutil
 import signal
@@ -21,10 +21,16 @@ import threading
 import time
 import json
 import struct
-import fcntl
-import termios
 
 import pyte
+
+WINDOWS = os.name == "nt"
+if WINDOWS:
+    from winpty import PtyProcess
+else:
+    import fcntl
+    import pty
+    import termios
 
 KEYS = {
     "enter": "\r",
@@ -62,8 +68,8 @@ class PickleSession:
         self.env.update({"PICKLE_HOME": self.home, "TERM": "xterm-256color", "COLUMNS": str(cols), "LINES": str(rows)})
         if env:
             self.env.update(env)
-        # adminTheme "none": the same prompt whether or not the tests run as root.
-        cfg = {"shell": {"showStartupBanner": False, "adminTheme": "none"}}
+        # adminTheme "none": the same prompt whether or not the tests run as root; no first-run questions.
+        cfg = {"shell": {"showStartupBanner": False, "adminTheme": "none", "firstRunCompleted": True, "setupVersion": 1000}}
         if config:
             _deep_merge(cfg, config)
         os.makedirs(os.path.join(self.home, "config"), exist_ok=True)
@@ -75,6 +81,7 @@ class PickleSession:
         self.raw = bytearray()
         self.pid = None
         self.fd = None
+        self.proc = None
         self.alive = False
 
     def __enter__(self):
@@ -85,6 +92,11 @@ class PickleSession:
         self.close()
 
     def start(self):
+        if WINDOWS:
+            self.proc = PtyProcess.spawn([self.pickle_path] + self.args, env=self.env, dimensions=(self.rows, self.cols))
+            self.alive = True
+            threading.Thread(target=self._reader_windows, daemon=True).start()
+            return
         pid, fd = pty.fork()
         if pid == 0:
             os.execve(self.pickle_path, [self.pickle_path] + self.args, self.env)
@@ -109,9 +121,32 @@ class PickleSession:
                 break
         self.alive = False
 
+    def _reader_windows(self):
+        while self.alive:
+            try:
+                data = self.proc.read(65536)
+            except EOFError:
+                break
+            if not data:
+                if not self.proc.isalive():
+                    break
+                time.sleep(0.01)
+                continue
+            data = data.encode("utf-8")
+            with self.lock:
+                self.raw.extend(data)
+                self.stream.feed(data)
+        self.alive = False
+
+    def _write(self, text: str):
+        if WINDOWS:
+            self.proc.write(text)
+        else:
+            os.write(self.fd, text.encode())
+
     def type(self, text: str, delay=0.0):
         for ch in text:
-            os.write(self.fd, ch.encode())
+            self._write(ch)
             if delay:
                 time.sleep(delay)
         if not delay:
@@ -119,7 +154,7 @@ class PickleSession:
 
     def press(self, *keys):
         for k in keys:
-            os.write(self.fd, KEYS.get(k.lower(), k).encode())
+            self._write(KEYS.get(k.lower(), k))
             time.sleep(0.05)
 
     def text(self) -> str:
@@ -135,7 +170,14 @@ class PickleSession:
             if not self.alive:
                 break
             time.sleep(0.05)
-        raise AssertionError(f"Timed out waiting for {needle!r}. Screen:\n{self.text()}")
+        raise AssertionError(f"Timed out waiting for {needle!r}. Screen:\n{self.text()}{self._raw_tail()}")
+
+    def _raw_tail(self):
+        # CI sets this so a failure on another OS shows exactly what the program wrote.
+        if not os.environ.get("PICKLE_E2E_RAW"):
+            return ""
+        with self.lock:
+            return "\nLast output:\n" + repr(bytes(self.raw[-3000:]).decode("utf-8", "replace"))
 
     def wait_for_count(self, needle: str, count: int, timeout=20.0) -> str:
         deadline = time.time() + timeout
@@ -160,6 +202,12 @@ class PickleSession:
 
     def exit_code(self, timeout=10.0):
         deadline = time.time() + timeout
+        if WINDOWS:
+            while time.time() < deadline:
+                if not self.proc.isalive():
+                    return self.proc.exitstatus
+                time.sleep(0.05)
+            return None
         while time.time() < deadline:
             pid, status = os.waitpid(self.pid, os.WNOHANG)
             if pid:
@@ -169,6 +217,13 @@ class PickleSession:
 
     def close(self):
         self.alive = False
+        if WINDOWS:
+            try:
+                self.proc.terminate(force=True)
+            except Exception:  # noqa: BLE001
+                pass
+            shutil.rmtree(self.home, ignore_errors=True)
+            return
         try:
             os.kill(self.pid, signal.SIGKILL)
             os.waitpid(self.pid, 0)

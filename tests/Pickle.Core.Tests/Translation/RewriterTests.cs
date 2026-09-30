@@ -170,6 +170,22 @@ public class RewriterTests
         Assert.Equal("Start-Process -Verb RunAs -FilePath 'pickle.exe'", rewriter.Rewrite("sudo -i", NoHistory)?.Rewritten);
     }
 
+    [Fact]
+    public void SudoOpensTheElevatedPickleInWindowsTerminalWhenRunningThere()
+    {
+        const string wt = @"C:\Users\me\AppData\Local\Microsoft\WindowsApps\wt.exe";
+        var rewriter = new SudoRewriter(true, _ => null, null, @"C:\Program Files\Pickle\pickle.exe", wt);
+
+        Assert.Equal(
+            "Start-Process -Verb RunAs -FilePath '" + wt + "' -ArgumentList '-w new -- \"C:\\Program Files\\Pickle\\pickle.exe\"'",
+            rewriter.Rewrite("sudo", NoHistory)?.Rewritten);
+
+        var command = rewriter.Rewrite("sudo Stop-Service wuauserv", new RewriteContext(@"C:\work", []))!.Rewritten;
+        Assert.StartsWith("Start-Process -Verb RunAs -FilePath '" + wt + "' -ArgumentList '-w new -- \"C:\\Program Files\\Pickle\\pickle.exe\" -NoLogo -c ", command, StringComparison.Ordinal);
+        Assert.Contains("''C:\\work''\\; try { Stop-Service wuauserv }", command, StringComparison.Ordinal);
+        Assert.DoesNotContain("'; try", command, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("sudo ls", false)]
     [InlineData("echo sudo", true)]

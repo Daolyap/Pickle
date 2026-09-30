@@ -15,9 +15,9 @@ internal sealed class WingetCommand : WindowsCommandBase
 
     public override string Usage =>
         "pk winget list|upgrades|search <query>|show <id>|sources  [--timeout 5m]\n" +
-        "pk winget install <id> [--version v] [--scope user|machine]\n" +
-        "pk winget upgrade <id>|--all [--elevated]\n" +
-        "pk winget uninstall <id> [<id>…] [--elevated] [--yes]\n" +
+        "pk winget install <id> [--version v] [--scope user|machine] [--admin]\n" +
+        "pk winget upgrade <id>|--all [--admin]\n" +
+        "pk winget uninstall <id> [<id>…] [--admin] [--yes]\n" +
         "pk winget repair-source [--admin] [--verbose]\n" +
         "pk winget install-module [--yes]";
 
@@ -265,6 +265,7 @@ internal sealed class WingetCommand : WindowsCommandBase
         var version = args.Value("version") is { } v ? WindowsIds.RequireWingetVersion(v) : null;
         var scope = args.Value("scope")?.ToLowerInvariant() switch
         {
+            null when args.Has("elevated", "admin") => WingetScope.Machine,
             null => WingetScope.Any,
             "user" => WingetScope.User,
             "machine" or "system" => WingetScope.Machine,

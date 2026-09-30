@@ -23,10 +23,11 @@ first-class Windows tooling on top.
 | 💽 **Disk management** | diskpart without the guesswork: the Disks panel's Partitions tab and wizards for Format-Volume, New/Resize/Remove-Partition, Initialize/Clear/Set-Disk, Repair- and Optimize-Volume; boot and system disks are never offered for wiping |
 | 🔤 **Fonts** | Installs Cascadia Code Nerd Font on request (`pk font install`) and falls back to plain glyphs when the terminal's font lacks the icons, so no `�` in the prompt |
 | 🧪 **Windows Sandbox** | Throwaway Windows in one key: presets (safe browsing, test an installer, offline analysis…), shared folders, networking and device switches, winget packages and Pickle itself inside (`pk sandbox run`) |
-| 📦 **winget** | Browse, search, install and upgrade packages interactively; `pk upgrade` updates apps *and* Windows; one-click (UAC) winget source repair |
+| 📦 **winget** | Browse, search (as you type), install and upgrade packages interactively — as administrator with one UAC prompt for the lot (`--admin`); `pk upgrade` updates apps *and* Windows; one-click (UAC) winget source repair |
 | 🧙 **Command wizards** | F2 on a command opens a guided builder with live preview: curl, nmap, ffmpeg, git, docker, ssh/scp, openssl, robocopy, tar, 7z, kubectl, Get-WinEvent, netsh, certutil, adb, yt-dlp, rsync |
 | 🐧 **Linux muscle memory** | `ls -la`, `grep -rn`, `rm -rf`, `export X=1`, `VAR=x cmd`, `2>/dev/null`, `!!`, `sudo`, `apt install` → sensible Windows equivalents (shown dimmed) |
-| 🔗 **Aliases** | Permanent aliases, including parameterized (`gco {branch}`), script, directory- and machine-scoped |
+| 🛡️ **Administrator** | A command that fails with "access denied" offers to run again as administrator (`sudo`, in an elevated Pickle — in Windows Terminal when you use it) |
+| 🔗 **Aliases** | Permanent aliases, including parameterized (`gco {branch}`, filled in order or by name: `scan out=home 10.0.0.1`), script, directory- and machine-scoped |
 | 🔌 **Plugins** | Any PowerShell module can be a plugin (`Register-PicklePanel`, `-Wizard`, `-Command`, `-PromptSegment`, `-Hook`…); .NET plugins add full panels and services — see the [plugin guide](docs/plugins.md) |
 | ☁️ **Sync** | Sync config, aliases, themes and history across machines through a folder (OneDrive…) or a git repo |
 | ⏰ **Scheduler** | `pk schedule add "every 30m" <command>` and a Task Scheduler panel |
@@ -42,7 +43,8 @@ first-class Windows tooling on top.
 | Fedora / RHEL | Download `pickle-<version>-1.x86_64.rpm` from [Releases](https://github.com/Daolyap/Pickle/releases), then `sudo dnf install ./pickle-*.x86_64.rpm` |
 | Other Linux | Download `pickle-<version>-linux-x64.tar.gz`, extract `pickle` somewhere on your `PATH` (needs `libicu`) |
 
-`pk version check` tells you when a newer release is out; `pk version update` installs it for the portable exe and
+Pickle looks for a newer release once a day in the background and says so under the banner
+(`shell.checkForUpdates`); `pk version check` asks right away, and `pk version update` installs it for the portable exe and
 the MSI (downloaded from the GitHub release and checked against its `SHA256SUMS.txt`). Scoop, winget and RPM installs
 update through their package manager.
 
@@ -59,6 +61,7 @@ pk theme gallery             # or Alt+E: every theme previewed live in its own c
 pk theme auto                # light theme in light mode, dark theme in dark mode
 pk theme import "One Half Dark"   # any Windows Terminal color scheme as a Pickle theme
 pk alias add gco 'git checkout {branch}' --kind param
+pk alias add scan 'nmap -A -oN {out=scan}.txt {*}' --kind param   # then: scan out=home 10.0.0.0/24 10.0.0.9
 pk winget search ripgrep     # or press Alt+W
 pk upgrade                   # upgrade all apps + Windows updates
 pk update check              # Windows Update

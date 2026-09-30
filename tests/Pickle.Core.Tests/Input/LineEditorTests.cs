@@ -385,6 +385,30 @@ public class LineEditorTests
     }
 
     [Fact]
+    public void BracketedPasteIsInsertedLiterallyAsOneEdit()
+    {
+        using var h = EditorHarness.Create(40);
+        h.Terminal.Paste("\u001b[200~Write-Output 1\nWrite-Output 2\u001b[201~");
+        Assert.Equal("Write-Output 1\nWrite-Output 2", h.Pending());
+
+        h.Press("Ctrl+Z");
+        Assert.Equal(string.Empty, h.Pending());
+    }
+
+    [Fact]
+    public void StrayPasteEndMarkerIsDroppedAndEscapeStillClearsTheLine()
+    {
+        using var h = EditorHarness.Create(40);
+        h.Type("abc");
+        h.Terminal.Paste("\u001b[201~");
+        Assert.Equal("abc", h.Pending());
+
+        h.Press("Escape");
+        h.Type("[de");
+        Assert.Equal("[de", h.Pending());
+    }
+
+    [Fact]
     public void EnterEndingABurstAcceptsTheWholeInput()
     {
         using var h = EditorHarness.Create(40);

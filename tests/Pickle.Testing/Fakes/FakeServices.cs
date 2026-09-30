@@ -58,8 +58,18 @@ public sealed class FakeWingetService : IWingetService
     public Task<WingetBackend> GetBackendAsync(CancellationToken cancellationToken = default) => Task.FromResult(Backend);
     public Task<WingetOperationResult> InstallClientModuleAsync(CancellationToken cancellationToken = default) => Ok("install-module");
     public Task<IReadOnlyList<WingetPackage>> ListInstalledAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<WingetPackage>>(Installed);
-    public Task<IReadOnlyList<WingetPackage>> ListUpgradesAsync(bool includeUnknown = false, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<WingetPackage>>([.. Installed.Where(p => p.IsUpgradable)]);
+    /// <summary>How long <see cref="ListUpgradesAsync"/> takes (a real winget takes seconds).</summary>
+    public TimeSpan UpgradeDelay { get; set; }
+
+    public async Task<IReadOnlyList<WingetPackage>> ListUpgradesAsync(bool includeUnknown = false, CancellationToken cancellationToken = default)
+    {
+        if (UpgradeDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(UpgradeDelay, cancellationToken).ConfigureAwait(false);
+        }
+
+        return [.. Installed.Where(p => p.IsUpgradable)];
+    }
     public Task<IReadOnlyList<WingetPackage>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<WingetPackage>>([.. Catalog.Where(p => p.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))]);
     public Task<WingetPackageDetails?> GetDetailsAsync(string id, CancellationToken cancellationToken = default) =>
@@ -82,6 +92,8 @@ public sealed class FakeWingetService : IWingetService
     public Task<WingetOperationResult> UninstallAsync(string id, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) => Ok("uninstall " + id, progress);
     public Task<WingetOperationResult> UninstallElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
         Ok("uninstall-elevated " + string.Join(',', ids), progress);
+    public Task<WingetOperationResult> UpgradeElevatedAsync(IReadOnlyList<string> ids, IProgress<WingetProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        Ok("upgrade-elevated " + string.Join(',', ids), progress);
     public Task<IReadOnlyList<WingetSource>> ListSourcesAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<WingetSource>>(Sources);
     public Task<WingetOperationResult> RepairSourceAsync(bool elevated, CancellationToken cancellationToken = default) => Ok(elevated ? "repair-source elevated" : "repair-source");
 

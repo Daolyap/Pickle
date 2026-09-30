@@ -226,6 +226,11 @@ public sealed class ShellEngine : IPickleShell, IDisposable
         }
     }
 
+    private object? _topError;
+
+    /// <summary>The error the last interactive command added to <c>$Error</c> (null when it added none).</summary>
+    public ErrorRecord? LastNewError { get; private set; }
+
     /// <summary>Number of running PowerShell jobs, refreshed after every interactive command.</summary>
     public int RunningJobCount { get; private set; }
 
@@ -236,12 +241,16 @@ public sealed class ShellEngine : IPickleShell, IDisposable
             using var ps = PowerShell.Create();
             ps.Runspace = Host.Runspace;
 
-            // $? must be read first: it still holds the previous pipeline's status.
-            ps.AddScript("$?; $global:LASTEXITCODE; @(Get-Job -State Running -ErrorAction Ignore).Count");
+            // $? must be read first: it still holds the previous pipeline's status. Each value is wrapped (,) so a
+            // $null exit code or error still takes its slot.
+            ps.AddScript("$?; ,$global:LASTEXITCODE; @(Get-Job -State Running -ErrorAction Ignore).Count; ,$global:Error[0]");
             var results = ps.Invoke();
             var success = results.Count > 0 && results[0]?.BaseObject is bool b && b;
             int? exit = results.Count > 1 && results[1]?.BaseObject is int code ? code : null;
             RunningJobCount = results.Count > 2 && results[2]?.BaseObject is int jobs ? jobs : 0;
+            var top = results.Count > 3 ? results[3]?.BaseObject : null;
+            LastNewError = top is not null && !ReferenceEquals(top, _topError) ? top as ErrorRecord ?? (top as RuntimeException)?.ErrorRecord : null;
+            _topError = top;
             return (success, exit);
         }
         catch (Exception ex) when (ex is RuntimeException or InvalidOperationException)

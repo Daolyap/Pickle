@@ -183,3 +183,25 @@ after installing a build.
 - [ ] `Install-Module`/`Import-Module` from PSGallery works (e.g. `Install-PSResource Terminal-Icons`).
 - [ ] With `shell.loadPwshProfile = true`, an existing pwsh profile using `Set-PSReadLineOption` loads without errors.
 - [ ] `Enter-PSSession` to a remote machine works (if available).
+
+## 0.4.0 checks
+
+- Paste (Ctrl+V and right-click) into the theme gallery filter (Alt+E), a wizard field (F2), a Network tools box
+  (Alt+T), a dialog prompt and the prompt: the text appears at once and in full, without pressing another key.
+- Network tools (Alt+T): click into Targets, Ports and Timeout and type; tick a checkbox with the mouse.
+- Wizard (F2 on `nmap`): the mouse wheel scrolls the options, also with the pointer over a text box; scrolling feels
+  smooth. In the winget Installed list a wheel notch moves three rows. The nmap wizard's Ports section has
+  "All ports (1-65535)" (`-p-`), which hides the other port options.
+- Windows Update (Alt+U): the list fills by itself; ticking Optional (or Drivers) searches again.
+- winget (Alt+W) Search: results appear while typing, and focus stays in the box.
+- Not elevated: `Stop-Service wuauserv` (or `net stop wuauserv`) fails, Pickle asks "Run it as administrator?"; y
+  opens an elevated Pickle (in Windows Terminal when started from it) that runs it. `shell.offerElevation false`
+  turns the question off.
+- winget Upgrades → Upgrade all → "As administrator": one UAC prompt for all packages. With a separate administrator
+  account that never ran winget, the log says the winget source was added first and the upgrades work.
+- Open two Pickle windows: only one has `primary.lock` open (close it and the other takes over within a minute).
+  After a few minutes the banner of a new window shows "N app upgrades available · Alt+W" when there are some, and the
+  winget panel opens with that list before refreshing.
+- `VulnScan OUTPUT=Internal IP=192.168.1.0/24` with `pk alias add VulnScan 'nmap -oN C:\out\{OUTPUT}.txt {IP}' --kind param`
+  runs `nmap -oN C:\out\Internal.txt 192.168.1.0/24`.
+

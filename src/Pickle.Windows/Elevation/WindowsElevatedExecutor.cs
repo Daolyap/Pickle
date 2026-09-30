@@ -33,6 +33,18 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
         return new ElevatedResponse(outcome.Success, outcome.Message, outcome.ExitCode ?? 0, outcome.Output);
     }
 
+    public async Task<bool> HasWingetSourceAsync(CancellationToken cancellationToken)
+    {
+        var result = await _runner.RunAsync(
+            WingetService.WindowsPowerShellPath,
+            WingetSourceRepair.CheckArguments(),
+            null,
+            TimeSpan.FromMinutes(1),
+            cancellationToken,
+            WingetSourceRepair.Environment()).ConfigureAwait(false);
+        return result.ExitCode == 0 && !result.TimedOut;
+    }
+
     public async Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken)
     {
         progress.Report("Turning on Windows Sandbox (this can take a few minutes)…");

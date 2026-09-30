@@ -14,6 +14,9 @@ public abstract class PickleCommandBase : IPickleCommand
 
     public abstract string Usage { get; }
 
+    /// <summary>Example lines for <c>pk &lt;name&gt; --help</c>.</summary>
+    public virtual IReadOnlyList<string> Examples => [];
+
     public async ValueTask<int> ExecuteAsync(PickleCommandContext context, IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         try

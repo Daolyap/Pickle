@@ -14,7 +14,7 @@ namespace Pickle.Tui.Panels.Windows;
 public sealed class WingetPanel : WindowsPanelBase
 {
     private const string SelectionHelp = "Space/click tick · Shift+click or Shift+↑↓ range · Ctrl+A all";
-    private static readonly string[] ScopeLabels = ["Any", "User", "Machine"];
+    private static readonly string[] ScopeLabels = ["Any", "User", "Machine (admin)"];
 
     private readonly IWingetService? _winget;
     private readonly Label _backend;
@@ -38,7 +38,14 @@ public sealed class WingetPanel : WindowsPanelBase
     private List<WingetPackage> _installed = [];
     private List<WingetPackage> _upgrades = [];
     private List<WingetPackage> _results = [];
+    private CancellationTokenSource? _typingSearch;
+    private string? _searchedQuery;
+    private int _searchVersion;
     private WingetPackageDetails? _details;
+
+    internal const int MinTypedQuery = 2;
+
+    internal static TimeSpan TypingPause { get; set; } = TimeSpan.FromMilliseconds(600);
 
     public WingetPanel(PanelContext context)
         : base(context, "winget")
@@ -168,6 +175,12 @@ public sealed class WingetPanel : WindowsPanelBase
 
     protected override void Opened()
     {
+        // The last list any Pickle found (the background check), shown until the fresh one arrives.
+        if (Service<IBackgroundWork>()?.Read<List<WingetPackage>>(WingetCache.UpgradesKey) is { Value.Count: > 0 } cached)
+        {
+            ApplyUpgrades(cached.Value);
+        }
+
         Refresh();
         _updates?.Start();
     }
@@ -182,7 +195,14 @@ public sealed class WingetPanel : WindowsPanelBase
         Load(_winget.GetBackendAsync, ApplyBackend, "detecting winget…");
         Load(_winget.ListInstalledAsync, ApplyInstalled, "loading packages…");
         var includeUnknown = Pickle.Config.Current.Winget.IncludeUnknownVersions;
-        Load(ct => _winget.ListUpgradesAsync(includeUnknown, ct), ApplyUpgrades, "checking upgrades…");
+        Load(
+            ct => _winget.ListUpgradesAsync(includeUnknown, ct),
+            upgrades =>
+            {
+                ApplyUpgrades(upgrades);
+                SaveUpgrades(upgrades);
+            },
+            "checking upgrades…");
         Load(_winget.ListSourcesAsync, ApplySources, "loading sources…");
     }
 
@@ -211,6 +231,18 @@ public sealed class WingetPanel : WindowsPanelBase
     {
         _upgrades = [.. packages];
         _upgradesTable.SetItems(_upgrades);
+    }
+
+    private void SaveUpgrades(IReadOnlyList<WingetPackage> upgrades)
+    {
+        try
+        {
+            Service<IBackgroundWork>()?.Write(WingetCache.UpgradesKey, upgrades.ToList());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Pickle.Log.Debug("winget", $"upgrade cache not saved: {ex.Message}");
+        }
     }
 
     internal void ApplySources(IReadOnlyList<WingetSource> sources)
@@ -277,16 +309,32 @@ public sealed class WingetPanel : WindowsPanelBase
         }
 
         var note = skipped > 0 ? $"\n\n{skipped} selected package(s) have no upgrade and are skipped." : string.Empty;
-        if (!Ask("Upgrade packages", $"Upgrade {targets.Count} package(s) {from}?\n\n{PackageList(targets, p => $"{p.Name}  {p.InstalledVersion} → {p.AvailableVersion}")}{note}"))
+        var choice = Choose(
+            "Upgrade packages",
+            $"Upgrade {targets.Count} package(s) {from}?\n\n{PackageList(targets, p => $"{p.Name}  {p.InstalledVersion} → {p.AvailableVersion}")}{note}\n\n" +
+            "As administrator: one UAC prompt for all of them instead of one per installer.",
+            "_Upgrade",
+            "As _administrator",
+            "_Cancel");
+        if (choice is not (0 or 1))
         {
             return;
         }
 
+        var elevated = choice == 1;
         _upgradeLog.Content = string.Empty;
         var includeUnknown = Pickle.Config.Current.Winget.IncludeUnknownVersions;
         Load(
             async ct =>
             {
+                if (elevated)
+                {
+                    var ids = targets.Select(p => p.Id).ToList();
+                    Ui(() => AppendLog(_upgradeLog, $"→ {string.Join(", ", ids)} (administrator)"));
+                    var elevatedProgress = new UiProgress<WingetProgress>(this, p => AppendLog(_upgradeLog, $"   {p.Stage}{(p.Message is { } m ? ": " + m : string.Empty)}"));
+                    return [await _winget.UpgradeElevatedAsync(ids, elevatedProgress, ct).ConfigureAwait(false)];
+                }
+
                 var results = new List<WingetOperationResult>();
                 foreach (var package in targets)
                 {
@@ -392,18 +440,59 @@ public sealed class WingetPanel : WindowsPanelBase
             "uninstalling…");
     }
 
-    internal void Search()
+    /// <summary>Searches for the query (Enter/Find: then the results take focus).</summary>
+    internal void Search() => Search(typing: false);
+
+    private void Search(bool typing)
     {
+        _typingSearch?.Cancel();
         var query = _query.Text.Trim();
-        if (_winget is null || query.Length == 0)
+        if (_winget is null || query.Length == 0 || (typing && query == _searchedQuery))
         {
             return;
         }
 
-        Load(ct => _winget.SearchAsync(query, ct), ApplyResults, "searching…");
+        _searchedQuery = query;
+        var version = ++_searchVersion;
+        Load(
+            ct => _winget.SearchAsync(query, ct),
+            results =>
+            {
+                // A newer search (the user kept typing) wins over a slower older one.
+                if (version == _searchVersion)
+                {
+                    ApplyResults(results, takeFocus: !typing);
+                }
+            },
+            "searching…");
     }
 
-    internal void ApplyResults(IReadOnlyList<WingetPackage> results)
+    // Searching as you type: once the query has been still for a moment, like the other panels' live filters.
+    private void SearchSoon()
+    {
+        _typingSearch?.Cancel();
+        if (_query.Text.Trim().Length < MinTypedQuery)
+        {
+            return;
+        }
+
+        var pending = _typingSearch = new CancellationTokenSource();
+        _ = Task.Delay(TypingPause, pending.Token).ContinueWith(
+            _ => Ui(() =>
+            {
+                if (ReferenceEquals(pending, _typingSearch) && !pending.IsCancellationRequested)
+                {
+                    Search(typing: true);
+                }
+            }),
+            pending.Token,
+            TaskContinuationOptions.OnlyOnRanToCompletion,
+            TaskScheduler.Default);
+    }
+
+    internal void ApplyResults(IReadOnlyList<WingetPackage> results) => ApplyResults(results, takeFocus: true);
+
+    private void ApplyResults(IReadOnlyList<WingetPackage> results, bool takeFocus)
     {
         _results = [.. results];
         _searchTable.Table = new EnumerableTableSource<WingetPackage>(_results, new Dictionary<string, Func<WingetPackage, object>>
@@ -418,7 +507,7 @@ public sealed class WingetPanel : WindowsPanelBase
         if (_results.Count > 0)
         {
             // Keyboard flow: Enter in the search box, then ↑↓ and Enter (or i) to install.
-            if (_query.HasFocus)
+            if (takeFocus && _query.HasFocus)
             {
                 _searchTable.SetFocus();
             }
@@ -626,9 +715,10 @@ public sealed class WingetPanel : WindowsPanelBase
             Search();
             e.Handled = true;
         };
+        _query.TextChanged += (_, _) => SearchSoon();
         var go = MakeButton("_Find", Search);
         go.X = Pos.Right(_query) + 1;
-        var help = new Label { X = 0, Y = 1, Text = "Enter search · ↑↓ details · Enter/i install · / new search" };
+        var help = new Label { X = 0, Y = 1, Text = "Type to search · ↑↓ details · Enter/i install · / new search" };
         _searchTable.ValueChanged += (_, _) => ShowDetails(SelectedRow(_searchTable));
         _searchTable.Accepting += (_, e) =>
         {

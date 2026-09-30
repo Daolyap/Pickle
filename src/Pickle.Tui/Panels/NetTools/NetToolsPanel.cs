@@ -37,7 +37,7 @@ public sealed class NetToolsPanel : PanelWindow
         _toolList.SetSource(new ObservableCollection<string>(_tools.Select(t => t.Title)));
         _results.SetSource(_lines);
 
-        var right = new View { X = Pos.Right(_toolList) + 1, Y = 0, Width = Dim.Fill(), Height = Dim.Fill() };
+        var right = new View { X = Pos.Right(_toolList) + 1, Y = 0, Width = Dim.Fill(), Height = Dim.Fill(), CanFocus = true };
         _description.X = 0;
         _form.X = 0;
         var output = new FrameView { X = 0, Y = Pos.Bottom(_form), Width = Dim.Fill(), Height = Dim.Fill(), Title = "Results" };
@@ -83,6 +83,8 @@ public sealed class NetToolsPanel : PanelWindow
     public string ToolId => _tool.Id;
 
     internal IReadOnlyList<string> Lines => _lines;
+
+    internal View? Editor(string key) => _editors.GetValueOrDefault(key);
 
     internal string StatusText => _status.Text ?? string.Empty;
 

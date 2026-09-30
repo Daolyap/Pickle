@@ -153,7 +153,7 @@ public sealed class WindowsPanelTests : IDisposable
             Wait(() => panel.UpgradeLog.Contains('✓', StringComparison.Ordinal)));
 
         Assert.Contains("upgrade Git.Git", _winget.Calls);
-        Assert.Contains(_asked, a => a.Message.Contains("Git  2.45.1 → 2.46.0", StringComparison.Ordinal));
+        Assert.Contains(_choices, c => c.Message.Contains("Git  2.45.1 → 2.46.0", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -180,6 +180,107 @@ public sealed class WindowsPanelTests : IDisposable
     }
 
     [Fact]
+    public void ASearchFinishingAfterAnInstallDoesNotOverwriteIt()
+    {
+        using var panel = Hooked(new UpdatesPanel(Context));
+        var updates = panel.Updates!;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var searches = 0;
+        Run(
+            panel,
+            When(() => updates.Rows.Count == 2, () =>
+            {
+                _wu.SearchDelay = TimeSpan.FromMilliseconds(400);
+                searches = _wu.Queries.Count;
+                updates.Check();
+                updates.InstallSelected();
+                clock.Restart();
+            }),
+            Wait(() => updates.LogText.Contains("Installed", StringComparison.Ordinal)),
+            Wait(() => _wu.Queries.Count > searches && clock.Elapsed > TimeSpan.FromMilliseconds(900)));
+
+        Assert.Contains("Installed", updates.LogText, StringComparison.Ordinal);
+        Assert.DoesNotContain("update(s) available", updates.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void UpdatesListSearchesByItselfAndAgainWhenOptionalIsTicked()
+    {
+        using var panel = Hooked(new UpdatesPanel(Context));
+        var updates = panel.Updates!;
+        Run(
+            panel,
+            Wait(() => updates.Rows.Count == 2),
+            Do(() => updates.OptionalBox.Value = CheckState.Checked),
+            Wait(() => updates.Rows.Count == 3));
+
+        Assert.False(_wu.Queries[0].IncludeOptional);
+        Assert.True(_wu.Queries[^1].IncludeOptional);
+        Assert.Contains(updates.Rows, u => u.Title == "Feature preview");
+    }
+
+    [Fact]
+    public void WingetPanelUpgradesAsAdministratorInOneBatch()
+    {
+        _winget.Installed.Add(new WingetPackage("7zip.7zip", "7-Zip", "23.01", "24.08", "winget"));
+        using var panel = Hooked(new WingetPanel(Context));
+        _choice = 1;
+        Run(
+            panel,
+            When(() => panel.UpgradeRows.Count == 2, () => panel.UpgradeSelected(all: true)),
+            Wait(() => _winget.Calls.Any(c => c.StartsWith("upgrade-elevated", StringComparison.Ordinal))));
+
+        Assert.Contains(_choices, c => c.Title == "Upgrade packages" && c.Buttons.Contains("As _administrator"));
+        Assert.Contains(_winget.Calls, c => c is "upgrade-elevated Git.Git,7zip.7zip" or "upgrade-elevated 7zip.7zip,Git.Git");
+        Assert.DoesNotContain(_winget.Calls, c => c.StartsWith("upgrade ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WingetPanelShowsTheCachedUpgradesAndSavesTheFreshList()
+    {
+        var background = _t.Runtime.Services.Require<IBackgroundWork>();
+        background.Write(WingetCache.UpgradesKey, new List<WingetPackage> { new("Old.Cached", "Cached", "1", "2", "winget") });
+        _winget.UpgradeDelay = TimeSpan.FromMilliseconds(500);
+        using var panel = Hooked(new WingetPanel(Context));
+        var sawCached = false;
+        Run(
+            panel,
+            When(() => panel.UpgradeRows.Count > 0, () => sawCached = panel.UpgradeRows[0].Id == "Old.Cached"),
+            Wait(() => panel.UpgradeRows.Any(p => p.Id == "Git.Git")));
+
+        Assert.True(sawCached);
+        Assert.Equal(["Git.Git"], background.Read<List<WingetPackage>>(WingetCache.UpgradesKey)!.Value.Select(p => p.Id));
+    }
+
+    [Fact]
+    public void WingetSearchRunsWhileTypingAndLeavesFocusInTheBox()
+    {
+        var pause = WingetPanel.TypingPause;
+        WingetPanel.TypingPause = TimeSpan.FromMilliseconds(20);
+        try
+        {
+            using var panel = Hooked(new WingetPanel(Context));
+            var focused = false;
+            Run(
+                panel,
+                Do(() =>
+                {
+                    panel.ActiveTab = "Search";
+                    panel.QueryField.SetFocus();
+                    panel.Query = "7z";
+                }),
+                When(() => panel.SearchResults.Count == 1, () => focused = panel.QueryField.HasFocus));
+
+            Assert.Equal("7zip.7zip", panel.SearchResults[0].Id);
+            Assert.True(focused);
+        }
+        finally
+        {
+            WingetPanel.TypingPause = pause;
+        }
+    }
+
+    [Fact]
     public void WingetPanelOffersModuleInstallAndSourceRepair()
     {
         _winget.Backend = WingetBackend.Cli;
@@ -203,6 +304,7 @@ public sealed class WindowsPanelTests : IDisposable
     public void WingetPanelDeclinedConfirmationDoesNothing()
     {
         using var panel = Hooked(new WingetPanel(Context), answer: false);
+        _choice = 2;
         Run(
             panel,
             When(() => panel.UpgradeRows.Count == 1, () =>
@@ -269,7 +371,7 @@ public sealed class WindowsPanelTests : IDisposable
             Wait(() => panel.UpgradeLog.Contains('✓', StringComparison.Ordinal)));
 
         Assert.Equal(["upgrade Git.Git"], _winget.Calls);
-        Assert.Contains(_asked, a => a.Message.Contains("1 package(s) selected in Installed", StringComparison.Ordinal) && a.Message.Contains("1 selected package(s) have no upgrade", StringComparison.Ordinal));
+        Assert.Contains(_choices, c => c.Message.Contains("1 package(s) selected in Installed", StringComparison.Ordinal) && c.Message.Contains("1 selected package(s) have no upgrade", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -478,9 +580,9 @@ public sealed class WindowsPanelTests : IDisposable
         _wu.Available.Add(Update("33333333-2222-3333-4444-555555555555", "Realtek Audio Driver", driver: true));
         using var panel = Hooked(new UpdatesPanel(Context));
         var updates = panel.Updates!;
+        var searches = 0;
         Run(
             panel,
-            Do(updates.Check),
             When(() => updates.Rows.Count == 3, () =>
             {
                 Assert.Equal([true, false, false], Ticks(updates.Table));
@@ -488,9 +590,10 @@ public sealed class WindowsPanelTests : IDisposable
                 Click(updates.Table, 2, MouseFlags.Shift);
                 Assert.Equal([true, true, true], Ticks(updates.Table));
                 Click(updates.Table, 0);
+                searches = _wu.Queries.Count;
                 updates.Check();
             }),
-            Wait(() => _wu.Queries.Count == 2),
+            Wait(() => _wu.Queries.Count > searches && updates.LogText.Contains("available", StringComparison.Ordinal)),
             Do(() =>
             {
                 Assert.Equal([false, true, true], Ticks(updates.Table));
@@ -527,7 +630,9 @@ public sealed class WindowsPanelTests : IDisposable
 
         Assert.Equal(["0a1b2c3d-4e5f-6071-8293-a4b5c6d7e8f9"], _wu.Installed);
         Assert.Contains(_told, t => t.Message.Contains("'nope' is not a KB number", StringComparison.Ordinal));
-        Assert.All(_wu.Queries, q => Assert.True(q.IncludeOptional && q.IncludeDrivers));
+        // The KB lookup searches everything; the list's own automatic search follows its boxes (drivers, no optional).
+        Assert.Contains(_wu.Queries, q => q.IncludeOptional && q.IncludeDrivers);
+        Assert.All(_wu.Queries, q => Assert.True(q.IncludeDrivers));
         Assert.Contains(_asked, a => a.Message.Contains("KB5031455  2026-09 Cumulative Update", StringComparison.Ordinal));
     }
 

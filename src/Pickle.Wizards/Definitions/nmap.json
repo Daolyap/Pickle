@@ -67,11 +67,12 @@
     {
       "title": "Ports",
       "options": [
-        { "id": "ports", "label": "Ports", "type": "text", "flag": "-p", "placeholder": "22,80,443 or 1-65535 or U:53,T:80", "validation": "^[\\dTU:,\\-]+$|^-$" },
+        { "id": "allPorts", "label": "All ports (1-65535)", "type": "flag", "flag": "-p-", "description": "Scan every port instead of the 1000 most common ones. Thorough but slow; add a faster timing template or --min-rate." },
+        { "id": "ports", "label": "Ports", "type": "text", "flag": "-p", "placeholder": "22,80,443 or 1-65535 or U:53,T:80", "validation": "^[\\dTU:,\\-]+$|^-$", "dependsOn": "!allPorts" },
         { "id": "excludePorts", "label": "Exclude ports", "type": "text", "flag": "--exclude-ports", "placeholder": "9100,9101", "validation": "^[\\dTU:,\\-]+$" },
-        { "id": "topPorts", "label": "Top N ports", "type": "number", "flag": "--top-ports", "validation": "^\\d+$" },
-        { "id": "portRatio", "label": "Ports more common than ratio", "type": "text", "flag": "--port-ratio", "placeholder": "0.1", "validation": "^(0(\\.\\d+)?|1(\\.0+)?)$" },
-        { "id": "fast", "label": "Fast (top 100 ports)", "type": "flag", "flag": "-F" },
+        { "id": "topPorts", "label": "Top N ports", "type": "number", "flag": "--top-ports", "validation": "^\\d+$", "dependsOn": "!allPorts" },
+        { "id": "portRatio", "label": "Ports more common than ratio", "type": "text", "flag": "--port-ratio", "placeholder": "0.1", "validation": "^(0(\\.\\d+)?|1(\\.0+)?)$", "dependsOn": "!allPorts" },
+        { "id": "fast", "label": "Fast (top 100 ports)", "type": "flag", "flag": "-F", "dependsOn": "!allPorts" },
         { "id": "sequential", "label": "Scan ports in order (not randomized)", "type": "flag", "flag": "-r" },
         { "id": "open", "label": "Show only open ports", "type": "flag", "flag": "--open" }
       ]
@@ -156,8 +157,8 @@
     { "name": "LAN discovery (ARP + ICMP)", "description": "Host discovery on a local subnet using ARP and ICMP echo, no port scan.", "values": { "scanType": "-sn", "pingArp": "true", "pingEcho": "true", "targets": "192.168.1.0/24" } },
     { "name": "List targets (no packets)", "description": "Expand a range and reverse-resolve names without scanning.", "values": { "scanType": "-sL", "targets": "192.168.1.0/28" } },
     { "name": "Services and versions", "description": "Version detection plus default scripts.", "values": { "serviceVersion": "true", "defaultScripts": "true", "targets": "scanme.nmap.org" } },
-    { "name": "All TCP ports", "description": "SYN scan of every TCP port (needs admin).", "values": { "scanType": "-sS", "ports": "1-65535", "noPing": "true", "timing": "4", "targets": "192.168.1.10" } },
-    { "name": "All TCP ports, rate-limited", "description": "Every TCP port at no more than 100 packets per second.", "values": { "ports": "1-65535", "maxRate": "100", "open": "true", "targets": "192.168.1.10" } },
+    { "name": "All TCP ports", "description": "SYN scan of every TCP port (needs admin).", "values": { "scanType": "-sS", "allPorts": "true", "noPing": "true", "timing": "4", "targets": "192.168.1.10" } },
+    { "name": "All TCP ports, rate-limited", "description": "Every TCP port at no more than 100 packets per second.", "values": { "allPorts": "true", "maxRate": "100", "open": "true", "targets": "192.168.1.10" } },
     { "name": "OS and traceroute", "description": "OS detection with a traceroute (needs admin).", "values": { "osDetect": "true", "osGuess": "true", "traceroute": "true", "targets": "scanme.nmap.org" } },
     { "name": "Aggressive and save", "description": "OS/version/scripts/traceroute, saved to a file.", "values": { "aggressive": "true", "timing": "4", "outNormal": "scan.txt", "targets": "scanme.nmap.org" } },
     { "name": "Save every format", "description": "Top 1000 ports with versions, saved as normal, XML and grepable output.", "values": { "serviceVersion": "true", "outAll": "scan", "targets": "scanme.nmap.org" } },

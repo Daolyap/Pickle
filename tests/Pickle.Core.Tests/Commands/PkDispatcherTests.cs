@@ -92,6 +92,10 @@ public class PkDispatcherTests
         t.Terminal.ClearRawOutput();
         t.Run("pk version -h");
         Assert.Contains("Show Pickle, PowerShell and .NET versions", t.Terminal.RawOutput, StringComparison.Ordinal);
+        t.Terminal.ClearRawOutput();
+        t.Run("pk alias --help");
+        Assert.Contains("Examples:", t.Terminal.RawOutput, StringComparison.Ordinal);
+        Assert.Contains("scan out=home 10.0.0.0/24", t.Terminal.RawOutput, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -36,6 +36,18 @@ public class DefinitionTests
     private static WizardDefinition Get(string id) => All.Single(d => d.Id == id);
 
     [Fact]
+    public void NmapScansAllPortsWithDashPDash()
+    {
+        var nmap = All.Single(d => d.Id == "nmap");
+
+        var (_, values, unknown) = WizardEngine.Parse(nmap, "nmap -p- -sV 10.0.0.1");
+
+        Assert.Empty(unknown);
+        Assert.Equal("true", values["allPorts"]);
+        Assert.False(values.ContainsKey("ports"));
+    }
+
+    [Fact]
     public void AllExpectedWizardsAreEmbedded()
     {
         string[] expected =

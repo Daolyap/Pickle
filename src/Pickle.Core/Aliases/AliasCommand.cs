@@ -167,13 +167,24 @@ public sealed class AliasCommand : IPickleCommand
         return 0;
     }
 
+    public IReadOnlyList<string> Examples =>
+    [
+        "pk alias add ll 'Get-ChildItem -Force'",
+        "pk alias add gco 'git checkout {branch}'                   # gco main → git checkout main",
+        "pk alias add serve 'python -m http.server {port=8000}'     # serve · serve 9000 · serve port=9000",
+        "pk alias add scan 'nmap -A -oN {out}.txt {*}' --kind param # scan out=home 10.0.0.0/24 10.0.0.9",
+        "pk alias add build 'dotnet build' --dir '~/src/app/**'",
+        "Placeholders are filled in order, or by name (name=value or -name value); {*} takes the rest.",
+    ];
+
     private int Help(PickleCommandContext context)
     {
         context.WriteHost(Usage);
-        context.WriteHost("  pk alias add ll 'Get-ChildItem -Force'");
-        context.WriteHost("  pk alias add gco 'git checkout {branch}'          # gco main → git checkout main");
-        context.WriteHost("  pk alias add serve 'python -m http.server {port=8000}'");
-        context.WriteHost("  pk alias add build 'dotnet build' --dir '~/src/app/**'");
+        foreach (var line in Examples)
+        {
+            context.WriteHost("  " + line);
+        }
+
         return 0;
     }
 

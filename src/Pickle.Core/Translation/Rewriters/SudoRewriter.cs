@@ -21,13 +21,19 @@ public sealed class SudoRewriter : IInputRewriter
     private readonly Func<string, CommandLookup?> _lookup;
     private readonly string? _builtInSudo;
     private readonly string _picklePath;
+    private readonly string? _windowsTerminal;
 
-    public SudoRewriter(bool isWindows, Func<string, CommandLookup?> lookup, string? builtInSudo, string picklePath)
+    /// <param name="windowsTerminal">
+    /// wt.exe when this session runs in Windows Terminal: the elevated Pickle opens there too, instead of a classic
+    /// console window (its own font, no Pickle colors, glyphs and box drawing that render wrong).
+    /// </param>
+    public SudoRewriter(bool isWindows, Func<string, CommandLookup?> lookup, string? builtInSudo, string picklePath, string? windowsTerminal = null)
     {
         _isWindows = isWindows;
         _lookup = lookup;
         _builtInSudo = builtInSudo;
         _picklePath = picklePath;
+        _windowsTerminal = windowsTerminal;
     }
 
     public string Name => "sudo";
@@ -72,7 +78,7 @@ public sealed class SudoRewriter : IInputRewriter
 
             if (index >= words.Count || words[index].Literal is "-i" or "-s" or "su" or "-")
             {
-                edits.Replace(statement.Start, statement.End, $"Start-Process -Verb RunAs -FilePath {PowerShellText.SingleQuote(_picklePath)}");
+                edits.Replace(statement.Start, statement.End, ElevatedPickle(null));
                 continue;
             }
 
@@ -89,13 +95,29 @@ public sealed class SudoRewriter : IInputRewriter
 
             var command = input[words[index].Start..statement.End];
             var script = $"Set-Location -LiteralPath {PowerShellText.SingleQuote(context.Cwd)}; try {{ {command} }} finally {{ Read-Host 'Press Enter to close' }}";
-            var arguments = "-NoLogo -c " + PowerShellText.WindowsArgument(script);
-            edits.Replace(
-                statement.Start,
-                statement.End,
-                $"Start-Process -Verb RunAs -FilePath {PowerShellText.SingleQuote(_picklePath)} -ArgumentList {PowerShellText.SingleQuote(arguments)}");
+            edits.Replace(statement.Start, statement.End, ElevatedPickle("-NoLogo -c " + PowerShellText.WindowsArgument(script)));
         }
 
         return edits.Count == 0 ? null : new RewriteResult(edits.Apply(input), "sudo runs the command in an elevated Pickle window (UAC)");
     }
+
+    /// <summary>The <c>Start-Process -Verb RunAs</c> call that opens an elevated Pickle with <paramref name="arguments"/>.</summary>
+    private string ElevatedPickle(string? arguments)
+    {
+        if (_windowsTerminal is null)
+        {
+            return arguments is null
+                ? $"Start-Process -Verb RunAs -FilePath {PowerShellText.SingleQuote(_picklePath)}"
+                : $"Start-Process -Verb RunAs -FilePath {PowerShellText.SingleQuote(_picklePath)} -ArgumentList {PowerShellText.SingleQuote(arguments)}";
+        }
+
+        // wt splits its command line into its own commands at every ';' (quoted or not) unless escaped as '\;'.
+        var commandLine = PowerShellText.WindowsArgument(_picklePath) + (arguments is null ? string.Empty : " " + arguments);
+        var wtArguments = "-w new -- " + commandLine.Replace(";", "\\;", StringComparison.Ordinal);
+        return $"Start-Process -Verb RunAs -FilePath {PowerShellText.SingleQuote(_windowsTerminal)} -ArgumentList {PowerShellText.SingleQuote(wtArguments)}";
+    }
+
+    /// <summary>wt.exe when this session runs inside Windows Terminal, else null.</summary>
+    public static string? FindWindowsTerminal() =>
+        string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WT_SESSION")) ? null : Commands.ExecutableLocator.Find("wt");
 }

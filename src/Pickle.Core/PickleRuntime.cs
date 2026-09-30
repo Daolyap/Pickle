@@ -57,11 +57,13 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         Sync = new SyncService(this);
         LineEditor = new LineEditor(this);
         ProfileLoader = new ProfileLoader(this);
+        Background = new BackgroundWork(this);
 
         ByHost[Engine.Host.InstanceId] = this;
         ServiceRegistry.Add<IPickleShell>(Engine);
         ServiceRegistry.Add<IGitService>(new GitService(log));
         ServiceRegistry.Add<IFirstRunOffers>(FirstRun);
+        ServiceRegistry.Add<IBackgroundWork>(Background);
         ServiceRegistry.Add(this);
     }
 
@@ -128,6 +130,9 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public ILineEditor LineEditor { get; }
     public ProfileLoader ProfileLoader { get; }
 
+    /// <summary>Jobs only the first running instance does (see <see cref="BackgroundWork"/>).</summary>
+    internal BackgroundWork Background { get; }
+
     public List<ISessionStateContributor> SessionContributors { get; } = [];
 
     public bool ExitRequested { get; private set; }
@@ -149,7 +154,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
 
     private IEnumerable<object> Components =>
     [
-        History, Aliases, Highlighter, Autosuggest, Completion, Prompt, Translation, Plugins, Sync, LineEditor, ProfileLoader,
+        History, Aliases, Highlighter, Autosuggest, Completion, Prompt, Translation, Plugins, Sync, LineEditor, ProfileLoader, Background,
     ];
 
     /// <summary>Phase 1: components register actions/commands/segments/session contributions.</summary>
@@ -158,6 +163,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         Startup.Mark("runtime");
         CommandRegistry.Register(new Commands.VersionCommand(this));
         CommandRegistry.Register(new Commands.SetupCommand(this));
+        Update.UpdateCheck.Register(this);
         foreach (var component in Components.OfType<IRuntimeComponent>())
         {
             component.Initialize();

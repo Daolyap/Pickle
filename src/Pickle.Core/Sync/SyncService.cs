@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 using Pickle.Core.Commands;
 using Pickle.Core.Config;
 using Pickle.Core.Contracts;
@@ -20,16 +21,12 @@ public sealed class SyncService : ISyncService, IRuntimeComponent, IDisposable
     private readonly PickleRuntime _runtime;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly CancellationTokenSource _shutdown = new();
-    private Task? _backgroundSync;
 
     public SyncService(PickleRuntime runtime) => _runtime = runtime;
 
     public string RepoDir => Path.Combine(_runtime.Paths.DataDir, "sync-repo");
 
     public TimeSpan ExitTimeout { get; set; } = TimeSpan.FromSeconds(10);
-
-    /// <summary>The startup auto sync, if one was started (tests await it).</summary>
-    public Task? BackgroundSync => _backgroundSync;
 
     private SyncSettings Settings => _runtime.Config.Current.Sync;
 
@@ -54,34 +51,22 @@ public sealed class SyncService : ISyncService, IRuntimeComponent, IDisposable
             return;
         }
 
-        var token = _shutdown.Token;
-        _backgroundSync = Task.Run(
-            async () =>
-            {
-                try
-                {
-                    var report = await RunReportAsync(SyncDirection.Both, background: true, token).ConfigureAwait(false);
-                    _runtime.Log.Info("sync", $"Startup sync: {report.Message} {string.Join("; ", report.Changes)}");
-                }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
-                {
-                    _runtime.Log.Warn("sync", $"Startup sync failed: {ex.Message}", ex);
-                }
-            },
-            token);
+        // Once, by the first running Pickle: every window syncing the same files at the same moment only conflicts.
+        _runtime.Background.Register(new BackgroundJob("sync", async ct =>
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, _shutdown.Token);
+            var report = await RunReportAsync(SyncDirection.Both, background: true, linked.Token).ConfigureAwait(false);
+            _runtime.Log.Info("sync", $"Startup sync: {report.Message} {string.Join("; ", report.Changes)}");
+        })
+        {
+            InitialDelay = TimeSpan.FromSeconds(2),
+            MinimumGap = TimeSpan.FromMinutes(10),
+        });
     }
 
     public void Dispose()
     {
         _shutdown.Cancel();
-        try
-        {
-            _backgroundSync?.Wait(TimeSpan.FromSeconds(2));
-        }
-        catch (AggregateException)
-        {
-        }
-
         _shutdown.Dispose();
     }
 
@@ -95,7 +80,6 @@ public sealed class SyncService : ISyncService, IRuntimeComponent, IDisposable
         using var cts = new CancellationTokenSource(ExitTimeout);
         try
         {
-            _backgroundSync?.Wait(cts.Token);
             var report = RunReportAsync(SyncDirection.Push, background: true, cts.Token).GetAwaiter().GetResult();
             _runtime.Log.Info("sync", $"Exit sync: {report.Message}");
         }

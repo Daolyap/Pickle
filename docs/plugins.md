@@ -317,6 +317,7 @@ internal sealed class DeployCommand : PickleCommandBase
 }
 ```
 
+Override `Examples` to list example lines that `pk deploy --help` prints after the usage.
 `ArgumentException`s become usage errors (exit code 2); I/O, timeout and invalid-operation errors become exit code
 1 with the message printed. `CommandOutput` has `Line`, `Heading`, `Muted`, `Success`, `Failure`, `Warning`,
 `Status` (a line that the next one replaces) and `Transcript`. Write objects with `Object`; `Display.Columns` picks
@@ -388,6 +389,7 @@ context.Commands.Register(new OpenMyPanel());   // ExecuteAsync: context.Pickle.
 | Hook | `context.Hooks.Register(HookKind.PostExecute, (e, ct) => …)` (returns an `IDisposable` to unregister) |
 | Service | `context.Services.Add<IMyService>(impl)`; other plugins get it with `Services.Get<IMyService>()` |
 | First-start question | `context.Services.Get<IFirstRunOffers>()?.Add(new FirstRunOffer(id, question, isRelevant, accept) { Since = 2, Progress = "Downloading…" })`: asked once at the first start (and by `pk setup`); `Since` is the setup version that added it, so people who already went through setup are asked it once after upgrading |
+| Background job | `context.Services.Get<IBackgroundWork>()?.Register(new BackgroundJob("my-check", async ct => bg.Write("my-check", await CheckAsync(ct))) { Interval = TimeSpan.FromHours(6) })`: only the first running Pickle runs it; every instance reads the result with `Read<T>("my-check")` (`CachedValue<T>` with the time it was written) |
 | Settings | read `context.Config.Current`; store your own file under `context.Paths.DataDir` |
 
 Windows-only code: mark it `[SupportedOSPlatform("windows")]` and check `OperatingSystem.IsWindows()` so the plugin

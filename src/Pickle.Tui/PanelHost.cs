@@ -131,9 +131,16 @@ public sealed class PanelHost : IPanelHost
         _running = true;
         try
         {
+            using var pacing = FramePacing.Begin();
             using var app = ApplicationFactory();
             app.Init(DriverName);
-            app.SessionBegun += (_, e) => StyleSession(e.State.Runnable);
+            WheelScroll.Attach(app);
+            PasteRepaint.Attach(app);
+            app.SessionBegun += (_, e) =>
+            {
+                StyleSession(e.State.Runnable);
+                FocusSync.Track(e.State.Runnable);
+            };
             object? view = null;
             try
             {

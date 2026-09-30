@@ -71,7 +71,7 @@ public sealed class TranslationPipeline : ITranslationPipeline, IRuntimeComponen
         registry.RegisterRewriter(new PackageManagerRewriter(isWindows, name => LookupCommand(name) is not null, name => _runtime.CommandRegistry.Get(name) is not null));
         registry.RegisterRewriter(new ExportRewriter(isWindows));
         registry.RegisterRewriter(new EnvPrefixRewriter(isWindows));
-        registry.RegisterRewriter(new SudoRewriter(isWindows, LookupCommand, isWindows ? SudoRewriter.FindBuiltInSudo() : null, Environment.ProcessPath ?? "pickle"));
+        registry.RegisterRewriter(new SudoRewriter(isWindows, LookupCommand, isWindows ? SudoRewriter.FindBuiltInSudo() : null, Environment.ProcessPath ?? "pickle", isWindows ? SudoRewriter.FindWindowsTerminal() : null));
         _runtime.CommandRegistry.Register(new TranslateCommand(this));
     }
 

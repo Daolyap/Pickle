@@ -108,6 +108,12 @@ public static partial class AliasCompiler
             sb.Append("param(")
                 .Append(string.Join(", ", placeholders.Select(p => p.Default is null ? "$" + p.Name : $"${p.Name} = {PowerShellText.SingleQuote(p.Default)}")))
                 .AppendLine(")");
+
+            // `scan IP=10.0.0.1 OUT=home` fills placeholders by name (PowerShell alone would bind "IP=…" by position).
+            var names = string.Join(", ", placeholders.Select(p => PowerShellText.SingleQuote(p.Name)));
+            var defaults = string.Join("; ", placeholders.Where(p => p.Default is not null).Select(p => $"{PowerShellText.SingleQuote(p.Name)} = {PowerShellText.SingleQuote(p.Default!)}"));
+            sb.Append("if ($__named = [Pickle.Core.Aliases.AliasArguments]::ByName(@(").Append(names).Append("), @{").Append(defaults)
+                .AppendLine("}, $PSBoundParameters, $args)) { $__named.Apply($ExecutionContext.SessionState, $PSBoundParameters); $args = $__named.Rest }");
         }
 
         var usage = Usage(alias);
@@ -143,16 +149,12 @@ public static partial class AliasCompiler
             var remainder = PlaceholderRegex().Replace(word.Text, string.Empty);
             if (ShellLexer.TryGetLiteral(remainder) == remainder && remainder.IndexOfAny([' ', '\t', '{', '}', '(', ')', '$', '"', '\'', '`']) < 0)
             {
-                var sb = new StringBuilder("\"");
-                var last = 0;
-                foreach (Match m in PlaceholderRegex().Matches(word.Text))
-                {
-                    sb.Append(PowerShellText.EscapeDoubleQuoted(word.Text[last..m.Index])).Append(Expansion(m));
-                    last = m.Index + m.Length;
-                }
-
-                sb.Append(PowerShellText.EscapeDoubleQuoted(word.Text[last..])).Append('"');
-                edits.Replace(word.Start, word.End, sb.ToString());
+                edits.Replace(word.Start, word.End, Interpolated(word.Text));
+            }
+            else if (word.Text.Length > 1 && ShellLexer.IsSingleQuote(word.Text[0]) && ShellLexer.TryGetLiteral(word.Text) is { } quoted)
+            {
+                // '...{x}...' would pass `$($x)` literally: single quotes don't expand.
+                edits.Replace(word.Start, word.End, Interpolated(quoted));
             }
             else
             {
@@ -161,6 +163,19 @@ public static partial class AliasCompiler
         }
 
         return edits.Apply(body);
+    }
+
+    private static string Interpolated(string text)
+    {
+        var sb = new StringBuilder("\"");
+        var last = 0;
+        foreach (Match m in PlaceholderRegex().Matches(text))
+        {
+            sb.Append(PowerShellText.EscapeDoubleQuoted(text[last..m.Index])).Append(Expansion(m));
+            last = m.Index + m.Length;
+        }
+
+        return sb.Append(PowerShellText.EscapeDoubleQuoted(text[last..])).Append('"').ToString();
     }
 
     private static string Expansion(Match m) => m.Groups["rest"].Success ? "$($args -join ' ')" : "$($" + m.Groups["name"].Value + ")";

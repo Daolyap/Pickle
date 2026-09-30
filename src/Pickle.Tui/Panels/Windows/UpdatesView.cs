@@ -147,7 +147,13 @@ public sealed partial class UpdatesView : View
         var version = ++_searchVersion;
         var query = new WindowsUpdateQuery(_drivers.Value == CheckState.Checked, _optional.Value == CheckState.Checked);
         _log.Content = "Searching Windows Update (the first search after a restart can take a few minutes)…";
-        var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => _log.Content = Describe(p));
+        var progress = new UiProgress<WindowsUpdateProgress>(_owner, p =>
+        {
+            if (version == _searchVersion)
+            {
+                _log.Content = Describe(p);
+            }
+        });
         _owner.Load(
             ct => _service.SearchAsync(query, progress, ct),
             updates =>
@@ -258,6 +264,8 @@ public sealed partial class UpdatesView : View
             _table.SetMarked(update, true);
         }
 
+        // A search still running describes the list from before the install: drop its result.
+        _searchVersion++;
         _log.Content = string.Empty;
         var progress = new UiProgress<WindowsUpdateProgress>(_owner, p => AppendLog(Describe(p)));
         _owner.Load(

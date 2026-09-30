@@ -180,6 +180,30 @@ public sealed class WindowsPanelTests : IDisposable
     }
 
     [Fact]
+    public void ASearchFinishingAfterAnInstallDoesNotOverwriteIt()
+    {
+        using var panel = Hooked(new UpdatesPanel(Context));
+        var updates = panel.Updates!;
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var searches = 0;
+        Run(
+            panel,
+            When(() => updates.Rows.Count == 2, () =>
+            {
+                _wu.SearchDelay = TimeSpan.FromMilliseconds(400);
+                searches = _wu.Queries.Count;
+                updates.Check();
+                updates.InstallSelected();
+                clock.Restart();
+            }),
+            Wait(() => updates.LogText.Contains("Installed", StringComparison.Ordinal)),
+            Wait(() => _wu.Queries.Count > searches && clock.Elapsed > TimeSpan.FromMilliseconds(900)));
+
+        Assert.Contains("Installed", updates.LogText, StringComparison.Ordinal);
+        Assert.DoesNotContain("update(s) available", updates.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void UpdatesListSearchesByItselfAndAgainWhenOptionalIsTicked()
     {
         using var panel = Hooked(new UpdatesPanel(Context));

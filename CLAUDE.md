@@ -2,9 +2,10 @@
 
 Pickle is a Windows-first shell that hosts the **real PowerShell 7 engine** (Microsoft.PowerShell.SDK, in-process,
 custom `PSHost`) and replaces the interactive experience: its own line editor (syntax highlighting, autosuggestions,
-completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, processes, network, network tools, disks, winget, Windows Update,
-Task Scheduler, Windows Sandbox, settings, command wizards), built-in network tools, on-demand tool installs, a plugin system,
-Linux-syntax translation, aliases and sync.
+completion menu, fuzzy history), a themeable prompt, Terminal.Gui panels (files, git, jobs, processes, network, network tools, disks,
+disk configuration, services, logs, packages, hosts/PATH/env, winget, Windows Update, Task Scheduler / cron / systemd timers, Windows Sandbox,
+settings, command wizards), built-in network tools, on-demand tool installs, a plugin system, optional modules (Docker, Kubernetes,
+GitHub, nmap, vault, WSL/containers, …), Linux-syntax translation, aliases and sync.
 C# / .NET 10. GitHub repo: `Daolyap/Pickle` (formerly `milkshell`); the product, binary (`pickle`) and namespaces are **Pickle**.
 
 ## Commands
@@ -48,8 +49,10 @@ src/Pickle.Core          The shell engine. Key folders:
   Contracts/             Internal seams between Core components (IPromptRenderer, IAutosuggestProvider, ...)
   PickleRuntime.cs       Composition root inside the process; implements IPickleContext
   PickleApp.cs           Mode dispatch (interactive / -c / file / headless)
-src/Pickle.Tui           Terminal.Gui v2 panels. PanelHost (IPanelHost), TuiPlugin, Panels/<Feature>/
-src/Pickle.Windows       Windows services (winget, WUA, Task Scheduler, elevation broker, Windows Terminal fragment)
+src/Pickle.Tui           Terminal.Gui v2 panels. PanelHost (IPanelHost), TuiPlugin, ResourcePanel<T>/PanelCommand, Panels/<Feature>/
+src/Pickle.Windows       Windows services (winget, WUA, Task Scheduler, elevation broker, disk configuration, services/logs/hosts/env, Windows Terminal fragment)
+src/Pickle.Admin         Linux/macOS administration backends (systemd/launchd services, logs, apt/dnf/zypper/pacman/brew, cron/timers, hosts, env) + UnixPrivilegeService
+src/Pickle.Modules       Optional modules (nmap, Docker, Kubernetes, GitHub, languages, notifier, explain, vault, WSL/containers, themes, example): compiled in, off until selected
 src/Pickle.Wizards       Wizard schema engine + Definitions/*.json (embedded)
 src/Pickle.Network       Network tools engines (scan, sweep, DNS client, trace, whois, cert, subnet, http, WoL) + pk commands
 src/Pickle               pickle.exe: Program.cs (arg modes) + BuiltInPlugins.cs (the list of built-in plugins)
@@ -70,6 +73,12 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   `$?`/`$LASTEXITCODE` are read right after (`ShellEngine.QueryStatus`).
 - Threading: interactive pipelines run synchronously from the REPL thread. `IPickleShell.InvokeAsync` runs nested
   when called from inside a pipeline, waits for idle otherwise; `ShellTarget.Background` uses a runspace pool.
+- Optional modules are `IPicklePlugin`s with a `ModuleDescriptor` listed in `src/Pickle.Modules/OptionalModules.cs`; `ModuleCatalog`
+  loads only the selected ones (installer selection ∪ `modules.enabled` − `modules.disabled`). New module: `docs/modules.md` and the
+  `add-module` skill; list it in `packaging/modules.json` too (`PackagingTests` fails when the two drift).
+- Privileged work never means running Pickle as administrator: Windows goes through `IElevationBroker` (allowlisted
+  `ElevatedOperationKind`s, validated again in the helper); Linux/macOS through `IPrivilegeService`. Rules that protect the machine
+  (e.g. `DiskOperationRules`, `HostsDocument`, `EnvironmentRules`) live in Abstractions so the panel and the helper share them.
 - Panels run modally on the REPL thread via `IPanelHost.Show` (fresh Terminal.Gui `IApplication` each time) and
   return a `PanelResult` (insert text / replace input / run command / cd).
 - Cmdlets find their runtime with `PickleRuntime.Resolve(Host)` (derive from `PickleCmdlet`).
@@ -86,6 +95,8 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
   (`InvokeAsync("param($p) ...", new Dictionary<string, object?>{["p"]=value})`) and to processes via
   `ProcessStartInfo.ArgumentList`. When generated script text must embed a value, use `PowerShellText.SingleQuote`
   (PowerShell also treats ‘ ’ ‚ ‛ as quotes — never hand-roll `Replace("'", "''")`).
+- **Programs for modules and services go through `IProgramRunner`** (`context.Services.Require<IProgramRunner>()`): argument list only,
+  PATH-absolute, timeout, optional stdin (secrets go there or in the environment, never on a command line). Tests use `FakeProgramRunner`.
 - **Never start a program by bare name**: resolve it with `Commands.ExecutableLocator.Find` (absolute PATH entries only;
   Windows and .NET's Unix resolver would otherwise run a copy planted in the current directory). Automatic git calls
   go through `GitService`, which also disables repo-configured fsmonitor/filters/textconv.
@@ -97,7 +108,7 @@ themes/*.json            Built-in themes (embedded into Pickle.Core)
 - New cmdlet: `[Cmdlet]` class deriving `PickleCmdlet` in `Pickle.Core/Cmdlets` — registration is automatic.
 - New key action: `KeyBindings.RegisterAction(name, ...)`; default chord goes in `Input/DefaultKeyBindings.cs`.
 - Comments: only for non-obvious *why*. No multi-paragraph docstrings.
-- Recipes for common additions live in `.claude/skills/` (add-wizard, add-panel, add-prompt-segment, add-translation, release).
+- Recipes for common additions live in `.claude/skills/` (add-wizard, add-panel, add-prompt-segment, add-translation, add-module, release).
 
 ## Testing
 

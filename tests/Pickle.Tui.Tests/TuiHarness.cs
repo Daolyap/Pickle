@@ -140,9 +140,13 @@ internal static class TuiHarness
     }
 
     /// <summary>A started runtime with the Tui plugin loaded and its panel host wired to <paramref name="script"/>.</summary>
-    public static (TestPickle Pickle, PanelHost Host) Start(UiScript? script = null, Action<PickleConfig>? configure = null)
+    public static (TestPickle Pickle, PanelHost Host) Start(
+        UiScript? script = null,
+        Action<PickleConfig>? configure = null,
+        IReadOnlyList<Abstractions.Services.ModuleDescriptor>? modules = null,
+        IEnumerable<string>? machineModules = null)
     {
-        var t = TestPickle.Create(start: true, configure: configure, plugins: [new TuiPlugin()]);
+        var t = TestPickle.Create(start: true, configure: configure, plugins: [new TuiPlugin()], modules: modules, machineModules: machineModules);
         var host = (PanelHost)t.Runtime.Services.Require<IPanelHost>();
         host.RawOutput = null;
         host.DriverName = Driver;

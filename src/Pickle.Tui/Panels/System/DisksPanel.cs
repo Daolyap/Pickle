@@ -95,7 +95,7 @@ public sealed class DisksPanel : SystemPanelBase
                     return false;
                 }
 
-                ChooseDiskAction();
+                ConfigureSelected();
                 return true;
             });
         }
@@ -135,9 +135,6 @@ public sealed class DisksPanel : SystemPanelBase
 
     internal View PartitionsTab => _partitionsTab;
 
-    /// <summary>Tests capture the wizard (id, pre-filled command) instead of opening it.</summary>
-    internal Action<string, string>? WizardHook { get; set; }
-
     internal void RefreshPartitions()
     {
         if (_layout is not { } layout || _partitions is null)
@@ -151,39 +148,22 @@ public sealed class DisksPanel : SystemPanelBase
             disks =>
             {
                 _partitions.SetItems(DiskLayoutRows.Build(disks));
-                _partitionsHelp.Text = Environment.IsPrivilegedProcess
-                    ? "Enter: what to do with the selected disk or partition (opens its wizard; you review the command before it runs)."
-                    : "Enter: actions (opens their wizards). Changing disks needs an administrator Pickle; reading them does not.";
+                _partitionsHelp.Text = "Enter: configure the selected disk in the Disk Configuration panel (plan, review and apply changes; one administrator prompt).";
             },
             "reading disks…");
     }
 
-    internal void ChooseDiskAction()
+    /// <summary>Enter on the Partitions tab: the Disk Configuration panel, on the selected disk.</summary>
+    internal void ConfigureSelected()
     {
         if (_partitions?.Selected is not { } row)
         {
             return;
         }
 
-        var actions = DiskLayoutRows.Actions(row);
-        if (actions.Count == 0)
+        if (!OpenPanel(DiskConfigurationPanel.PanelId, row.Disk.Number.ToString(System.Globalization.CultureInfo.InvariantCulture)))
         {
-            return;
-        }
-
-        var choice = Choose(DiskLayoutRows.Name(row).Trim(), [.. actions.Select(a => a.Label)]);
-        if (actions.FirstOrDefault(a => a.Label == choice) is not { } action)
-        {
-            return;
-        }
-
-        if (WizardHook is { } hook)
-        {
-            hook(action.WizardId, action.Command);
-        }
-        else if (!OpenPanel("wizard", action.WizardId, action.Command))
-        {
-            Complete(new PanelResult(PanelResultKind.ReplaceInput, action.Command));
+            Tell("Disk Configuration", "The Disk Configuration panel is not available here: use pk diskconfig, or the Storage cmdlets directly.");
         }
     }
 

@@ -1,8 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
-using Pickle.Abstractions.Services;
 
-namespace Pickle.Windows.TaskScheduler;
+namespace Pickle.Abstractions.Services;
 
 /// <summary>
 /// Friendly schedule syntax → <see cref="TaskTriggerSpec"/>. Pure (clock and time zone are parameters) so it is

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pickle.Admin\Pickle.Admin.csproj" />
+  </ItemGroup>
+</Project>

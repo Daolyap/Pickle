@@ -1,4 +1,5 @@
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 
 namespace Pickle;
 
@@ -14,6 +15,7 @@ internal static class BuiltInPlugins
         new Wizards.WizardsPlugin(),
         new Core.SystemMonitoring.SystemMonitorsPlugin(),
         new Network.NetworkToolsPlugin(),
+        new Admin.AdminPlugin(),
         new Tui.TuiPlugin(),
         new Tui.Panels.Git.GitPanelPlugin(),
         new Tui.Panels.Windows.WindowsPanelsPlugin(),
@@ -23,5 +25,9 @@ internal static class BuiltInPlugins
         new Tui.Panels.Dashboard.DashboardPanelPlugin(),
         new Tui.Panels.Themes.ThemeGalleryPanelPlugin(),
         new Tui.Panels.Ssh.SshPanelPlugin(),
+        new Tui.Panels.Admin.AdminPanelsPlugin(),
     ];
+
+    /// <summary>The optional modules (Docker, Kubernetes, nmap, …); only those selected at install or with <c>pk module</c> are loaded.</summary>
+    public static IReadOnlyList<ModuleDescriptor> OptionalModules() => Modules.OptionalModules.All;
 }

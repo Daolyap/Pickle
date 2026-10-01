@@ -27,9 +27,21 @@ public sealed class PickleConfig
     public TranslationSettings Translation { get; set; } = new();
     public ShellSettings Shell { get; set; } = new();
     public PluginSettings Plugins { get; set; } = new();
+
+    /// <summary>Which optional modules (Docker, Kubernetes, …) are on for this user, on top of what the installer selected.</summary>
+    public ModuleSettings Modules { get; set; } = new();
     public SyncSettings Sync { get; set; } = new();
     public TerminalSettings Terminal { get; set; } = new();
     public WingetSettings Winget { get; set; } = new();
+
+    /// <summary>The <c>weather</c> prompt segment: where, which units, how often. Off until enabled.</summary>
+    public WeatherSettings Weather { get; set; } = new();
+
+    /// <summary>The <c>music</c> prompt segment (what is playing). Off until enabled.</summary>
+    public MusicSettings Music { get; set; } = new();
+
+    /// <summary>The <c>battery</c> prompt segment's defaults (a theme's own segment options win).</summary>
+    public BatterySettings Battery { get; set; } = new();
 
     /// <summary>Free-form settings owned by plugins, keyed by plugin id.</summary>
     public Dictionary<string, JsonElement> Extensions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -122,6 +134,12 @@ public sealed class ShellSettings
     /// <summary>Look for a newer Pickle release once a day (in the background; the banner says when there is one).</summary>
     public bool CheckForUpdates { get; set; } = true;
 
+    /// <summary>Variables Pickle sets for every session it starts (edit them with <c>pk env</c> or the environment panel); <c>%NAME%</c> and <c>$env:NAME</c> are expanded.</summary>
+    public Dictionary<string, string> Environment { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Folders Pickle puts at the front of PATH for every session it starts (the PATH editor's "Pickle" scope).</summary>
+    public List<string> PathPrepend { get; set; } = [];
+
     public bool FirstRunCompleted { get; set; } = false;
 
     /// <summary>The newest setup whose questions were asked (see <c>pk setup</c>); newer offers are asked once.</summary>
@@ -135,6 +153,22 @@ public sealed class PluginSettings
 
     /// <summary>SHA-256 hashes of .NET plugin assemblies the user has trusted.</summary>
     public List<string> TrustedAssemblies { get; set; } = [];
+}
+
+/// <summary>
+/// The user's choice of optional modules. The installer's selection (MSI features, RPM sub-packages, <c>modules.d</c>
+/// markers) is the starting point: <see cref="Enabled"/> adds to it and <see cref="Disabled"/> removes from it.
+/// </summary>
+public sealed class ModuleSettings
+{
+    /// <summary>Module ids turned on for this user (<c>pk module enable docker</c>).</summary>
+    public List<string> Enabled { get; set; } = [];
+
+    /// <summary>Module ids turned off for this user even when the installer selected them.</summary>
+    public List<string> Disabled { get; set; } = [];
+
+    /// <summary>Ask which optional modules to turn on at the first start and in <c>pk setup</c>.</summary>
+    public bool AskAtSetup { get; set; } = true;
 }
 
 public sealed class SyncSettings
@@ -179,6 +213,57 @@ public sealed class WingetSettings
     public bool AutoInstallClientModule { get; set; } = false;
     public bool IncludeWindowsUpdatesInUpgrade { get; set; } = true;
     public bool IncludeUnknownVersions { get; set; } = false;
+}
+
+/// <summary>
+/// Weather for the <c>weather</c> prompt segment, from Open-Meteo (no account or key). Turning it on sends the place name
+/// or coordinates below to open-meteo.com (and, for "auto", your IP address to ipwho.is) every <see cref="RefreshMinutes"/>.
+/// </summary>
+public sealed class WeatherSettings
+{
+    public bool Enabled { get; set; } = false;
+
+    /// <summary>A place name ("Paris", "Portland, Oregon"), coordinates ("48.85,2.35"), or "auto" to look it up from your IP address.</summary>
+    public string Location { get; set; } = string.Empty;
+
+    /// <summary>"auto" (follows the system region), "metric" (°C, km/h) or "imperial" (°F, mph).</summary>
+    public string Units { get; set; } = "auto";
+
+    public int RefreshMinutes { get; set; } = 30;
+
+    /// <summary>Placeholders: {icon} {temp} {unit} {feels} {condition} {wind} {city}.</summary>
+    public string Format { get; set; } = "{icon} {temp}{unit}";
+}
+
+/// <summary>What is playing, for the <c>music</c> prompt segment: Windows media sessions, MPRIS (playerctl) on Linux, Music and Spotify on macOS.</summary>
+public sealed class MusicSettings
+{
+    public bool Enabled { get; set; } = false;
+
+    /// <summary>"auto", or a player name (<c>spotify</c>, <c>vlc</c>, <c>music</c>) to follow only that one.</summary>
+    public string Player { get; set; } = "auto";
+
+    public int MaxLength { get; set; } = 40;
+
+    public bool HideWhenPaused { get; set; } = true;
+
+    /// <summary>How often the player is asked (seconds; background jobs tick every 15 s, so lower values behave like 15).</summary>
+    public int PollSeconds { get; set; } = 15;
+
+    /// <summary>Placeholders: {artist} {title} {player} {state}.</summary>
+    public string Format { get; set; } = "♪ {artist} – {title}";
+}
+
+public sealed class BatterySettings
+{
+    /// <summary>Hide the segment while on AC power at or above this charge (100: always show it on a laptop).</summary>
+    public int HideAbove { get; set; } = 95;
+
+    /// <summary>At or below this charge (not charging) the segment turns red.</summary>
+    public int Low { get; set; } = 15;
+
+    /// <summary>Shown after the percentage while charging.</summary>
+    public string ChargingMarker { get; set; } = "↑";
 }
 
 public sealed class ConfigChangedEventArgs(PickleConfig config, string? path) : EventArgs

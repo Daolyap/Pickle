@@ -34,6 +34,7 @@ public static class SettingsModel
         ["terminal.cursorShape"] = ["bar", "vintage", "underscore", "filledBox", "emptyBox", "doubleUnderscore"],
         ["sync.backend"] = ["none", "folder", "git"],
         ["shell.bannerStyle"] = ["animated", "art", "line"],
+        ["weather.units"] = ["auto", "metric", "imperial"],
     };
 
     /// <summary>Theme, the config sections in declaration order, then key bindings.</summary>

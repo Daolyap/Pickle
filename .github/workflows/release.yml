@@ -82,7 +82,7 @@ jobs:
     container: fedora:latest
     steps:
       - name: Install rpmbuild
-        run: dnf install -y --setopt=install_weak_deps=False git tar gzip findutils rpm-build
+        run: dnf install -y --setopt=install_weak_deps=False git tar gzip findutils rpm-build python3
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:

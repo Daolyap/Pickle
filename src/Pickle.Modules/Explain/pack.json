@@ -1,0 +1,1399 @@
+{
+ "ls": {
+  "summary": "List directory contents",
+  "flags": {
+   "-l": "long format with permissions, owner, size and date",
+   "-a": "include hidden files (names starting with .)",
+   "-h": "human-readable sizes (K, M, G)",
+   "-t": "sort by modification time, newest first",
+   "-r": "reverse the order",
+   "-R": "list subdirectories recursively",
+   "-S": "sort by size, largest first",
+   "-1": "one entry per line",
+   "-d": "list directories themselves, not their contents"
+  },
+  "args": "files or directories to list (default: the current directory)"
+ },
+ "cd": {
+  "summary": "Change the current directory",
+  "args": "the directory to go to (no argument: home; '-' : the previous directory)"
+ },
+ "pwd": {
+  "summary": "Print the current directory"
+ },
+ "cat": {
+  "summary": "Print files (or standard input) to the output",
+  "flags": {
+   "-n": "number all lines",
+   "-A": "show non-printing characters",
+   "-b": "number non-empty lines"
+  },
+  "args": "files to print; several are joined one after another"
+ },
+ "head": {
+  "summary": "Print the first lines of a file",
+  "flags": {
+   "-n": "=how many lines (default 10)",
+   "-c": "=how many bytes"
+  },
+  "args": "the file"
+ },
+ "tail": {
+  "summary": "Print the last lines of a file",
+  "flags": {
+   "-n": "=how many lines (default 10)",
+   "-f": "keep the file open and print new lines as they are written",
+   "-F": "like -f, and keep trying if the file is rotated or missing"
+  },
+  "args": "the file"
+ },
+ "less": {
+  "summary": "Page through a file",
+  "flags": {
+   "-N": "show line numbers",
+   "-S": "do not wrap long lines",
+   "-R": "show colors",
+   "-F": "quit if the file fits one screen"
+  },
+  "args": "the file"
+ },
+ "grep": {
+  "summary": "Search text for lines that match a pattern",
+  "flags": {
+   "-i": "ignore case",
+   "-r": "search directories recursively",
+   "-R": "search directories recursively, following symlinks",
+   "-n": "show line numbers",
+   "-v": "show lines that do NOT match",
+   "-l": "list only the names of files that match",
+   "-c": "count matching lines",
+   "-E": "extended regular expressions",
+   "-F": "fixed string, not a regular expression",
+   "-w": "match whole words only",
+   "-o": "print only the matching part",
+   "-A": "=also show N lines after each match",
+   "-B": "=also show N lines before each match",
+   "-C": "=also show N lines around each match",
+   "-e": "=the pattern (use several -e for several patterns)"
+  },
+  "args": "first the pattern, then the files (none: standard input)"
+ },
+ "find": {
+  "summary": "Search a directory tree for files",
+  "flags": {
+   "-name": "=match the file name against a pattern (case sensitive)",
+   "-iname": "=like -name, ignoring case",
+   "-type": "=f = file, d = directory, l = symlink",
+   "-size": "=match by size (+10M is bigger than 10 MB)",
+   "-mtime": "=modified N days ago (-7 is within a week)",
+   "-maxdepth": "=do not go deeper than N levels",
+   "-mindepth": "=skip the first N levels",
+   "-exec": "=run a command for each match ({} is the file; end with \\;  or +)",
+   "-delete": "delete what matches",
+   "-print": "print the path (the default)",
+   "-user": "=owned by this user",
+   "-perm": "=has these permissions",
+   "-newer": "=modified more recently than this file",
+   "-empty": "empty files or directories"
+  },
+  "args": "starting directories first, then tests and actions",
+  "warnings": [
+   {
+    "pattern": "-delete",
+    "message": "-delete removes every match without asking; run it without -delete first to see what would go."
+   }
+  ],
+  "combineShortFlags": false
+ },
+ "sed": {
+  "summary": "Edit text as it streams through (stream editor)",
+  "flags": {
+   "-i": "edit the file in place",
+   "-n": "print only lines selected with p",
+   "-e": "=a script to run",
+   "-E": "extended regular expressions",
+   "-r": "extended regular expressions"
+  },
+  "args": "a script such as 's/old/new/g' (substitute everywhere on each line), then the files"
+ },
+ "awk": {
+  "summary": "Process text line by line with patterns and actions",
+  "flags": {
+   "-F": "=the field separator",
+   "-v": "=set a variable (name=value)",
+   "-f": "=read the program from a file"
+  },
+  "args": "a program such as '{print $1}' (the first column), then the files"
+ },
+ "sort": {
+  "summary": "Sort lines",
+  "flags": {
+   "-n": "numeric order",
+   "-r": "reverse",
+   "-u": "drop duplicate lines",
+   "-k": "=sort by this column (field)",
+   "-t": "=the field separator",
+   "-h": "human-readable numbers (2K, 1G)",
+   "-f": "ignore case"
+  },
+  "args": "files (none: standard input)"
+ },
+ "uniq": {
+  "summary": "Collapse repeated adjacent lines (sort first)",
+  "flags": {
+   "-c": "prefix each line with how many times it occurred",
+   "-d": "show only lines that are repeated",
+   "-u": "show only lines that occur once",
+   "-i": "ignore case"
+  }
+ },
+ "wc": {
+  "summary": "Count lines, words and bytes",
+  "flags": {
+   "-l": "lines",
+   "-w": "words",
+   "-c": "bytes",
+   "-m": "characters"
+  }
+ },
+ "cut": {
+  "summary": "Cut columns out of each line",
+  "flags": {
+   "-d": "=the field delimiter",
+   "-f": "=which fields to keep (1,3 or 2-4)",
+   "-c": "=which characters to keep"
+  }
+ },
+ "tr": {
+  "summary": "Translate or delete characters",
+  "flags": {
+   "-d": "delete the listed characters",
+   "-s": "squeeze repeated characters into one",
+   "-c": "use the complement of the set"
+  },
+  "args": "SET1 [SET2]"
+ },
+ "xargs": {
+  "summary": "Build command lines from standard input",
+  "flags": {
+   "-n": "=at most N arguments per command",
+   "-I": "=replace this string in the command with each input item",
+   "-0": "input items are separated by NUL (use with find -print0)",
+   "-P": "=run N commands in parallel",
+   "-r": "do nothing when the input is empty"
+  },
+  "args": "the command to run with the input appended",
+  "wraps": true
+ },
+ "tee": {
+  "summary": "Copy standard input to files and to the output",
+  "flags": {
+   "-a": "append instead of overwriting"
+  },
+  "args": "the files to write"
+ },
+ "echo": {
+  "summary": "Print text",
+  "flags": {
+   "-n": "no trailing newline",
+   "-e": "interpret backslash escapes"
+  }
+ },
+ "mkdir": {
+  "summary": "Create directories",
+  "flags": {
+   "-p": "create parent directories too, and do not complain if it exists",
+   "-m": "=set the permissions"
+  },
+  "args": "the directories to create"
+ },
+ "rm": {
+  "summary": "Remove files or directories (permanently; there is no trash)",
+  "flags": {
+   "-r": "recurse into directories",
+   "-R": "recurse into directories",
+   "-f": "force: no prompts, ignore missing files",
+   "-i": "ask before each removal",
+   "-v": "print what is removed",
+   "-d": "remove empty directories"
+  },
+  "args": "the files or directories to delete",
+  "warnings": [
+   {
+    "pattern": "(^|\\s)(-[a-zA-Z]*r[a-zA-Z]*f|-[a-zA-Z]*f[a-zA-Z]*r)\\s+(/|~|\\*|\\.|\\.\\.)(\\s|$)",
+    "message": "This deletes recursively and without asking from a very broad place. Check the path twice."
+   }
+  ]
+ },
+ "rmdir": {
+  "summary": "Remove empty directories"
+ },
+ "cp": {
+  "summary": "Copy files and directories",
+  "flags": {
+   "-r": "copy directories recursively",
+   "-R": "copy directories recursively",
+   "-a": "archive: recursive, keep permissions, owners, times and links",
+   "-v": "print each file copied",
+   "-i": "ask before overwriting",
+   "-n": "never overwrite",
+   "-u": "copy only when the source is newer",
+   "-p": "keep mode, owner and times"
+  },
+  "args": "sources first, destination last"
+ },
+ "mv": {
+  "summary": "Move or rename files",
+  "flags": {
+   "-i": "ask before overwriting",
+   "-n": "never overwrite",
+   "-v": "print each move",
+   "-f": "overwrite without asking"
+  },
+  "args": "sources first, destination last"
+ },
+ "ln": {
+  "summary": "Make links between files",
+  "flags": {
+   "-s": "symbolic link (without it, a hard link)",
+   "-f": "replace an existing destination",
+   "-n": "treat a destination symlink to a directory as a file"
+  },
+  "args": "target first, then the link name"
+ },
+ "touch": {
+  "summary": "Create an empty file, or update its modification time",
+  "flags": {
+   "-t": "=set this timestamp",
+   "-c": "do not create the file"
+  }
+ },
+ "chmod": {
+  "summary": "Change file permissions",
+  "flags": {
+   "-R": "apply recursively",
+   "-v": "print what changes",
+   "-c": "print only what changes"
+  },
+  "args": "the mode (755, u+x, a-w) then the files",
+  "warnings": [
+   {
+    "pattern": "\\b777\\b",
+    "message": "777 lets every user read, write and run the file. Almost always too much."
+   },
+   {
+    "pattern": "-R.*\\s/(\\s|$)|\\s/\\s*$",
+    "message": "Changing permissions from / can break the system."
+   }
+  ]
+ },
+ "chown": {
+  "summary": "Change file owner and group",
+  "flags": {
+   "-R": "apply recursively",
+   "-v": "print what changes",
+   "-h": "change symlinks themselves"
+  },
+  "args": "owner[:group] then the files"
+ },
+ "tar": {
+  "summary": "Create or extract archives",
+  "flags": {
+   "-c": "create an archive",
+   "-x": "extract an archive",
+   "-t": "list the contents",
+   "-z": "compress with gzip (.tar.gz)",
+   "-j": "compress with bzip2 (.tar.bz2)",
+   "-J": "compress with xz (.tar.xz)",
+   "-v": "verbose: list files as they are processed",
+   "-f": "=the archive file name (must be followed by it)",
+   "-C": "=change to this directory first",
+   "-r": "append files to an archive",
+   "--exclude": "=skip files that match the pattern",
+   "-p": "preserve permissions",
+   "--strip-components": "=drop N leading path parts when extracting"
+  },
+  "args": "archive and files; with -x, optionally the members to extract"
+ },
+ "zip": {
+  "summary": "Package and compress files into a .zip",
+  "flags": {
+   "-r": "recurse into directories",
+   "-e": "encrypt with a password",
+   "-q": "quiet",
+   "-9": "best compression"
+  },
+  "args": "the archive first, then files"
+ },
+ "unzip": {
+  "summary": "Extract a .zip",
+  "flags": {
+   "-d": "=extract into this directory",
+   "-l": "list the contents",
+   "-o": "overwrite without asking",
+   "-q": "quiet"
+  }
+ },
+ "gzip": {
+  "summary": "Compress files (replaces them with .gz)",
+  "flags": {
+   "-d": "decompress",
+   "-k": "keep the original",
+   "-r": "recurse into directories",
+   "-9": "best compression",
+   "-v": "verbose"
+  }
+ },
+ "curl": {
+  "summary": "Transfer data from or to a URL",
+  "flags": {
+   "-o": "=write the output to this file",
+   "-O": "save under the remote file name",
+   "-L": "follow redirects",
+   "-s": "silent: no progress bar",
+   "-S": "show errors even when silent",
+   "-f": "fail on HTTP errors",
+   "-X": "=the HTTP method (GET, POST, PUT, DELETE)",
+   "-H": "=add a request header",
+   "-d": "=send this as the request body (implies POST)",
+   "--data-raw": "=send this as the body without interpreting @",
+   "-u": "=user:password for authentication",
+   "-I": "fetch only the headers (HEAD)",
+   "-k": "do not verify the TLS certificate",
+   "-i": "include response headers in the output",
+   "-v": "verbose: show the whole conversation",
+   "--json": "=send JSON and set the JSON headers",
+   "-F": "=send a multipart form field"
+  },
+  "args": "the URL",
+  "warnings": [
+   {
+    "pattern": "\\|\\s*(sudo\\s+)?(ba|z)?sh\\b",
+    "message": "Piping a download straight into a shell runs code you have not read. Download it first and read it."
+   },
+   {
+    "pattern": "(^|\\s)-k(\\s|$)|--insecure",
+    "message": "-k turns off TLS certificate checks, so anyone on the path can impersonate the server."
+   }
+  ]
+ },
+ "wget": {
+  "summary": "Download files over HTTP, HTTPS or FTP",
+  "flags": {
+   "-O": "=write to this file name",
+   "-c": "continue a partial download",
+   "-q": "quiet",
+   "-r": "recursive download",
+   "-P": "=save into this directory",
+   "--no-check-certificate": "do not verify the TLS certificate"
+  },
+  "args": "the URL"
+ },
+ "ssh": {
+  "summary": "Open a secure shell on a remote machine (or run one command there)",
+  "flags": {
+   "-p": "=the remote port",
+   "-i": "=the private key file",
+   "-L": "=forward a local port (local:host:remote)",
+   "-R": "=forward a remote port back to here",
+   "-D": "=start a SOCKS proxy on this local port",
+   "-N": "do not run a command (for tunnels)",
+   "-A": "forward your ssh agent",
+   "-J": "=connect through this jump host",
+   "-v": "verbose (for debugging connections)",
+   "-o": "=set an ssh option (Option=value)",
+   "-t": "force a terminal (for interactive commands)"
+  },
+  "args": "[user@]host [command]"
+ },
+ "scp": {
+  "summary": "Copy files over ssh",
+  "flags": {
+   "-r": "copy directories recursively",
+   "-P": "=the remote port",
+   "-i": "=the private key file",
+   "-C": "compress in transit",
+   "-q": "quiet"
+  },
+  "args": "source and destination; remote paths look like user@host:/path"
+ },
+ "rsync": {
+  "summary": "Copy and synchronize files efficiently (only what changed)",
+  "flags": {
+   "-a": "archive: recursive, keeps permissions, times, owners and links",
+   "-v": "verbose",
+   "-z": "compress during transfer",
+   "-n": "dry run: show what would change",
+   "--dry-run": "show what would change without doing it",
+   "--delete": "delete files at the destination that are gone from the source",
+   "-P": "show progress and keep partial files",
+   "--progress": "show progress",
+   "-h": "human-readable sizes",
+   "-e": "=the remote shell to use (for example ssh -p 2222)",
+   "--exclude": "=skip files that match the pattern",
+   "-u": "skip files that are newer at the destination",
+   "-r": "recurse into directories"
+  },
+  "args": "source then destination; a trailing / on the source means 'its contents'",
+  "warnings": [
+   {
+    "pattern": "--delete",
+    "message": "--delete removes files at the destination that are not in the source. Try --dry-run first."
+   }
+  ]
+ },
+ "sudo": {
+  "summary": "Run a command with another user's rights (root by default)",
+  "flags": {
+   "-u": "=run as this user",
+   "-i": "start a login shell as the target user",
+   "-s": "start a shell",
+   "-E": "keep your environment variables",
+   "-k": "forget the cached password",
+   "-n": "never ask for a password (fail instead)"
+  },
+  "args": "the command to run",
+  "wraps": true
+ },
+ "git": {
+  "summary": "Version control",
+  "flags": {
+   "-C": "=run as if started in this directory",
+   "--no-pager": "do not page the output",
+   "-c": "=set a config value for this command"
+  },
+  "subcommands": {
+   "status": {
+    "summary": "Show what changed in the working tree and index",
+    "flags": {
+     "-s": "short format",
+     "-b": "show the branch",
+     "--porcelain": "stable machine-readable format"
+    }
+   },
+   "add": {
+    "summary": "Stage changes for the next commit",
+    "flags": {
+     "-A": "stage everything, including deletions",
+     "-p": "choose hunks interactively",
+     "-u": "stage only files git already tracks",
+     "-n": "dry run"
+    },
+    "args": "the files to stage ('.' is everything here)"
+   },
+   "commit": {
+    "summary": "Record the staged changes",
+    "flags": {
+     "-m": "=the commit message",
+     "-a": "also stage all tracked files that changed",
+     "--amend": "rewrite the previous commit instead of making a new one",
+     "--no-verify": "skip the commit hooks",
+     "-v": "show the diff in the message editor",
+     "--allow-empty": "commit even with no changes"
+    },
+    "warnings": [
+     {
+      "pattern": "--amend",
+      "message": "--amend rewrites the last commit. Do not do it after pushing unless you know the branch is only yours."
+     }
+    ]
+   },
+   "push": {
+    "summary": "Send commits to a remote",
+    "flags": {
+     "-u": "remember this remote branch as the upstream",
+     "--force": "overwrite the remote history (dangerous)",
+     "-f": "overwrite the remote history (dangerous)",
+     "--force-with-lease": "overwrite only if nobody else pushed meanwhile",
+     "--tags": "push all tags",
+     "--delete": "delete a remote branch",
+     "-n": "dry run"
+    },
+    "args": "remote and branch",
+    "warnings": [
+     {
+      "pattern": "(^|\\s)(--force|-f)(\\s|$)",
+      "message": "A plain --force can destroy other people's commits. Prefer --force-with-lease."
+     }
+    ]
+   },
+   "pull": {
+    "summary": "Fetch and integrate remote changes",
+    "flags": {
+     "--rebase": "replay your commits on top instead of merging",
+     "--ff-only": "refuse anything but a fast-forward",
+     "-r": "same as --rebase"
+    }
+   },
+   "fetch": {
+    "summary": "Download remote history without changing your branches",
+    "flags": {
+     "--all": "from every remote",
+     "--prune": "drop remote-tracking branches that no longer exist",
+     "-p": "same as --prune"
+    }
+   },
+   "checkout": {
+    "summary": "Switch branches or restore files",
+    "flags": {
+     "-b": "=create a new branch and switch to it",
+     "-B": "=create or reset a branch and switch to it",
+     "--": "everything after this is a path, not a branch"
+    },
+    "warnings": [
+     {
+      "pattern": "\\s--\\s",
+      "message": "'checkout -- <path>' throws away your uncommitted changes to that path."
+     }
+    ]
+   },
+   "switch": {
+    "summary": "Switch branches",
+    "flags": {
+     "-c": "=create a new branch and switch to it",
+     "-": "go back to the previous branch"
+    }
+   },
+   "branch": {
+    "summary": "List, create or delete branches",
+    "flags": {
+     "-d": "=delete a merged branch",
+     "-D": "=force-delete a branch",
+     "-a": "list local and remote branches",
+     "-r": "list remote branches",
+     "-m": "=rename a branch",
+     "-v": "show the last commit of each"
+    }
+   },
+   "merge": {
+    "summary": "Join another branch into the current one",
+    "flags": {
+     "--no-ff": "always create a merge commit",
+     "--squash": "combine the changes into one staged change",
+     "--abort": "give up an in-progress merge"
+    }
+   },
+   "rebase": {
+    "summary": "Replay your commits on top of another base",
+    "flags": {
+     "-i": "interactively edit, reorder or drop commits",
+     "--continue": "go on after resolving conflicts",
+     "--abort": "give up and go back",
+     "--onto": "=transplant onto a different base"
+    },
+    "warnings": [
+     {
+      "pattern": ".*",
+      "message": "Rebasing rewrites history; do not rebase commits other people already have."
+     }
+    ]
+   },
+   "log": {
+    "summary": "Show commit history",
+    "flags": {
+     "--oneline": "one line per commit",
+     "--graph": "draw the branch structure",
+     "-p": "show the patch of each commit",
+     "-n": "=limit the number of commits",
+     "--stat": "show changed-file statistics",
+     "--author": "=only commits by this author",
+     "--since": "=only commits after this date",
+     "--all": "all branches, not just the current"
+    }
+   },
+   "diff": {
+    "summary": "Show changes",
+    "flags": {
+     "--staged": "what is staged (will be committed)",
+     "--cached": "what is staged (will be committed)",
+     "--stat": "a summary only",
+     "--name-only": "only the names of changed files"
+    }
+   },
+   "stash": {
+    "summary": "Shelve changes temporarily",
+    "flags": {
+     "-u": "include untracked files",
+     "pop": "reapply the newest stash and drop it",
+     "list": "show all stashes",
+     "drop": "delete a stash"
+    }
+   },
+   "reset": {
+    "summary": "Move the current branch (and optionally the index and files)",
+    "flags": {
+     "--soft": "keep changes staged",
+     "--mixed": "keep changes, unstaged (the default)",
+     "--hard": "discard all changes in the working tree"
+    },
+    "warnings": [
+     {
+      "pattern": "--hard",
+      "message": "reset --hard throws away uncommitted work permanently."
+     }
+    ]
+   },
+   "clean": {
+    "summary": "Delete untracked files",
+    "flags": {
+     "-f": "required: actually delete",
+     "-d": "also untracked directories",
+     "-n": "dry run: show what would be deleted",
+     "-x": "also ignored files"
+    },
+    "warnings": [
+     {
+      "pattern": "-[a-z]*f",
+      "message": "clean -f deletes untracked files for good. Run -n first."
+     }
+    ]
+   },
+   "clone": {
+    "summary": "Copy a repository",
+    "flags": {
+     "--depth": "=shallow clone with only the latest N commits",
+     "-b": "=check out this branch",
+     "--recurse-submodules": "also clone submodules"
+    },
+    "args": "the URL, then optionally a directory"
+   },
+   "tag": {
+    "summary": "Create, list or delete tags",
+    "flags": {
+     "-a": "annotated tag",
+     "-m": "=tag message",
+     "-d": "=delete a tag"
+    }
+   },
+   "remote": {
+    "summary": "Manage remotes",
+    "flags": {
+     "-v": "show URLs",
+     "add": "add a remote",
+     "remove": "remove a remote"
+    }
+   },
+   "cherry-pick": {
+    "summary": "Apply the changes of existing commits here",
+    "flags": {
+     "-x": "note the original commit in the message",
+     "--continue": "go on after resolving conflicts"
+    }
+   },
+   "restore": {
+    "summary": "Restore files from the index or another commit",
+    "flags": {
+     "--staged": "unstage (restore the index)",
+     "--source": "=restore from this commit"
+    }
+   }
+  }
+ },
+ "docker": {
+  "summary": "Run and manage containers",
+  "flags": {
+   "-H": "=talk to this Docker daemon",
+   "--context": "=use this docker context"
+  },
+  "subcommands": {
+   "run": {
+    "summary": "Create and start a container",
+    "flags": {
+     "-d": "run in the background (detached)",
+     "-it": "interactive with a terminal",
+     "-i": "keep stdin open",
+     "-t": "allocate a terminal",
+     "--rm": "delete the container when it exits",
+     "-p": "=publish a port (host:container)",
+     "-v": "=mount a volume or folder (host:container)",
+     "-e": "=set an environment variable",
+     "--name": "=name the container",
+     "--network": "=attach to this network",
+     "-w": "=working directory inside the container",
+     "--privileged": "give the container nearly all host privileges",
+     "-u": "=run as this user"
+    },
+    "args": "image [command…]",
+    "warnings": [
+     {
+      "pattern": "--privileged",
+      "message": "--privileged removes most container isolation."
+     },
+     {
+      "pattern": "-v\\s+/:|-v\\s+/var/run/docker.sock",
+      "message": "Mounting / or the Docker socket gives the container control of the host."
+     }
+    ]
+   },
+   "ps": {
+    "summary": "List containers",
+    "flags": {
+     "-a": "include stopped containers",
+     "-q": "only the ids",
+     "--format": "=format the output"
+    }
+   },
+   "build": {
+    "summary": "Build an image from a Dockerfile",
+    "flags": {
+     "-t": "=name:tag for the image",
+     "-f": "=the Dockerfile to use",
+     "--no-cache": "ignore cached layers",
+     "--build-arg": "=set a build variable"
+    },
+    "args": "the build context directory"
+   },
+   "exec": {
+    "summary": "Run a command inside a running container",
+    "flags": {
+     "-it": "interactive with a terminal",
+     "-i": "keep stdin open",
+     "-t": "allocate a terminal",
+     "-u": "=as this user",
+     "-w": "=working directory"
+    },
+    "args": "container then the command"
+   },
+   "logs": {
+    "summary": "Show a container's output",
+    "flags": {
+     "-f": "follow new output",
+     "--tail": "=only the last N lines",
+     "--since": "=only since this time"
+    }
+   },
+   "compose": {
+    "summary": "Run multi-container apps from a compose file",
+    "flags": {
+     "-f": "=the compose file",
+     "-p": "=the project name",
+     "up": "create and start",
+     "down": "stop and remove",
+     "-d": "in the background",
+     "--build": "rebuild images first"
+    }
+   },
+   "rm": {
+    "summary": "Delete containers",
+    "flags": {
+     "-f": "force-remove running ones",
+     "-v": "also remove anonymous volumes"
+    }
+   },
+   "rmi": {
+    "summary": "Delete images"
+   },
+   "pull": {
+    "summary": "Download an image"
+   },
+   "images": {
+    "summary": "List images"
+   },
+   "system": {
+    "summary": "Manage Docker itself",
+    "flags": {
+     "prune": "delete unused data",
+     "-a": "all unused images, not just dangling ones",
+     "df": "show disk usage"
+    },
+    "warnings": [
+     {
+      "pattern": "prune",
+      "message": "prune permanently deletes stopped containers, unused networks and images."
+     }
+    ]
+   }
+  }
+ },
+ "kubectl": {
+  "summary": "Control a Kubernetes cluster",
+  "flags": {
+   "-n": "=the namespace",
+   "--namespace": "=the namespace",
+   "--context": "=the kube context",
+   "-A": "all namespaces",
+   "--all-namespaces": "all namespaces"
+  },
+  "subcommands": {
+   "get": {
+    "summary": "List resources",
+    "flags": {
+     "-o": "=output format (wide, yaml, json, name)",
+     "-w": "watch for changes",
+     "-l": "=filter by label",
+     "--show-labels": "include labels"
+    },
+    "args": "the resource type (pods, deploy, svc…) and optionally a name"
+   },
+   "describe": {
+    "summary": "Show details and recent events of a resource"
+   },
+   "apply": {
+    "summary": "Create or update resources from a file",
+    "flags": {
+     "-f": "=the manifest file or directory",
+     "-k": "=a kustomize directory",
+     "--dry-run": "=do not change anything (client or server)"
+    }
+   },
+   "delete": {
+    "summary": "Delete resources",
+    "flags": {
+     "-f": "=from this manifest",
+     "--force": "delete immediately without waiting",
+     "--all": "every resource of that type"
+    },
+    "warnings": [
+     {
+      "pattern": "--all|--force",
+      "message": "This can remove many resources at once. Check the namespace (-n) and context first."
+     }
+    ]
+   },
+   "logs": {
+    "summary": "Print a pod's logs",
+    "flags": {
+     "-f": "follow",
+     "--tail": "=only the last N lines",
+     "-c": "=which container",
+     "--previous": "the previous (crashed) container",
+     "-l": "=pods by label"
+    }
+   },
+   "exec": {
+    "summary": "Run a command in a pod",
+    "flags": {
+     "-it": "interactive with a terminal",
+     "-c": "=which container",
+     "--": "the command follows"
+    }
+   },
+   "rollout": {
+    "summary": "Manage a rollout",
+    "flags": {
+     "restart": "restart all pods of a deployment",
+     "status": "wait for it to finish",
+     "undo": "roll back"
+    }
+   },
+   "scale": {
+    "summary": "Change the number of replicas",
+    "flags": {
+     "--replicas": "=the new number"
+    }
+   },
+   "port-forward": {
+    "summary": "Forward a local port to a pod",
+    "args": "pod and local:remote ports"
+   },
+   "config": {
+    "summary": "Edit kubeconfig",
+    "flags": {
+     "use-context": "switch to this context",
+     "current-context": "show the current context",
+     "get-contexts": "list contexts"
+    }
+   }
+  }
+ },
+ "systemctl": {
+  "summary": "Control systemd services",
+  "flags": {
+   "--user": "the per-user manager instead of the system one",
+   "--now": "also start/stop immediately (with enable/disable)",
+   "-l": "do not shorten output",
+   "--no-pager": "do not page the output"
+  },
+  "subcommands": {
+   "start": {
+    "summary": "Start a unit"
+   },
+   "stop": {
+    "summary": "Stop a unit"
+   },
+   "restart": {
+    "summary": "Stop and start a unit"
+   },
+   "reload": {
+    "summary": "Ask a service to reload its configuration"
+   },
+   "enable": {
+    "summary": "Start a unit at boot"
+   },
+   "disable": {
+    "summary": "Do not start a unit at boot"
+   },
+   "status": {
+    "summary": "Show state and recent log lines"
+   },
+   "daemon-reload": {
+    "summary": "Re-read unit files"
+   },
+   "list-units": {
+    "summary": "List loaded units"
+   },
+   "list-timers": {
+    "summary": "List timers and when they run next"
+   },
+   "mask": {
+    "summary": "Make a unit impossible to start"
+   },
+   "is-active": {
+    "summary": "Exit 0 when the unit is running"
+   }
+  }
+ },
+ "journalctl": {
+  "summary": "Read the systemd journal",
+  "flags": {
+   "-u": "=only this unit",
+   "-f": "follow new entries",
+   "-n": "=only the last N entries",
+   "-b": "since the current boot",
+   "-p": "=only this priority and worse (err, warning…)",
+   "--since": "=from this time",
+   "--until": "=up to this time",
+   "-k": "kernel messages",
+   "-r": "newest first",
+   "--no-pager": "do not page",
+   "-o": "=output format (short, json, cat)"
+  }
+ },
+ "ps": {
+  "summary": "List processes",
+  "flags": {
+   "-e": "every process",
+   "-f": "full format",
+   "-u": "=of this user",
+   "aux": "all processes with user and resource columns (BSD style)",
+   "-ef": "every process, full format",
+   "-o": "=choose the columns"
+  }
+ },
+ "kill": {
+  "summary": "Send a signal to a process (the default asks it to terminate)",
+  "flags": {
+   "-9": "SIGKILL: the process cannot ignore it and gets no chance to clean up",
+   "-15": "SIGTERM: ask it to stop",
+   "-HUP": "SIGHUP: often means 'reload'",
+   "-l": "list signals"
+  },
+  "args": "process ids"
+ },
+ "top": {
+  "summary": "Live view of processes",
+  "flags": {
+   "-o": "=sort by this column",
+   "-u": "=only this user"
+  }
+ },
+ "df": {
+  "summary": "Show disk space of mounted filesystems",
+  "flags": {
+   "-h": "human-readable sizes",
+   "-T": "include the filesystem type",
+   "-i": "inodes instead of blocks"
+  }
+ },
+ "du": {
+  "summary": "Show how much space files and directories use",
+  "flags": {
+   "-h": "human-readable sizes",
+   "-s": "only a total per argument",
+   "-d": "=depth to summarize at",
+   "-a": "files too, not just directories",
+   "--max-depth": "=depth to summarize at"
+  }
+ },
+ "free": {
+  "summary": "Show memory use",
+  "flags": {
+   "-h": "human-readable sizes",
+   "-m": "in megabytes",
+   "-g": "in gigabytes"
+  }
+ },
+ "apt": {
+  "summary": "Debian/Ubuntu package manager",
+  "flags": {
+   "-y": "answer yes to every question",
+   "--no-install-recommends": "skip recommended packages"
+  },
+  "subcommands": {
+   "install": {
+    "summary": "Install packages"
+   },
+   "remove": {
+    "summary": "Remove packages, keep configuration"
+   },
+   "purge": {
+    "summary": "Remove packages and their configuration"
+   },
+   "update": {
+    "summary": "Refresh the package index (installs nothing)"
+   },
+   "upgrade": {
+    "summary": "Install available updates"
+   },
+   "search": {
+    "summary": "Search packages"
+   },
+   "autoremove": {
+    "summary": "Remove packages nobody needs any more"
+   }
+  }
+ },
+ "apt-get": {
+  "summary": "Debian/Ubuntu package manager (scripting interface)",
+  "flags": {
+   "-y": "answer yes to every question",
+   "--no-install-recommends": "skip recommended packages"
+  },
+  "subcommands": {
+   "install": {
+    "summary": "Install packages"
+   },
+   "remove": {
+    "summary": "Remove packages"
+   },
+   "update": {
+    "summary": "Refresh the package index"
+   },
+   "upgrade": {
+    "summary": "Install available updates"
+   },
+   "dist-upgrade": {
+    "summary": "Upgrade, adding or removing packages as needed"
+   },
+   "autoremove": {
+    "summary": "Remove unneeded packages"
+   }
+  }
+ },
+ "dnf": {
+  "summary": "Fedora/RHEL package manager",
+  "flags": {
+   "-y": "answer yes to every question"
+  },
+  "subcommands": {
+   "install": {
+    "summary": "Install packages"
+   },
+   "remove": {
+    "summary": "Remove packages"
+   },
+   "upgrade": {
+    "summary": "Update packages"
+   },
+   "search": {
+    "summary": "Search packages"
+   },
+   "makecache": {
+    "summary": "Refresh metadata"
+   },
+   "autoremove": {
+    "summary": "Remove unneeded packages"
+   }
+  }
+ },
+ "pacman": {
+  "summary": "Arch package manager",
+  "flags": {
+   "-S": "install a package (sync)",
+   "-Syu": "refresh the index and upgrade the system",
+   "-R": "remove a package",
+   "-Rs": "remove a package and unneeded dependencies",
+   "-Q": "query installed packages",
+   "-Ss": "=search repositories",
+   "--noconfirm": "do not ask questions"
+  }
+ },
+ "brew": {
+  "summary": "Homebrew package manager",
+  "subcommands": {
+   "install": {
+    "summary": "Install a formula or cask"
+   },
+   "uninstall": {
+    "summary": "Remove one"
+   },
+   "upgrade": {
+    "summary": "Upgrade installed packages"
+   },
+   "update": {
+    "summary": "Refresh Homebrew itself"
+   },
+   "list": {
+    "summary": "List installed packages"
+   },
+   "search": {
+    "summary": "Search"
+   },
+   "info": {
+    "summary": "Show details"
+   }
+  }
+ },
+ "npm": {
+  "summary": "Node.js package manager",
+  "flags": {
+   "-g": "global (system-wide) instead of the current project",
+   "--save-dev": "record as a development dependency",
+   "-D": "record as a development dependency",
+   "--force": "ignore safety checks"
+  },
+  "subcommands": {
+   "install": {
+    "summary": "Install the project's dependencies, or a package"
+   },
+   "run": {
+    "summary": "Run a script from package.json"
+   },
+   "test": {
+    "summary": "Run the test script"
+   },
+   "init": {
+    "summary": "Create a package.json"
+   },
+   "ci": {
+    "summary": "Clean install from the lockfile (for CI)"
+   },
+   "publish": {
+    "summary": "Publish to the registry"
+   }
+  }
+ },
+ "pip": {
+  "summary": "Python package installer",
+  "flags": {
+   "--user": "install for your user only",
+   "-r": "=install from this requirements file",
+   "-U": "upgrade to the newest version",
+   "--upgrade": "upgrade to the newest version"
+  },
+  "subcommands": {
+   "install": {
+    "summary": "Install packages"
+   },
+   "uninstall": {
+    "summary": "Remove packages"
+   },
+   "list": {
+    "summary": "List installed packages"
+   },
+   "freeze": {
+    "summary": "Print installed packages in requirements format"
+   },
+   "show": {
+    "summary": "Show package details"
+   }
+  }
+ },
+ "make": {
+  "summary": "Build targets described in a Makefile",
+  "flags": {
+   "-j": "=run N jobs in parallel",
+   "-f": "=use this makefile",
+   "-C": "=change to this directory first",
+   "-n": "print what would run without running it",
+   "-B": "rebuild everything"
+  },
+  "args": "targets to build (default: the first)"
+ },
+ "dotnet": {
+  "summary": ".NET command line",
+  "subcommands": {
+   "build": {
+    "summary": "Compile a project or solution",
+    "flags": {
+     "-c": "=configuration (Debug or Release)",
+     "--no-restore": "skip restoring packages"
+    }
+   },
+   "run": {
+    "summary": "Build and run a project",
+    "flags": {
+     "--project": "=which project",
+     "--": "arguments for your program follow"
+    }
+   },
+   "test": {
+    "summary": "Run unit tests",
+    "flags": {
+     "--filter": "=run only matching tests",
+     "--no-build": "do not build first"
+    }
+   },
+   "publish": {
+    "summary": "Package the app for deployment",
+    "flags": {
+     "-c": "=configuration",
+     "-r": "=target runtime id",
+     "--self-contained": "include the runtime"
+    }
+   },
+   "restore": {
+    "summary": "Download dependencies"
+   },
+   "new": {
+    "summary": "Create a project from a template"
+   },
+   "add": {
+    "summary": "Add a package or reference"
+   },
+   "format": {
+    "summary": "Fix code formatting",
+    "flags": {
+     "--verify-no-changes": "only check"
+    }
+   }
+  }
+ },
+ "python": {
+  "summary": "Run Python",
+  "flags": {
+   "-m": "=run a module as a script (python -m venv, -m http.server…)",
+   "-c": "=run this code",
+   "-V": "print the version",
+   "-u": "unbuffered output",
+   "-i": "stay interactive after running"
+  },
+  "args": "a script file and its arguments"
+ },
+ "python3": {
+  "summary": "Run Python 3",
+  "flags": {
+   "-m": "=run a module as a script",
+   "-c": "=run this code",
+   "-V": "print the version",
+   "-u": "unbuffered output"
+  },
+  "args": "a script file and its arguments"
+ },
+ "node": {
+  "summary": "Run Node.js",
+  "flags": {
+   "-e": "=run this code",
+   "-v": "print the version",
+   "--inspect": "enable the debugger"
+  },
+  "args": "a script file and its arguments"
+ },
+ "which": {
+  "summary": "Show which executable a name resolves to",
+  "flags": {
+   "-a": "all matches on PATH"
+  }
+ },
+ "man": {
+  "summary": "Show a command's manual page",
+  "flags": {
+   "-k": "=search page names and descriptions"
+  }
+ },
+ "export": {
+  "summary": "Set an environment variable for the shell and what it starts",
+  "args": "NAME=value"
+ },
+ "env": {
+  "summary": "Print the environment, or run a command with changed variables",
+  "flags": {
+   "-i": "start with an empty environment",
+   "-u": "=unset this variable"
+  }
+ },
+ "ping": {
+  "summary": "Check that a host answers",
+  "flags": {
+   "-c": "=stop after N packets",
+   "-n": "=number of echo requests (Windows)",
+   "-t": "ping until stopped (Windows)",
+   "-i": "=seconds between packets",
+   "-W": "=seconds to wait for a reply"
+  },
+  "args": "the host"
+ },
+ "ip": {
+  "summary": "Show and configure network interfaces (Linux)",
+  "flags": {
+   "-c": "colored output",
+   "-br": "brief output"
+  },
+  "subcommands": {
+   "addr": {
+    "summary": "Addresses of interfaces"
+   },
+   "link": {
+    "summary": "Network devices and their state"
+   },
+   "route": {
+    "summary": "The routing table"
+   },
+   "neigh": {
+    "summary": "The ARP/neighbor table"
+   }
+  }
+ },
+ "ss": {
+  "summary": "Show sockets (the modern netstat)",
+  "flags": {
+   "-t": "TCP",
+   "-u": "UDP",
+   "-l": "listening sockets",
+   "-n": "numbers, not names",
+   "-p": "the owning process",
+   "-a": "all sockets"
+  }
+ },
+ "netstat": {
+  "summary": "Show network connections and ports",
+  "flags": {
+   "-t": "TCP",
+   "-u": "UDP",
+   "-l": "listening only",
+   "-n": "numbers, not names",
+   "-p": "the owning process",
+   "-a": "all",
+   "-r": "the routing table"
+  }
+ },
+ "dd": {
+  "summary": "Copy raw data between files or devices",
+  "flags": {
+   "if": "=input file",
+   "of": "=output file",
+   "bs": "=block size",
+   "count": "=how many blocks",
+   "status": "=progress (status=progress)"
+  },
+  "warnings": [
+   {
+    "pattern": "of=/dev/",
+    "message": "Writing to a device with dd overwrites it completely, partition table included. Check of= twice."
+   }
+  ]
+ },
+ "mkfs": {
+  "summary": "Create a filesystem (erases the device)",
+  "warnings": [
+   {
+    "pattern": ".*",
+    "message": "mkfs destroys everything on the target device."
+   }
+  ]
+ },
+ "shutdown": {
+  "summary": "Power off or reboot",
+  "flags": {
+   "-h": "halt",
+   "-r": "reboot",
+   "now": "immediately",
+   "/s": "shut down (Windows)",
+   "/r": "restart (Windows)",
+   "/t": "=seconds to wait (Windows)"
+  }
+ },
+ "pk": {
+  "summary": "Pickle's own commands (pk help lists them)"
+ }
+}

@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+    <ProjectReference Include="..\Pickle.Admin\Pickle.Admin.csproj" />
     <ProjectReference Include="..\Pickle.Network\Pickle.Network.csproj" />
     <ProjectReference Include="..\Pickle.Wizards\Pickle.Wizards.csproj" />
   </ItemGroup>
@@ -12,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Pickle.Tui.Tests" />
+    <InternalsVisibleTo Include="Pickle.Modules.Tests" />
   </ItemGroup>
 </Project>

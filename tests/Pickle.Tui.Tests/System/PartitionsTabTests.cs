@@ -3,15 +3,12 @@ using Pickle.Abstractions.Services;
 using Pickle.Testing;
 using Pickle.Testing.Fakes;
 using Pickle.Tui.Panels.SystemMonitoring;
-using Pickle.Wizards;
 using static Pickle.Tui.Tests.Windows.PanelRunner;
 
 namespace Pickle.Tui.Tests.SystemMonitoring;
 
 public sealed class PartitionsTabTests : IDisposable
 {
-    private static readonly IReadOnlyList<WizardDefinition> Wizards = WizardLoader.LoadEmbedded((name, ex) => throw new InvalidOperationException(name, ex));
-
     private static readonly PhysicalDisk SystemDisk = new(
         0, "Samsung SSD 980", "GPT", 1000L << 30, 1000L << 30, "Online", false, false, true, true, "NVMe",
         [
@@ -44,50 +41,27 @@ public sealed class PartitionsTabTests : IDisposable
     }
 
     [Fact]
-    public void SystemDisksAndPartitionsAreNeverOfferedForDeletion()
+    public void PlannedVolumesAreMarkedInTheRows()
     {
-        var rows = DiskLayoutRows.Build([SystemDisk, DataDisk, NewDisk]);
-        var labels = rows.ToDictionary(DiskLayoutRows.Name, r => DiskLayoutRows.Actions(r).Select(a => a.Label).ToList());
-
-        Assert.DoesNotContain("Wipe the disk (clean)…", labels["Disk 0  Samsung SSD 980"]);
-        Assert.DoesNotContain("Delete partition…", labels["    C: partition 3"]);
-        Assert.Contains("Delete partition…", labels["    E: partition 1"]);
-        Assert.Contains("Wipe the disk (clean)…", labels["Disk 1  WD Elements"]);
-        Assert.Equal(["Initialize (GPT)…", "Bring online…"], labels["Disk 2  Blank SSD"]);
-        Assert.Equal(["New partition in this space"], labels["    unallocated"]);
-    }
-
-    [Fact]
-    public void EveryActionParsesBackIntoItsWizard()
-    {
-        foreach (var row in DiskLayoutRows.Build([SystemDisk, DataDisk, NewDisk]))
+        var planned = DataDisk with
         {
-            foreach (var action in DiskLayoutRows.Actions(row))
-            {
-                var wizard = Assert.Single(Wizards, w => w.Id == action.WizardId);
-                var parsed = WizardEngine.Parse(wizard, action.Command);
-                Assert.True(parsed.Matched, action.Command);
-                Assert.Empty(parsed.UnknownTokens);
-            }
-        }
+            AllocatedSize = 1000L << 30,
+            Partitions = [.. DataDisk.Partitions, new DiskPartition(1, DiskOperationRules.PlannedPartitionBase, 'F', 500L << 30, "Basic", false, false, "NTFS", "Scratch", 500L << 30)],
+        };
+
+        var rows = DiskLayoutRows.Build([planned]);
+
+        Assert.Equal("    F: new volume", DiskLayoutRows.Name(rows[2]));
+        Assert.StartsWith("planned", DiskLayoutRows.Status(rows[2]), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void EnterOffersActionsAndOpensThePrefilledWizard()
+    public void EnterOpensTheDiskConfigurationPanelOrSaysItCannot()
     {
         _t.Runtime.ServiceRegistry.Add<IDiskMonitor>(new FakeDiskMonitor());
         _t.Runtime.ServiceRegistry.Add<IDiskLayoutService>(new FakeLayout([SystemDisk, DataDisk]));
-        var opened = new List<(string Wizard, string Command)>();
-        IReadOnlyList<string>? offered = null;
-        using var panel = new DisksPanel(new PanelContext { Pickle = _t.Runtime })
-        {
-            PickHook = (_, options) =>
-            {
-                offered = options;
-                return "Format…";
-            },
-            WizardHook = (wizard, command) => opened.Add((wizard, command)),
-        };
+        string? message = null;
+        using var panel = new DisksPanel(new PanelContext { Pickle = _t.Runtime }) { MessageHook = (_, text) => message = text };
 
         Run(
             panel,
@@ -95,11 +69,10 @@ public sealed class PartitionsTabTests : IDisposable
             When(() => panel.Partitions!.TotalCount == 7, () =>
             {
                 panel.Partitions!.Select(r => r.Partition?.DriveLetter == 'E');
-                panel.ChooseDiskAction();
+                panel.ConfigureSelected();
             }));
 
-        Assert.Contains("Delete partition…", offered!);
-        Assert.Equal([("format-volume", "Format-Volume -DriveLetter E -FileSystem NTFS")], opened);
+        Assert.Contains("not available here", message, StringComparison.Ordinal);
     }
 
     private sealed class FakeLayout(IReadOnlyList<PhysicalDisk> disks) : IDiskLayoutService

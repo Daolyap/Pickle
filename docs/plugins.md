@@ -13,6 +13,10 @@ Linux-style commands and hooks. There are two kinds, and both can do everything 
 Everything Pickle ships (the git, winget, sandbox and network tools panels, the wizards, the Windows integrations) is
 built as plugins through the same interfaces, so anything built in is something a plugin can do too.
 
+Features that live in this repository but should stay off until someone asks for them (Docker, Kubernetes, nmap, the
+secrets vault…) are **modules**: ordinary plugins compiled into `pickle.exe` and selected at install time or with
+`pk module`. They are for contributors; see [modules.md](modules.md). Plugins written outside the repository use this guide.
+
 - [Quick start](#quick-start)
 - [PowerShell plugins](#powershell-plugins): [commands](#pk-commands), [panels](#panels), [wizards](#wizards),
   [prompt segments](#prompt-segments), [completions](#completions), [key bindings](#key-bindings),

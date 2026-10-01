@@ -16,11 +16,14 @@ first-class Windows tooling on top.
 | 🔎 **Search** | Fuzzy history (Ctrl+R) scoped to all / this directory / this session; fuzzy completion menu with descriptions |
 | 🎨 **Prompt & themes** | Built-in themeable prompt (git, duration, status, k8s, aws/azure/gcloud, docker, venv, node, .NET/Go/Rust, battery…) and 18 themes — dracula, nord, gruvbox, catppuccin, tokyo-night, rose-pine, a light one, and **animated** aurora, synthwave, matrix, ember and prism; follows the system's light/dark mode (`pk theme auto`), imports any Windows Terminal color scheme (`pk theme import`), drives `$PSStyle` and your Windows Terminal colors; a red admin theme and logo when elevated ([themes guide](docs/themes.md)) |
 | 📈 **Tab progress** | Windows Terminal's tab and taskbar button show a progress ring while a command runs, the real percentage for `Write-Progress`, and red when it failed; optional bell after long commands (`terminal.bellAfterSeconds`) |
-| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), system dashboard (Alt+I), theme gallery (Alt+E), SSH hosts (Alt+H), disks with partitions (Alt+D), winget (Alt+W), Windows Update (Alt+U), Task Scheduler (Alt+S), Windows Sandbox (Alt+X), settings (Alt+,) |
+| 🪟 **Panels** | Full-screen TUI panels: command palette (F1), files (Ctrl+T), git (Alt+G), jobs (Alt+J), processes (Alt+P), network (Alt+N), network tools (Alt+T), system dashboard (Alt+I), theme gallery (Alt+E), SSH hosts (Alt+H), disks (Alt+D), disk configuration (Alt+Shift+C), winget (Alt+W), Windows Update (Alt+U), Task Scheduler / cron / systemd timers (Alt+S), services (Alt+V), logs (Alt+L), hosts, PATH and environment (Alt+O), packages on Linux/macOS (Alt+K), Windows Sandbox (Alt+X), settings (Alt+,) |
 | 🛰️ **Network tools** | Built in, nothing to install: port scan (`pk scan 10.0.0.0/24 -p top100`), host discovery with MACs (`pk sweep`), DNS lookups against any server (`pk dns`), `pk trace`, `pk whois`, TLS certificate checks (`pk cert`), `pk http` timings, `pk subnet`, Wake-on-LAN, `pk ip` |
 | 📥 **Missing tools** | Type `7z …` or `nmap …` without them installed and Pickle offers to install first — just for you, all users or this session only, added to PATH — instead of a broken command (`pk tool install <name>`, ~100 known tools from zoxide to Sysinternals: `pk tool list`) |
 | 📊 **System** | `pk dashboard` (Alt+I): OS, uptime, CPU/memory/swap history, disks, network, battery, top processes and pending restarts at a glance; `pk devious` fills the screen hacker-movie style with real data from your machine |
-| 💽 **Disk management** | diskpart without the guesswork: the Disks panel's Partitions tab and wizards for Format-Volume, New/Resize/Remove-Partition, Initialize/Clear/Set-Disk, Repair- and Optimize-Volume; boot and system disks are never offered for wiping |
+| 💽 **Disk configuration** | Disk Management without leaving the terminal (Alt+Shift+C, `pk diskconfig`): every disk drawn as a strip, its partitions and free space as a table; plan initialize, new volume, format, resize, delete, drive letter, label, check, optimize, online/offline/read-only and wipe, see the plan as the PowerShell it equals, then apply it all with **one** administrator prompt — in order, stopping at the first failure. Windows and the boot files are never offered, and the elevated helper checks every change against the live disks again |
+| 🧰 **Administration** | Panels and commands for the machine itself, on every OS: services and daemons (Alt+V, `pk services`: Windows services, systemd, launchd), event logs and journals (Alt+L, `pk logs`), a hosts / PATH / environment-variable editor (Alt+O, `pk hosts`, `pk path`, `pk env`), cron, systemd timers and launchd agents next to Task Scheduler (Alt+S, `pk schedule`), and a package manager panel for apt, dnf, zypper, pacman and Homebrew (Alt+K, `pk pkg`). Least privilege: Pickle itself never has to run as administrator — on Windows an allowlisted helper asks UAC once, on Linux and macOS one fixed `pkexec`/`sudo -n` command (or a line to run in your shell when a password is needed), and files are staged and validated before anything is installed over system files |
+| 🌤️ **Live prompt segments** | `weather` (Open-Meteo, no key: place, coordinates or your IP's location; metric or imperial), `music` (what's playing: Windows media sessions, MPRIS via `playerctl`, Music and Spotify on macOS) and a configurable `battery` segment. Off until you enable them (`weather.enabled`, `music.enabled` in settings); the first Pickle fetches values in the background, so the prompt never waits |
+| 🧩 **Optional modules** | Inside the same exe but off until you pick them (installer, `pk module setup`, `pk module enable <id>`, `PICKLE_MODULES`): **nmap** scan builder, **Docker/Podman**, **Kubernetes** and **GitHub** panels, **language-version** prompt segments, a **long-command notifier**, an offline **command explainer** (`pk explain`), a **secrets vault** (`pk secret`, in Credential Manager / libsecret / Keychain), a **WSL and Linux containers** manager (Distrobox, Toolbx, LXC, Incus) and extra **theme packs** — see [docs/modules.md](docs/modules.md) |
 | 🔤 **Fonts** | Installs Cascadia Code Nerd Font on request (`pk font install`) and falls back to plain glyphs when the terminal's font lacks the icons, so no `�` in the prompt |
 | 🧪 **Windows Sandbox** | Throwaway Windows in one key: presets (safe browsing, test an installer, offline analysis…), shared folders, networking and device switches, winget packages and Pickle itself inside (`pk sandbox run`) |
 | 📦 **winget** | Browse, search (as you type), install and upgrade packages interactively — as administrator with one UAC prompt for the lot (`--admin`); `pk upgrade` updates apps *and* Windows; one-click (UAC) winget source repair |
@@ -38,10 +41,10 @@ first-class Windows tooling on top.
 |---|---|
 | winget | `winget install Daolyap.Pickle` *(after the first release is published)* |
 | Scoop | `scoop bucket add pickle https://github.com/Daolyap/Pickle` then `scoop install pickle/pickle` |
-| MSI | Download `pickle-<version>-win-x64.msi` from [Releases](https://github.com/Daolyap/Pickle/releases) — choose the folder and features (PATH, Windows Terminal profile, Nerd Font, Start menu and desktop shortcuts); uninstalling asks whether to remove your settings and history too |
-| Portable | Download `pickle-<version>-win-x64.exe` and run it; the first run offers the font, a Windows Terminal profile and making Pickle the default (`pk setup` shows it again) |
-| Fedora / RHEL | Download `pickle-<version>-1.x86_64.rpm` from [Releases](https://github.com/Daolyap/Pickle/releases), then `sudo dnf install ./pickle-*.x86_64.rpm` |
-| Other Linux | Download `pickle-<version>-linux-x64.tar.gz`, extract `pickle` somewhere on your `PATH` (needs `libicu`) |
+| MSI | Download `pickle-<version>-win-x64.msi` from [Releases](https://github.com/Daolyap/Pickle/releases) — choose the folder and features (PATH, Windows Terminal profile, Nerd Font, Start menu and desktop shortcuts, and the [optional modules](docs/modules.md), which are off until ticked); uninstalling asks whether to remove your settings and history too. Silent: `msiexec /i pickle.msi /qn ADDLOCAL=Main,Module_docker,Module_nmap` |
+| Portable | Download `pickle-<version>-win-x64.exe` and run it; the first run offers the font, a Windows Terminal profile, the optional modules and making Pickle the default (`pk setup` shows it again) |
+| Fedora / RHEL | Download `pickle-<version>-1.x86_64.rpm` from [Releases](https://github.com/Daolyap/Pickle/releases), then `sudo dnf install ./pickle-<version>-1.x86_64.rpm`. Each optional module is its own noarch package (`pickle-module-docker`, `pickle-module-nmap`, …; `pickle-modules-all` for everything) that turns the module on for every user |
+| Other Linux | Download `pickle-<version>-linux-x64.tar.gz`, extract `pickle` somewhere on your `PATH` (needs `libicu`); `PICKLE_MODULES=docker,nmap` (or `pk module setup`) turns modules on |
 
 Pickle looks for a newer release once a day in the background and says so under the banner
 (`shell.checkForUpdates`); `pk version check` asks right away, and `pk version update` installs it for the portable exe and
@@ -77,12 +80,17 @@ pk setup                           # run the first-start setup again
 pk bugreport                       # a zip for an issue: versions, pk doctor, config and logs, secrets removed
 pk sandbox run "Test an installer" # throwaway Windows with Downloads shared read-only
 pk plugin new MyTools              # start a plugin (docs/plugins.md)
+pk module setup                    # pick optional modules: Docker, nmap, vault, WSL… (docs/modules.md)
+pk secret set github-token         # a token in the OS credential store, asked without echo
+pk secret run -e GH_TOKEN=github-token gh api user   # the variable exists only while gh runs
+pk explain tar -xzvf backup.tgz -C /tmp            # what each part does, offline
 ```
 
 Keys: **F1** palette · **Ctrl+R** history · **Tab** completion · **→** accept suggestion · **Ctrl+T** files ·
 **F2** wizard · **Alt+G** git · **Alt+W** winget · **Alt+U** updates · **Alt+J** jobs · **Alt+S** scheduler · **Alt+,** settings ·
-**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) · **Alt+I** dashboard (`pk dashboard`) · **Alt+E** theme gallery (`pk theme gallery`) · **Alt+H** SSH hosts (`pk ssh`) ·
-**Alt+X** Windows Sandbox (`pk sandbox`).
+**Alt+P** processes (`pk top`) · **Alt+N** network (`pk net`) · **Alt+T** network tools (`pk tools`) · **Alt+D** disks (`pk disks [folder]`) · **Alt+Shift+C** disk configuration (`pk diskconfig`) · **Alt+I** dashboard (`pk dashboard`) · **Alt+E** theme gallery (`pk theme gallery`) · **Alt+H** SSH hosts (`pk ssh`) ·
+**Alt+X** Windows Sandbox (`pk sandbox`) · **Alt+V** services (`pk services`) · **Alt+L** logs (`pk logs`) · **Alt+O** hosts, PATH and environment (`pk hosts`, `pk path`, `pk env`) · **Alt+K** packages (`pk pkg`) ·
+modules add **Alt+Shift+** keys: N nmap · D Docker · K Kubernetes · G GitHub · W WSL and containers · E explain.
 
 ## Configuration
 

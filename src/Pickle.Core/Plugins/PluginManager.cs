@@ -2,6 +2,7 @@ using System.Management.Automation;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 using Pickle.Core.Commands;
 using Pickle.Core.Config;
 using Pickle.Core.Contracts;
@@ -88,6 +89,8 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
             }
         }
 
+        _runtime.ModuleCatalog.LoadEnabled();
+
         if (!ThirdPartyEnabled)
         {
             _runtime.Log.Info("plugins", "Third-party plugins are off (--no-plugins or plugins.autoLoad=false)");
@@ -96,6 +99,31 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
 
         LoadThirdParty();
         ShowNotices();
+    }
+
+    /// <summary>Creates and initializes an optional module (once per session); a module that throws is marked failed, nothing else is affected.</summary>
+    public PluginInfo LoadModule(ModuleDescriptor module)
+    {
+        if (Find(module.Id, PluginInfo.ModuleKind) is { Status: PluginStatus.Loaded } loaded)
+        {
+            return loaded;
+        }
+
+        var info = new PluginInfo { Id = module.Id, DisplayName = module.Name, Description = module.Description, Kind = PluginInfo.ModuleKind };
+        Add(info);
+        try
+        {
+            InitializeTracked(module.Create(), module.Id);
+            info.Status = PluginStatus.Loaded;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _runtime.Log.Error("plugins", $"Module {module.Id} failed to initialize", ex);
+            info.Status = PluginStatus.Failed;
+            info.Error = ex.Message;
+        }
+
+        return info;
     }
 
     /// <summary>Discover and load plugins that are not loaded yet (startup, <c>pk reload</c>, after install/trust).</summary>
@@ -171,8 +199,9 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
     }
 
     /// <summary>Initialize a .NET/built-in plugin and record what it registered (commands, segments, panels, wizards).</summary>
-    private void InitializeTracked(IPicklePlugin plugin)
+    private void InitializeTracked(IPicklePlugin plugin, string? id = null)
     {
+        id ??= plugin.Id;
         HashSet<string> Snapshot() =>
         [
             .. _runtime.CommandRegistry.All.Select(c => "command: " + c.Name),
@@ -183,14 +212,14 @@ public sealed class PluginManager : IPluginManager, IRuntimeComponent, IDisposab
         ];
 
         var before = Snapshot();
-        using (Attribute(plugin.Id))
+        using (Attribute(id))
         {
             plugin.Initialize(_runtime);
         }
 
         foreach (var added in Snapshot().Except(before).Order(StringComparer.Ordinal))
         {
-            RecordContribution(plugin.Id, added);
+            RecordContribution(id, added);
         }
     }
 

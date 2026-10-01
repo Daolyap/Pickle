@@ -1,0 +1,122 @@
+{
+  "name": "github-light",
+  "description": "GitHub's light theme with plain segments.",
+  "terminal": {
+    "background": "#FFFFFF",
+    "foreground": "#24292F",
+    "cursorColor": "#24292F",
+    "selectionBackground": "#DDF4FF",
+    "black": "#24292F",
+    "red": "#CF222E",
+    "green": "#1A7F37",
+    "yellow": "#9A6700",
+    "blue": "#0969DA",
+    "purple": "#8250DF",
+    "cyan": "#1B7C83",
+    "white": "#6E7781",
+    "brightBlack": "#57606A",
+    "brightRed": "#CF222E",
+    "brightGreen": "#1A7F37",
+    "brightYellow": "#9A6700",
+    "brightBlue": "#0969DA",
+    "brightPurple": "#8250DF",
+    "brightCyan": "#1B7C83",
+    "brightWhite": "#24292F"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#1B7C83",
+    "unknownCommand": "#CF222E",
+    "parameter": "#57606A",
+    "string": "#1A7F37",
+    "number": "#8250DF",
+    "variable": "#24292F",
+    "operator": "#0969DA",
+    "keyword": "#0969DA",
+    "comment": "#6E7781",
+    "type": "#1B7C83",
+    "member": "#24292F",
+    "error": "#CF222E",
+    "suggestion": "#6E7781",
+    "selectionBackground": "#DDF4FF",
+    "translated": "#6E7781"
+  },
+  "ui": {
+    "accent": "#0969DA",
+    "muted": "#57606A",
+    "success": "#1A7F37",
+    "warning": "#9A6700",
+    "error": "#CF222E",
+    "info": "#0969DA",
+    "panelBackground": "#FFFFFF",
+    "panelForeground": "#24292F",
+    "panelBorder": "#DDF4FF",
+    "highlightBackground": "#DDF4FF",
+    "highlightForeground": "#24292F",
+    "menuBackground": "#F6F8FA",
+    "menuForeground": "#24292F",
+    "menuSelectedBackground": "#0969DA",
+    "menuSelectedForeground": "#FFFFFF",
+    "menuDescription": "#6E7781",
+    "matchHighlight": "#9A6700"
+  },
+  "prompt": {
+    "separator": "plain",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#0969DA",
+    "promptCharErrorColor": "#CF222E",
+    "continuationPrompt": "\u2219 ",
+    "transientTemplate": "{promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#CF222E",
+        "options": {
+          "symbol": "ADMIN"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#9A6700",
+        "template": "({value})"
+      },
+      {
+        "type": "cwd",
+        "foreground": "#0969DA",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#1A7F37",
+        "template": "{icon} {value}",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#9A6700",
+        "template": "took {value}"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#1B7C83",
+        "template": "\u2699 {value}"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#CF222E"
+      },
+      {
+        "type": "time",
+        "foreground": "#57606A",
+        "options": {
+          "format": "HH:mm"
+        }
+      }
+    ]
+  }
+}

@@ -124,6 +124,18 @@ internal sealed class FakeExecutor : IElevatedExecutor
 
     public Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken) => Record("enable-sandbox");
 
+    public Task<ElevatedResponse> ControlServiceAsync(string serviceName, string action, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Record($"service {serviceName} {action}");
+
+    public Task<ElevatedResponse> WriteHostsFileAsync(string content, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Record($"hosts {content.Length}");
+
+    public Task<ElevatedResponse> SetMachineEnvironmentAsync(string name, string? value, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Record($"env {name}={value ?? "<removed>"}");
+
+    public Task<ElevatedResponse> RunStorageOperationsAsync(IReadOnlyList<DiskOperation> operations, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Record("storage " + string.Join(" | ", operations.Select(DiskOperationRules.Describe)));
+
     private Task<ElevatedResponse> Record(string call)
     {
         lock (Calls)

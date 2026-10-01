@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Optional Pickle modules: nmap, Docker, Kubernetes, GitHub, language-version segments, long-command notifier, command explainer, secrets vault, WSL/Distrobox manager, theme packs. Only the ones selected at install (or with pk module) are loaded.</Description>
+    <RootNamespace>Pickle.Modules</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Pickle.Abstractions\Pickle.Abstractions.csproj" />
+    <ProjectReference Include="..\Pickle.Tui\Pickle.Tui.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Terminal.Gui" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Themes\Packs\*.json" LogicalName="Pickle.Modules.Themes.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Explain\pack.json" LogicalName="Pickle.Modules.Explain.pack.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickle.Modules.Tests" />
+  </ItemGroup>
+</Project>

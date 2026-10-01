@@ -3,7 +3,7 @@
   Pickle MSI (WiX Toolset 5.0.2, MS-RL; UI and Util extensions). Built by packaging/wix/build-msi.ps1.
 
   Installing shows a feature tree (install folder, PATH, Windows Terminal profile, the Cascadia Code Nerd Font, Start
-  menu and desktop shortcuts) and can start Pickle when it finishes. Removing through the installer's own dialogs
+  menu and desktop shortcuts, and the optional modules, which are off until ticked) and can start Pickle when it finishes. Removing through the installer's own dialogs
   (Apps > Pickle > Modify > Remove) has a checkbox to delete the user's Pickle data too; a plain uninstall (Apps >
   Uninstall) asks the same in a message box; `msiexec /x … REMOVEUSERDATA=1` deletes it without asking.
 
@@ -146,6 +146,8 @@
       <Feature Id="DesktopFeature" Title="Desktop shortcut" Level="2" Description="A Pickle shortcut on the desktop.">
         <ComponentRef Id="DesktopShortcut" />
       </Feature>
+      <!-- One feature per optional module, off by default: generated into Modules.wxs by build-msi.ps1 (packaging/modules.json). -->
+      <FeatureRef Id="ModulesFeature" />
     </Feature>
 
     <!-- Install / repair / change: write the all-users Terminal profile after the fonts are registered. -->

@@ -24,6 +24,12 @@ public static partial class WindowsIds
     [GeneratedRegex(@"^\\(?:[A-Za-z0-9][A-Za-z0-9 ._\-]{0,63}(?:\\[A-Za-z0-9][A-Za-z0-9 ._\-]{0,63})*\\?)?$", RegexOptions.CultureInvariant)]
     private static partial Regex TaskFolderRegex();
 
+    [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9_.$@\-]{0,255}$", RegexOptions.CultureInvariant)]
+    private static partial Regex ServiceNameRegex();
+
+    /// <summary>A Windows service's short name: no slashes, spaces or shell characters.</summary>
+    public static bool IsValidServiceName([NotNullWhen(true)] string? name) => name is not null && ServiceNameRegex().IsMatch(name);
+
     public static bool IsValidWingetId([NotNullWhen(true)] string? id) => id is not null && WingetIdRegex().IsMatch(id);
 
     public static bool IsValidWingetVersion([NotNullWhen(true)] string? version) => version is not null && WingetVersionRegex().IsMatch(version);

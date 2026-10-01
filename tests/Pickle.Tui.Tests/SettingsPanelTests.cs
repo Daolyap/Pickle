@@ -10,7 +10,7 @@ public class SettingsPanelTests
     public void CategoriesAndFieldsComeFromTheConfigClasses()
     {
         Assert.Equal(
-            ["Theme", "Editor", "History", "Prompt", "Translation", "Shell", "Plugins", "Sync", "Terminal", "Winget", "Key bindings"],
+            ["Theme", "Editor", "History", "Prompt", "Translation", "Shell", "Plugins", "Modules", "Sync", "Terminal", "Winget", "Weather", "Music", "Battery", "Key bindings"],
             SettingsModel.Categories);
 
         var (t, _) = TuiHarness.Start();

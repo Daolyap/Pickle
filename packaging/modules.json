@@ -1,0 +1,75 @@
+{
+  "_comment": "The optional modules the installers offer, one entry per non-hidden descriptor in src/Pickle.Modules (ModulePackagingTests keeps this file and the code in step). packaging/modules.py turns it into the MSI feature tree and the RPM sub-packages. rpmRecommends: Fedora packages that provide the tools a module drives (weak dependencies: installed when available, never required).",
+  "modules": [
+    {
+      "id": "nmap",
+      "name": "nmap",
+      "description": "Scan builder and results browser: panel and pk nmap (needs nmap installed)",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["nmap"]
+    },
+    {
+      "id": "docker",
+      "name": "Docker / Podman",
+      "description": "Containers, images, volumes and compose projects: panel and pk docker",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["podman"]
+    },
+    {
+      "id": "kubernetes",
+      "name": "Kubernetes",
+      "description": "Contexts, namespaces, pods, deployments and services: panel and pk k8s",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["kubernetes-client"]
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "description": "Pull requests, issues and workflow runs: panel and pk gh (uses the gh CLI)",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["gh"]
+    },
+    {
+      "id": "languages",
+      "name": "Language versions",
+      "description": "Prompt segments for python, java, ruby, php, deno, bun, terraform, elixir, lua, swift, zig and dart",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": []
+    },
+    {
+      "id": "notifier",
+      "name": "Long-command notifier",
+      "description": "A desktop notification when a command that took a while finishes (toast, notify-send, osascript)",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["libnotify"]
+    },
+    {
+      "id": "explain",
+      "name": "Command explainer",
+      "description": "pk explain and Alt+Shift+E: what each part of a command line does, offline, with warnings for dangerous ones",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": []
+    },
+    {
+      "id": "vault",
+      "name": "Secrets vault",
+      "description": "API keys and tokens in Credential Manager / the Secret Service / Keychain, or an encrypted file: pk secret set, get, run",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["libsecret"]
+    },
+    {
+      "id": "wsl",
+      "name": "WSL & Linux containers",
+      "description": "WSL distributions (Windows) and Distrobox, Toolbx, LXC and Incus containers (Linux): list, start, stop, enter, export, remove",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": ["distrobox"]
+    },
+    {
+      "id": "themes",
+      "name": "Theme packs",
+      "description": "Twelve extra themes: Monokai, One Dark, Kanagawa, GitHub, Oxocarbon, Night Owl, …",
+      "platforms": ["windows", "linux", "macos"],
+      "rpmRecommends": []
+    }
+  ]
+}

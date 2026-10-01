@@ -37,13 +37,13 @@ public class PluginCommandTests
     {
         using var t = TestPickle.Create(start: true);
         var work = Directory.CreateDirectory(Path.Combine(t.Home, "work")).FullName;
-        t.Run($"Set-Location -LiteralPath '{work}'; pk plugin new Weather");
-        Assert.True(File.Exists(Path.Combine(work, "Weather", "Weather.psd1")));
-        Assert.Equal(["True"], t.Run($"(Import-PowerShellDataFile -LiteralPath '{Path.Combine(work, "Weather", "Weather.psd1")}').PrivateData.ContainsKey('Pickle')"));
+        t.Run($"Set-Location -LiteralPath '{work}'; pk plugin new Greeter");
+        Assert.True(File.Exists(Path.Combine(work, "Greeter", "Greeter.psd1")));
+        Assert.Equal(["True"], t.Run($"(Import-PowerShellDataFile -LiteralPath '{Path.Combine(work, "Greeter", "Greeter.psd1")}').PrivateData.ContainsKey('Pickle')"));
 
-        t.Run("pk plugin install ./Weather");
-        Assert.Equal(["Hello, Zoe, from Weather!"], t.Run("pk weather Zoe"));
-        Assert.NotNull(t.Runtime.PromptSegmentRegistry.Get("weather"));
+        t.Run("pk plugin install ./Greeter");
+        Assert.Equal(["Hello, Zoe, from Greeter!"], t.Run("pk greeter Zoe"));
+        Assert.NotNull(t.Runtime.PromptSegmentRegistry.Get("greeter"));
     }
 
     [Fact]

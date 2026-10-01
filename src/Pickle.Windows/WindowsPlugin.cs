@@ -35,6 +35,8 @@ public sealed class WindowsPlugin : IPicklePlugin
         {
             AddIfMissing<IFontService>(services, Fonts.WindowsFontService.ForCurrentSystem);
             AddIfMissing<IDiskLayoutService>(services, () => new Storage.DiskLayoutService(() => context.Shell));
+            AddIfMissing<IDiskConfigurationService>(services, () => new Storage.DiskConfigurationService(services.Require<IDiskLayoutService>(), services.Require<IElevationBroker>(), () => context.Shell));
+            RegisterAdministration(context);
         }
 
         context.Commands.Register(new WingetCommand());
@@ -47,6 +49,18 @@ public sealed class WindowsPlugin : IPicklePlugin
 
         Terminal.WindowsTerminalIntegration.Register(context);
         RegisterUpgradeCheck(context);
+    }
+
+    // Windows backends for the administration panels (services, hosts file, environment); Pickle.Admin covers Linux and macOS.
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void RegisterAdministration(IPickleContext context)
+    {
+        var services = context.Services;
+        AddIfMissing<ISystemServiceManager>(services, () => new Services.WindowsServiceManager(() => context.Shell, services.Require<IElevationBroker>()));
+        AddIfMissing<ILogSource>(services, () => new Logs.WindowsEventLogSource(() => context.Shell));
+        AddIfMissing<IMusicSource>(services, () => new Music.WindowsMusicSource(new Processes.ProcessRunner(context.Log)));
+        AddIfMissing<IHostsService>(services, () => new Services.WindowsHostsService(services.Require<IElevationBroker>()));
+        AddIfMissing<IEnvironmentStore>(services, () => new Services.WindowsEnvironmentStore(context.Config, services.Require<IElevationBroker>()));
     }
 
     private static IWindowsUpdateService CreateWindowsUpdateService(IPickleContext context)

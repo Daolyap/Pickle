@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 using Pickle.Core;
 using Pickle.Core.Logging;
 
@@ -36,7 +37,9 @@ public sealed class TestPickle : IDisposable
         Action<PickleConfig>? configure = null,
         bool start = false,
         IReadOnlyList<IPicklePlugin>? plugins = null,
-        bool elevated = false)
+        bool elevated = false,
+        IReadOnlyList<ModuleDescriptor>? modules = null,
+        IEnumerable<string>? machineModules = null)
     {
         var home = Path.Combine(Path.GetTempPath(), "pickle-tests", Guid.NewGuid().ToString("N")[..12]);
         var paths = new PicklePaths(Path.Combine(home, "config"), Path.Combine(home, "data"));
@@ -52,10 +55,11 @@ public sealed class TestPickle : IDisposable
         var options = new PickleOptions { NoProfile = true, NoLogo = true, Elevated = elevated };
         var runtime = new PickleRuntime(options, terminal, paths, new FileLogger(paths.LogDir, PickleLogLevel.Debug));
         var test = new TestPickle(home, terminal, runtime);
+        runtime.ModuleCatalog.UseMachineSelection(machineModules ?? []);
         if (start)
         {
             runtime.InitializeComponents();
-            runtime.Start(plugins ?? []);
+            runtime.Start(plugins ?? [], modules);
         }
 
         return test;

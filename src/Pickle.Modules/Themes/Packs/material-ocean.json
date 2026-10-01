@@ -1,0 +1,156 @@
+{
+  "name": "material-ocean",
+  "description": "Material Ocean: deep navy with candy accents, Powerline blocks.",
+  "terminal": {
+    "background": "#0F111A",
+    "foreground": "#8F93A2",
+    "cursorColor": "#8F93A2",
+    "selectionBackground": "#1F2233",
+    "black": "#090B10",
+    "red": "#F07178",
+    "green": "#C3E88D",
+    "yellow": "#FFCB6B",
+    "blue": "#82AAFF",
+    "purple": "#C792EA",
+    "cyan": "#89DDFF",
+    "white": "#EEFFFF",
+    "brightBlack": "#464B5D",
+    "brightRed": "#F07178",
+    "brightGreen": "#C3E88D",
+    "brightYellow": "#FFCB6B",
+    "brightBlue": "#82AAFF",
+    "brightPurple": "#C792EA",
+    "brightCyan": "#89DDFF",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#89DDFF",
+    "unknownCommand": "#F07178",
+    "parameter": "#464B5D",
+    "string": "#C3E88D",
+    "number": "#C792EA",
+    "variable": "#8F93A2",
+    "operator": "#82AAFF",
+    "keyword": "#82AAFF",
+    "comment": "#464B5D",
+    "type": "#89DDFF",
+    "member": "#8F93A2",
+    "error": "#F07178",
+    "suggestion": "#464B5D",
+    "selectionBackground": "#1F2233",
+    "translated": "#464B5D"
+  },
+  "ui": {
+    "accent": "#82AAFF",
+    "muted": "#464B5D",
+    "success": "#C3E88D",
+    "warning": "#FFCB6B",
+    "error": "#F07178",
+    "info": "#82AAFF",
+    "panelBackground": "#0F111A",
+    "panelForeground": "#8F93A2",
+    "panelBorder": "#1F2233",
+    "highlightBackground": "#1F2233",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#1A1C25",
+    "menuForeground": "#8F93A2",
+    "menuSelectedBackground": "#82AAFF",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#464B5D",
+    "matchHighlight": "#FFCB6B"
+  },
+  "prompt": {
+    "separator": "powerline",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#82AAFF",
+    "promptCharErrorColor": "#F07178",
+    "continuationPrompt": "\u2502 ",
+    "transientTemplate": "{time} {promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#000000",
+        "background": "#F07178",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf0e7"
+        }
+      },
+      {
+        "type": "cwd",
+        "foreground": "#000000",
+        "background": "#82AAFF",
+        "template": " {icon} {value} ",
+        "icon": "\uf07c",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#000000",
+        "background": "#C3E88D",
+        "template": " {icon} {value} ",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#000000",
+        "background": "#FFCB6B",
+        "template": " {icon} {value} ",
+        "icon": "\uf252"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#000000",
+        "background": "#89DDFF",
+        "template": " {icon} {value} ",
+        "icon": "\uf013"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#000000",
+        "background": "#F07178",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf00d"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#000000",
+        "background": "#FFCB6B",
+        "template": " {icon} {value} ",
+        "icon": "\ue73c"
+      },
+      {
+        "type": "node",
+        "foreground": "#000000",
+        "background": "#C3E88D",
+        "template": " {icon} {value} ",
+        "icon": "\ue718"
+      },
+      {
+        "type": "k8s",
+        "foreground": "#000000",
+        "background": "#82AAFF",
+        "template": " {icon} {value} ",
+        "icon": "\udb84\udcfe"
+      },
+      {
+        "type": "time",
+        "foreground": "#8F93A2",
+        "background": "#1F2233",
+        "template": " {icon} {value} ",
+        "icon": "\uf017",
+        "options": {
+          "format": "HH:mm:ss"
+        }
+      }
+    ]
+  }
+}

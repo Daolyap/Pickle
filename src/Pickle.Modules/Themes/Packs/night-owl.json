@@ -1,0 +1,156 @@
+{
+  "name": "night-owl",
+  "description": "Night Owl: made for late nights, with Powerline blocks.",
+  "terminal": {
+    "background": "#011627",
+    "foreground": "#D6DEEB",
+    "cursorColor": "#D6DEEB",
+    "selectionBackground": "#1D3B53",
+    "black": "#011627",
+    "red": "#EF5350",
+    "green": "#22DA6E",
+    "yellow": "#ADDB67",
+    "blue": "#82AAFF",
+    "purple": "#C792EA",
+    "cyan": "#21C7A8",
+    "white": "#FFFFFF",
+    "brightBlack": "#575656",
+    "brightRed": "#EF5350",
+    "brightGreen": "#22DA6E",
+    "brightYellow": "#ADDB67",
+    "brightBlue": "#82AAFF",
+    "brightPurple": "#C792EA",
+    "brightCyan": "#21C7A8",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#21C7A8",
+    "unknownCommand": "#EF5350",
+    "parameter": "#575656",
+    "string": "#22DA6E",
+    "number": "#C792EA",
+    "variable": "#D6DEEB",
+    "operator": "#82AAFF",
+    "keyword": "#82AAFF",
+    "comment": "#637777",
+    "type": "#21C7A8",
+    "member": "#D6DEEB",
+    "error": "#EF5350",
+    "suggestion": "#637777",
+    "selectionBackground": "#1D3B53",
+    "translated": "#637777"
+  },
+  "ui": {
+    "accent": "#82AAFF",
+    "muted": "#575656",
+    "success": "#22DA6E",
+    "warning": "#ADDB67",
+    "error": "#EF5350",
+    "info": "#82AAFF",
+    "panelBackground": "#011627",
+    "panelForeground": "#D6DEEB",
+    "panelBorder": "#1D3B53",
+    "highlightBackground": "#1D3B53",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#0B2942",
+    "menuForeground": "#D6DEEB",
+    "menuSelectedBackground": "#82AAFF",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#637777",
+    "matchHighlight": "#ADDB67"
+  },
+  "prompt": {
+    "separator": "powerline",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#82AAFF",
+    "promptCharErrorColor": "#EF5350",
+    "continuationPrompt": "\u2502 ",
+    "transientTemplate": "{time} {promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#000000",
+        "background": "#EF5350",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf0e7"
+        }
+      },
+      {
+        "type": "cwd",
+        "foreground": "#000000",
+        "background": "#82AAFF",
+        "template": " {icon} {value} ",
+        "icon": "\uf07c",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#000000",
+        "background": "#22DA6E",
+        "template": " {icon} {value} ",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#000000",
+        "background": "#ADDB67",
+        "template": " {icon} {value} ",
+        "icon": "\uf252"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#000000",
+        "background": "#21C7A8",
+        "template": " {icon} {value} ",
+        "icon": "\uf013"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#000000",
+        "background": "#EF5350",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf00d"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#000000",
+        "background": "#ADDB67",
+        "template": " {icon} {value} ",
+        "icon": "\ue73c"
+      },
+      {
+        "type": "node",
+        "foreground": "#000000",
+        "background": "#22DA6E",
+        "template": " {icon} {value} ",
+        "icon": "\ue718"
+      },
+      {
+        "type": "k8s",
+        "foreground": "#000000",
+        "background": "#82AAFF",
+        "template": " {icon} {value} ",
+        "icon": "\udb84\udcfe"
+      },
+      {
+        "type": "time",
+        "foreground": "#D6DEEB",
+        "background": "#1D3B53",
+        "template": " {icon} {value} ",
+        "icon": "\uf017",
+        "options": {
+          "format": "HH:mm:ss"
+        }
+      }
+    ]
+  }
+}

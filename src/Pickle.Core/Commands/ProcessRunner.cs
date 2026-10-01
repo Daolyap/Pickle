@@ -33,7 +33,8 @@ public static class ProcessRunner
         string? workingDirectory = null,
         IReadOnlyDictionary<string, string?>? environment = null,
         TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? standardInput = null)
     {
         if (ExecutableLocator.Find(fileName) is not { } executable)
         {
@@ -80,6 +81,17 @@ public static class ProcessRunner
 
         using (process)
         {
+            if (standardInput is not null)
+            {
+                try
+                {
+                    await process.StandardInput.WriteAsync(standardInput.AsMemory(), cancellationToken).ConfigureAwait(false);
+                }
+                catch (IOException)
+                {
+                }
+            }
+
             process.StandardInput.Close();
             var stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
             var stderr = process.StandardError.ReadToEndAsync(CancellationToken.None);

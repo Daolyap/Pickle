@@ -8,6 +8,7 @@ using Pickle.Modules.Languages;
 using Pickle.Modules.Nmap;
 using Pickle.Modules.Notifier;
 using Pickle.Modules.Themes;
+using Pickle.Modules.Vault;
 
 namespace Pickle.Modules;
 
@@ -26,6 +27,7 @@ public static class OptionalModules
         LanguagesModule.Descriptor,
         NotifierModule.Descriptor,
         ExplainModule.Descriptor,
+        VaultModule.Descriptor,
         ThemePacksModule.Descriptor,
         ExampleModule.Descriptor,
     ];

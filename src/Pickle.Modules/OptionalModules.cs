@@ -1,5 +1,9 @@
 using Pickle.Abstractions.Services;
+using Pickle.Modules.Docker;
 using Pickle.Modules.Example;
+using Pickle.Modules.GitHub;
+using Pickle.Modules.Kubernetes;
+using Pickle.Modules.Nmap;
 
 namespace Pickle.Modules;
 
@@ -11,6 +15,10 @@ public static class OptionalModules
 {
     public static IReadOnlyList<ModuleDescriptor> All { get; } =
     [
+        NmapModule.Descriptor,
+        DockerModule.Descriptor,
+        KubernetesModule.Descriptor,
+        GitHubModule.Descriptor,
         ExampleModule.Descriptor,
     ];
 }

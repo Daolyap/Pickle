@@ -4,7 +4,10 @@ using Pickle.Windows.TaskScheduler;
 namespace Pickle.Windows.Elevation;
 
 /// <summary>A request that passed <see cref="ElevatedOperations.Validate"/>; only these reach an executor.</summary>
-internal sealed record ValidatedOperation(ElevatedOperationKind Kind, IReadOnlyList<string> Ids, bool All = false, ScheduledTaskDefinition? Task = null);
+internal sealed record ValidatedOperation(ElevatedOperationKind Kind, IReadOnlyList<string> Ids, bool All = false, ScheduledTaskDefinition? Task = null)
+{
+    public IReadOnlyList<DiskOperation>? Disk { get; init; }
+}
 
 /// <summary>What the helper can actually do. The real implementation runs fixed commands only (see WindowsElevatedExecutor).</summary>
 internal interface IElevatedExecutor
@@ -31,6 +34,9 @@ internal interface IElevatedExecutor
 
     /// <summary>A null <paramref name="value"/> removes the variable.</summary>
     Task<ElevatedResponse> SetMachineEnvironmentAsync(string name, string? value, IProgress<string> progress, CancellationToken cancellationToken);
+
+    /// <summary>Runs already validated disk operations in order, re-checking each against the live disks and stopping at the first failure.</summary>
+    Task<ElevatedResponse> RunStorageOperationsAsync(IReadOnlyList<DiskOperation> operations, IProgress<string> progress, CancellationToken cancellationToken);
 }
 
 /// <summary>The allowlist: strict per-kind argument validation and dispatch to an <see cref="IElevatedExecutor"/>.</summary>
@@ -162,6 +168,15 @@ internal static class ElevatedOperations
                 EnvironmentRules.Validate(args[0], variableValue, machineScope: true);
                 return new ValidatedOperation(request.Kind, variableValue is null ? [args[0]] : [args[0], variableValue]);
 
+            case ElevatedOperationKind.StorageOperations:
+                if (args.Count != 1)
+                {
+                    throw new ArgumentException("StorageOperations takes one JSON array of disk operations.");
+                }
+
+                var disk = DiskOperationCodec.Deserialize(args[0]);
+                return new ValidatedOperation(request.Kind, []) { Disk = disk };
+
             default:
                 throw new ArgumentException($"Operation {request.Kind} is not allowed.");
         }
@@ -197,6 +212,7 @@ internal static class ElevatedOperations
         ElevatedOperationKind.TaskRegisterElevated => TimeSpan.FromMinutes(2),
         ElevatedOperationKind.EnableWindowsSandbox => TimeSpan.FromMinutes(20),
         ElevatedOperationKind.ServiceControl => TimeSpan.FromMinutes(3),
+        ElevatedOperationKind.StorageOperations => TimeSpan.FromHours(2),
         _ => TimeSpan.FromMinutes(1),
     };
 
@@ -254,6 +270,9 @@ internal static class ElevatedOperations
 
                 case ElevatedOperationKind.MachineEnvironmentSet when operation.Ids.Count is 1 or 2:
                     return await executor.SetMachineEnvironmentAsync(operation.Ids[0], operation.Ids.Count == 2 ? operation.Ids[1] : null, progress, timeout.Token).ConfigureAwait(false);
+
+                case ElevatedOperationKind.StorageOperations when operation.Disk is { Count: > 0 } disk:
+                    return await executor.RunStorageOperationsAsync(disk, progress, timeout.Token).ConfigureAwait(false);
 
                 default:
                     return new ElevatedResponse(false, $"Operation {operation.Kind} is not allowed.", 1);

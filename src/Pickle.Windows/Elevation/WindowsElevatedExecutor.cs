@@ -15,7 +15,7 @@ namespace Pickle.Windows.Elevation;
 /// winget.exe from the App Installer package folder), with arguments from <see cref="ElevatedOperations"/>.
 /// </summary>
 [SupportedOSPlatform("windows")]
-internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner? runner = null) : IElevatedExecutor
+internal sealed partial class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner? runner = null) : IElevatedExecutor
 {
     private readonly IProcessRunner _runner = runner ?? new ProcessRunner(log);
 

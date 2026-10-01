@@ -43,8 +43,19 @@ public sealed class SystemPanelsPlugin : IPicklePlugin
             CreateView = ctx => new DisksPanel(ctx),
         });
 
+        context.Panels.Register(new PanelDescriptor
+        {
+            Id = DiskConfigurationPanel.PanelId,
+            Title = "Disk Configuration",
+            Description = "Initialize, partition, format, resize and repair disks: plan the changes, review them as PowerShell, apply with one prompt",
+            DefaultKey = "Alt+Shift+C",
+            WindowsOnly = true,
+            CreateView = ctx => new DiskConfigurationPanel(ctx),
+        });
+
         context.Commands.Register(new OpenPanelCommand("top", ProcessesPanel.PanelId, "Open the task manager (processes, CPU, memory)", "pk top [filter]"));
         context.Commands.Register(new OpenPanelCommand("net", NetworkPanel.PanelId, "Open the network monitor (interfaces, connections, ping, DNS)", "pk net"));
+        context.Commands.Register(new OpenPanelCommand("diskconfig", DiskConfigurationPanel.PanelId, "Configure disks: initialize, partition, format, resize, check and wipe (Windows)", "pk diskconfig [disk number]"));
         context.Commands.Register(new OpenPanelCommand("disks", DisksPanel.PanelId, "Open the disk monitor, or analyze a folder's disk usage", "pk disks [folder]", argumentIsPath: true));
     }
 }

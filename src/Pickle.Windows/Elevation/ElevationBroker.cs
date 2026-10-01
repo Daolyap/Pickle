@@ -161,6 +161,7 @@ public sealed class ElevationBroker : IElevationBroker
         ElevatedOperationKind.TaskRegisterElevated => $"{operation.Kind} {operation.Task?.Folder}\\{operation.Task?.Name}",
         ElevatedOperationKind.HostsFileWrite => $"{operation.Kind} ({operation.Ids[0].Length} characters)",
         ElevatedOperationKind.MachineEnvironmentSet => $"{operation.Kind} {operation.Ids[0]}",
+        ElevatedOperationKind.StorageOperations => $"{operation.Kind} [{string.Join("; ", operation.Disk?.Select(DiskOperationRules.Describe) ?? [])}]",
         _ when operation.All => $"{operation.Kind} --all",
         _ => $"{operation.Kind} [{string.Join(", ", operation.Ids)}]",
     };

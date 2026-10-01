@@ -35,6 +35,13 @@ public enum ElevatedOperationKind
 
     /// <summary>Set or remove a machine-wide environment variable, PATH included. Arguments: [name, value], or just [name] to remove it.</summary>
     MachineEnvironmentSet,
+
+    /// <summary>
+    /// Change disks, partitions and volumes. Arguments: [a JSON array of <see cref="DiskOperation"/>], run in order, stopping at the
+    /// first failure. Each one is checked by <see cref="DiskOperationRules"/> against the live disks first, so boot and system disks
+    /// and partitions are never touched whatever the caller asked for.
+    /// </summary>
+    StorageOperations,
 }
 
 public sealed record ElevatedRequest(ElevatedOperationKind Kind, IReadOnlyList<string> Arguments);

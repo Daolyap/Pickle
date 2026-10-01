@@ -133,6 +133,9 @@ internal sealed class FakeExecutor : IElevatedExecutor
     public Task<ElevatedResponse> SetMachineEnvironmentAsync(string name, string? value, IProgress<string> progress, CancellationToken cancellationToken) =>
         Record($"env {name}={value ?? "<removed>"}");
 
+    public Task<ElevatedResponse> RunStorageOperationsAsync(IReadOnlyList<DiskOperation> operations, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Record("storage " + string.Join(" | ", operations.Select(DiskOperationRules.Describe)));
+
     private Task<ElevatedResponse> Record(string call)
     {
         lock (Calls)

@@ -35,6 +35,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         {
             AddIfMissing<IFontService>(services, Fonts.WindowsFontService.ForCurrentSystem);
             AddIfMissing<IDiskLayoutService>(services, () => new Storage.DiskLayoutService(() => context.Shell));
+            AddIfMissing<IDiskConfigurationService>(services, () => new Storage.DiskConfigurationService(services.Require<IDiskLayoutService>(), services.Require<IElevationBroker>(), () => context.Shell));
             RegisterAdministration(context);
         }
 

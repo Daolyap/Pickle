@@ -1,6 +1,7 @@
 using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
 using Pickle.Admin.Logs;
+using Pickle.Admin.Packages;
 using Pickle.Admin.Privilege;
 using Pickle.Admin.Services;
 
@@ -25,6 +26,11 @@ public sealed class AdminPlugin : IPicklePlugin
         AddIfMissing<IPrivilegeService>(services, () => new UnixPrivilegeService(runner));
         AddIfMissing<ISystemServiceManager>(services, () => CreateServiceManager(runner, services.Require<IPrivilegeService>()));
         AddIfMissing<ILogSource>(services, () => CreateLogSource(runner));
+        if (!OperatingSystem.IsWindows())
+        {
+            AddIfMissing<ISystemPackageManager>(services, () => PackageManagers.Detect(runner, services.Require<IPrivilegeService>()));
+        }
+
         AddIfMissing<IHostsService>(services, () => new Hosts.UnixHostsService(services.Require<IPrivilegeService>()));
         AddIfMissing<IEnvironmentStore>(services, () => new EnvVars.UnixEnvironmentStore(context.Config, services.Require<IPrivilegeService>()));
     }

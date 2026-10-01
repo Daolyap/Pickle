@@ -146,3 +146,45 @@ public sealed class FakeLogSource : ILogSource
 
     public string? FollowCommand(LogQuery query) => $"journalctl -f ({query.Source ?? "default"})";
 }
+
+public sealed class FakeSystemPackageManager : ISystemPackageManager
+{
+    public string Name { get; set; } = "fakepm";
+
+    public bool IsSupported { get; set; } = true;
+
+    public bool NeedsPrivileges { get; set; } = true;
+
+    public List<SystemPackage> Installed { get; } = [];
+
+    public List<SystemPackage> Available { get; } = [];
+
+    public List<string> Calls { get; } = [];
+
+    public ServiceOperationResult Result { get; set; } = new(true, "done");
+
+    public Task<IReadOnlyList<SystemPackage>> ListInstalledAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SystemPackage>>([.. Installed]);
+
+    public Task<IReadOnlyList<SystemPackage>> ListUpgradesAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<SystemPackage>>([.. Installed.Where(p => p.Upgradable)]);
+
+    public Task<IReadOnlyList<SystemPackage>> SearchAsync(string query, CancellationToken cancellationToken = default)
+    {
+        Calls.Add("search " + query);
+        return Task.FromResult<IReadOnlyList<SystemPackage>>([.. Available.Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))]);
+    }
+
+    public Task<IReadOnlyList<string>> InfoAsync(string name, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<string>>([$"Package: {name}", "Description: fake"]);
+
+    public string ShellCommand(PackageAction action, IReadOnlyList<string> names)
+    {
+        PackageNames.Require(names);
+        return $"sudo fakepm {action.ToString().ToLowerInvariant()} {string.Join(' ', names)}".TrimEnd();
+    }
+
+    public Task<ServiceOperationResult> RunAsync(PackageAction action, IReadOnlyList<string> names, CancellationToken cancellationToken = default)
+    {
+        Calls.Add($"{action} {string.Join(' ', names)}".TrimEnd());
+        return Task.FromResult(Result);
+    }
+}

@@ -125,6 +125,12 @@ public sealed class ShellSettings
     /// <summary>Look for a newer Pickle release once a day (in the background; the banner says when there is one).</summary>
     public bool CheckForUpdates { get; set; } = true;
 
+    /// <summary>Variables Pickle sets for every session it starts (edit them with <c>pk env</c> or the environment panel); <c>%NAME%</c> and <c>$env:NAME</c> are expanded.</summary>
+    public Dictionary<string, string> Environment { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Folders Pickle puts at the front of PATH for every session it starts (the PATH editor's "Pickle" scope).</summary>
+    public List<string> PathPrepend { get; set; } = [];
+
     public bool FirstRunCompleted { get; set; } = false;
 
     /// <summary>The newest setup whose questions were asked (see <c>pk setup</c>); newer offers are asked once.</summary>

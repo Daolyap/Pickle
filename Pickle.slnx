@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Pickle.Abstractions/Pickle.Abstractions.csproj" />
+    <Project Path="src/Pickle.Admin/Pickle.Admin.csproj" />
     <Project Path="src/Pickle.Core/Pickle.Core.csproj" />
     <Project Path="src/Pickle.Modules/Pickle.Modules.csproj" />
     <Project Path="src/Pickle.Network/Pickle.Network.csproj" />
@@ -10,6 +11,7 @@
     <Project Path="src/Pickle/Pickle.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Pickle.Admin.Tests/Pickle.Admin.Tests.csproj" />
     <Project Path="tests/Pickle.Core.Tests/Pickle.Core.Tests.csproj" />
     <Project Path="tests/Pickle.Modules.Tests/Pickle.Modules.Tests.csproj" />
     <Project Path="tests/Pickle.Network.Tests/Pickle.Network.Tests.csproj" />

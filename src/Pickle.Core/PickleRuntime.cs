@@ -186,6 +186,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public void Start(IReadOnlyList<IPicklePlugin> builtInPlugins, IReadOnlyList<ModuleDescriptor>? optionalModules = null)
     {
         ModuleCatalog.SetAvailable(optionalModules ?? []);
+        Hosting.ConfiguredEnvironment.Apply(Config.Current.Shell, Log);
         Engine.Open();
         Startup.Mark("runspace");
         Plugins.LoadAll(builtInPlugins);

@@ -21,14 +21,14 @@ public sealed class FakeProgramRunner : IProgramRunner
     public bool StreamEnds { get; set; } = true;
 
     public string? Find(string program) =>
-        Installed.Contains(program) || _rules.Any(r => r.Match(program, [])) ? "/usr/bin/" + program : null;
+        Installed.Contains(Path.GetFileName(program)) || _rules.Any(r => r.Match(program, [])) ? "/usr/bin/" + Path.GetFileName(program) : null;
 
     /// <summary>When <paramref name="program"/> is run with arguments starting with <paramref name="argumentPrefix"/>, answer with <paramref name="stdout"/>.</summary>
     public FakeProgramRunner On(string program, string argumentPrefix, string stdout, int exitCode = 0, string stderr = "")
     {
         var prefix = argumentPrefix.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         _rules.Insert(0, (
-            (p, a) => string.Equals(p, program, StringComparison.OrdinalIgnoreCase) && (a.Count == 0 || StartsWith(a, prefix)),
+            (p, a) => SameProgram(p, program) && (a.Count == 0 || StartsWith(a, prefix)),
             (_, _) => new ProgramResult(exitCode, stdout, stderr)));
         Installed.Add(program);
         return this;
@@ -37,7 +37,7 @@ public sealed class FakeProgramRunner : IProgramRunner
     public FakeProgramRunner On(string program, Func<IReadOnlyList<string>, ProgramRunOptions?, ProgramResult?> respond)
     {
         _rules.Insert(0, (
-            (p, _) => string.Equals(p, program, StringComparison.OrdinalIgnoreCase),
+            (p, _) => SameProgram(p, program),
             (a, o) => respond(a, o) ?? new ProgramResult(1, string.Empty, "unexpected call: " + string.Join(' ', a))));
         Installed.Add(program);
         return this;
@@ -82,7 +82,11 @@ public sealed class FakeProgramRunner : IProgramRunner
 
     /// <summary>The recorded calls for one program, as "arg arg arg" strings.</summary>
     public IReadOnlyList<string> CommandLines(string program) =>
-        [.. Calls.Where(c => string.Equals(c.Program, program, StringComparison.OrdinalIgnoreCase)).Select(c => string.Join(' ', c.Arguments))];
+        [.. Calls.Where(c => SameProgram(c.Program, program)).Select(c => string.Join(' ', c.Arguments))];
+
+    // Callers pass what Find returned (an absolute path) as often as a bare name.
+    private static bool SameProgram(string called, string registered) =>
+        string.Equals(Path.GetFileName(called), Path.GetFileName(registered), StringComparison.OrdinalIgnoreCase);
 
     private static bool StartsWith(IReadOnlyList<string> arguments, string[] prefix) =>
         arguments.Count >= prefix.Length && prefix.Select((p, i) => arguments[i] == p).All(x => x);

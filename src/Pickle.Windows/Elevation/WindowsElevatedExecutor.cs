@@ -61,6 +61,85 @@ internal sealed class WindowsElevatedExecutor(IPickleLogger log, IProcessRunner?
         };
     }
 
+    // The service name and action travel as environment variables, never inside the script text.
+    internal const string ServiceScript = """
+        $ErrorActionPreference = 'Stop'
+        $name = $env:PICKLE_SERVICE
+        switch ($env:PICKLE_ACTION) {
+            'start' { Start-Service -Name $name }
+            'stop' { Stop-Service -Name $name }
+            'restart' { Restart-Service -Name $name }
+            'automatic' { Set-Service -Name $name -StartupType Automatic }
+            'manual' { Set-Service -Name $name -StartupType Manual }
+            'disabled' { Set-Service -Name $name -StartupType Disabled }
+            default { throw 'Unknown action.' }
+        }
+        'OK'
+        """;
+
+    public async Task<ElevatedResponse> ControlServiceAsync(string serviceName, string action, IProgress<string> progress, CancellationToken cancellationToken)
+    {
+        progress.Report($"{action} {serviceName} (elevated)…");
+        var environment = new Dictionary<string, string?>(WingetSourceRepair.Environment())
+        {
+            ["PICKLE_SERVICE"] = serviceName,
+            ["PICKLE_ACTION"] = action,
+        };
+        var result = await _runner.RunAsync(
+            WingetService.WindowsPowerShellPath,
+            ["-NoProfile", "-NonInteractive", "-EncodedCommand", Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(ServiceScript))],
+            null,
+            ElevatedOperations.TimeoutFor(ElevatedOperationKind.ServiceControl),
+            cancellationToken,
+            environment).ConfigureAwait(false);
+        var text = result.Output.Trim();
+        return result.ExitCode == 0 && !result.TimedOut
+            ? new ElevatedResponse(true, $"{serviceName}: {action} done.", 0, text)
+            : new ElevatedResponse(false, result.TimedOut ? $"{serviceName}: {action} timed out." : FirstLine(text, $"{serviceName}: {action} failed ({result.ExitCode})."), result.ExitCode, text);
+    }
+
+    public Task<ElevatedResponse> WriteHostsFileAsync(string content, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Task.Run(() =>
+        {
+            HostsDocument.Validate(content);
+            var path = Path.Combine(Environment.SystemDirectory, "drivers", "etc", "hosts");
+            progress.Report("Writing " + path + " (elevated)…");
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Copy(path, path + ".pickle-backup", overwrite: true);
+                }
+
+                // In place, so the file keeps its own permissions.
+                File.WriteAllText(path, content, new System.Text.UTF8Encoding(false));
+                return new ElevatedResponse(true, "The hosts file was saved (the previous one is hosts.pickle-backup).");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return new ElevatedResponse(false, "Writing the hosts file failed: " + ex.Message, ex.HResult);
+            }
+        }, cancellationToken);
+
+    public Task<ElevatedResponse> SetMachineEnvironmentAsync(string name, string? value, IProgress<string> progress, CancellationToken cancellationToken) =>
+        Task.Run(() =>
+        {
+            EnvironmentRules.Validate(name, value, machineScope: true);
+            progress.Report($"{(value is null ? "Removing" : "Setting")} {name} for all users (elevated)…");
+            try
+            {
+                MachineEnvironment.Set(name, value);
+                return new ElevatedResponse(true, value is null ? $"{name} was removed." : $"{name} was saved. New programs see it; running ones keep the old value.");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                return new ElevatedResponse(false, $"Changing {name} failed: {ex.Message}", ex.HResult);
+            }
+        }, cancellationToken);
+
+    private static string FirstLine(string text, string fallback) =>
+        text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? fallback;
+
     public async Task<ElevatedResponse> RunWingetAsync(IReadOnlyList<string> arguments, IProgress<string> progress, CancellationToken cancellationToken)
     {
         var exe = WingetLocator.FindTrusted(log);

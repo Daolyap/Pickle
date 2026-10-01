@@ -8,6 +8,9 @@ namespace Pickle.Tui;
 /// <summary>What an action on a resource did; its message is shown in the details pane.</summary>
 public sealed record ActionOutcome(bool Ok, string? Message = null)
 {
+    /// <summary>The action needs a password on the terminal: the panel offers to close and run this line in the shell.</summary>
+    public string? ShellCommand { get; init; }
+
     public static ActionOutcome Done(string? message = null) => new(true, message);
 
     public static ActionOutcome Fail(string message) => new(false, message);
@@ -134,6 +137,13 @@ public abstract class ResourcePanel<T> : PanelWindow
                 outcome =>
                 {
                     Details.ShowMessage(label, outcome.Message ?? (outcome.Ok ? "Done." : "Failed."));
+                    if (outcome.ShellCommand is { Length: > 0 } line
+                        && Confirm(label, $"A password is needed, so this runs in the shell:\n\n{line}\n\nClose the panel and run it?"))
+                    {
+                        Complete(new PanelResult(PanelResultKind.RunCommand, line));
+                        return;
+                    }
+
                     Reload();
                 },
                 label.ToLowerInvariant() + "…");

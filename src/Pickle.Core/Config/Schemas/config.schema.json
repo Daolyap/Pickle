@@ -233,6 +233,22 @@
           "default": true,
           "description": "Look for a newer Pickle release once a day in the background (only the first running Pickle does it); the startup banner says when one is available."
         },
+        "environment": {
+          "type": "object",
+          "default": {},
+          "description": "Environment variables Pickle sets for every session it starts (%NAME% references are expanded).",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "pathPrepend": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Folders Pickle puts at the front of PATH for every session it starts."
+        },
         "firstRunCompleted": {
           "type": "boolean",
           "default": false,

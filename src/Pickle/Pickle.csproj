@@ -23,6 +23,7 @@
   <Import Project="BundledModules.targets" />
 
   <ItemGroup>
+    <ProjectReference Include="..\Pickle.Admin\Pickle.Admin.csproj" />
     <ProjectReference Include="..\Pickle.Core\Pickle.Core.csproj" />
     <ProjectReference Include="..\Pickle.Modules\Pickle.Modules.csproj" />
     <ProjectReference Include="..\Pickle.Network\Pickle.Network.csproj" />

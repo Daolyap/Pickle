@@ -26,6 +26,15 @@ public enum ElevatedOperationKind
 
     /// <summary>Turn on the Windows Sandbox optional feature (<c>dism /Enable-Feature Containers-DisposableClientVM</c>). No arguments.</summary>
     EnableWindowsSandbox,
+
+    /// <summary>Start, stop or reconfigure one Windows service. Arguments: [service name, start|stop|restart|automatic|manual|disabled].</summary>
+    ServiceControl,
+
+    /// <summary>Replace the hosts file. Arguments: [the complete new file, which must pass <c>HostsDocument.Validate</c>]; the old one is kept as hosts.pickle-backup.</summary>
+    HostsFileWrite,
+
+    /// <summary>Set or remove a machine-wide environment variable, PATH included. Arguments: [name, value], or just [name] to remove it.</summary>
+    MachineEnvironmentSet,
 }
 
 public sealed record ElevatedRequest(ElevatedOperationKind Kind, IReadOnlyList<string> Arguments);

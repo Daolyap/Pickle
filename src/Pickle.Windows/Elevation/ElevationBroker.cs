@@ -159,6 +159,8 @@ public sealed class ElevationBroker : IElevationBroker
     internal static string Describe(ValidatedOperation operation) => operation.Kind switch
     {
         ElevatedOperationKind.TaskRegisterElevated => $"{operation.Kind} {operation.Task?.Folder}\\{operation.Task?.Name}",
+        ElevatedOperationKind.HostsFileWrite => $"{operation.Kind} ({operation.Ids[0].Length} characters)",
+        ElevatedOperationKind.MachineEnvironmentSet => $"{operation.Kind} {operation.Ids[0]}",
         _ when operation.All => $"{operation.Kind} --all",
         _ => $"{operation.Kind} [{string.Join(", ", operation.Ids)}]",
     };

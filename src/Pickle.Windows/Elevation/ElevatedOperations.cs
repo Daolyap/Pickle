@@ -23,6 +23,14 @@ internal interface IElevatedExecutor
 
     /// <summary>Runs System32 dism.exe with <see cref="ElevatedOperations.EnableSandboxArguments"/>.</summary>
     Task<ElevatedResponse> EnableWindowsSandboxAsync(IProgress<string> progress, CancellationToken cancellationToken);
+
+    /// <summary><paramref name="action"/> is one of <see cref="ElevatedOperations.ServiceActions"/>.</summary>
+    Task<ElevatedResponse> ControlServiceAsync(string serviceName, string action, IProgress<string> progress, CancellationToken cancellationToken);
+
+    Task<ElevatedResponse> WriteHostsFileAsync(string content, IProgress<string> progress, CancellationToken cancellationToken);
+
+    /// <summary>A null <paramref name="value"/> removes the variable.</summary>
+    Task<ElevatedResponse> SetMachineEnvironmentAsync(string name, string? value, IProgress<string> progress, CancellationToken cancellationToken);
 }
 
 /// <summary>The allowlist: strict per-kind argument validation and dispatch to an <see cref="IElevatedExecutor"/>.</summary>
@@ -31,6 +39,9 @@ internal static class ElevatedOperations
     public const int MaxArguments = 64;
     public const int MaxArgumentLength = TaskDefinitionCodec.MaxJsonLength;
     public const string AllPackages = "--all";
+
+    /// <summary>What <see cref="ElevatedOperationKind.ServiceControl"/> accepts as its second argument.</summary>
+    public static readonly IReadOnlyList<string> ServiceActions = ["start", "stop", "restart", "automatic", "manual", "disabled"];
 
     private static readonly string[] WingetCommon =
         ["--silent", "--accept-package-agreements", "--accept-source-agreements", "--disable-interactivity"];
@@ -122,6 +133,35 @@ internal static class ElevatedOperations
                 TaskDefinitionCodec.Validate(definition, elevated: true);
                 return new ValidatedOperation(request.Kind, [], Task: definition with { RunElevated = true });
 
+            case ElevatedOperationKind.ServiceControl:
+                if (args.Count != 2 || !WindowsIds.IsValidServiceName(args[0]))
+                {
+                    throw new ArgumentException("ServiceControl takes a service name and an action.");
+                }
+
+                return ServiceActions.Contains(args[1], StringComparer.Ordinal)
+                    ? new ValidatedOperation(request.Kind, [args[0], args[1]])
+                    : throw new ArgumentException($"'{args[1]}' is not a service action ({string.Join(", ", ServiceActions)}).");
+
+            case ElevatedOperationKind.HostsFileWrite:
+                if (args.Count != 1)
+                {
+                    throw new ArgumentException("HostsFileWrite takes the complete new hosts file.");
+                }
+
+                HostsDocument.Validate(args[0]);
+                return new ValidatedOperation(request.Kind, [args[0]]);
+
+            case ElevatedOperationKind.MachineEnvironmentSet:
+                if (args.Count is < 1 or > 2)
+                {
+                    throw new ArgumentException("MachineEnvironmentSet takes a name and a value.");
+                }
+
+                var variableValue = args.Count == 2 ? args[1] : null;
+                EnvironmentRules.Validate(args[0], variableValue, machineScope: true);
+                return new ValidatedOperation(request.Kind, variableValue is null ? [args[0]] : [args[0], variableValue]);
+
             default:
                 throw new ArgumentException($"Operation {request.Kind} is not allowed.");
         }
@@ -156,6 +196,7 @@ internal static class ElevatedOperations
         ElevatedOperationKind.WindowsUpdateInstall => TimeSpan.FromHours(3),
         ElevatedOperationKind.TaskRegisterElevated => TimeSpan.FromMinutes(2),
         ElevatedOperationKind.EnableWindowsSandbox => TimeSpan.FromMinutes(20),
+        ElevatedOperationKind.ServiceControl => TimeSpan.FromMinutes(3),
         _ => TimeSpan.FromMinutes(1),
     };
 
@@ -204,6 +245,15 @@ internal static class ElevatedOperations
 
                 case ElevatedOperationKind.EnableWindowsSandbox:
                     return await executor.EnableWindowsSandboxAsync(progress, timeout.Token).ConfigureAwait(false);
+
+                case ElevatedOperationKind.ServiceControl when operation.Ids.Count == 2:
+                    return await executor.ControlServiceAsync(operation.Ids[0], operation.Ids[1], progress, timeout.Token).ConfigureAwait(false);
+
+                case ElevatedOperationKind.HostsFileWrite when operation.Ids.Count == 1:
+                    return await executor.WriteHostsFileAsync(operation.Ids[0], progress, timeout.Token).ConfigureAwait(false);
+
+                case ElevatedOperationKind.MachineEnvironmentSet when operation.Ids.Count is 1 or 2:
+                    return await executor.SetMachineEnvironmentAsync(operation.Ids[0], operation.Ids.Count == 2 ? operation.Ids[1] : null, progress, timeout.Token).ConfigureAwait(false);
 
                 default:
                     return new ElevatedResponse(false, $"Operation {operation.Kind} is not allowed.", 1);

@@ -188,3 +188,40 @@ public sealed class FakeSystemPackageManager : ISystemPackageManager
         return Task.FromResult(Result);
     }
 }
+
+public sealed class FakeJobScheduler : IJobScheduler
+{
+    public string Name { get; set; } = "fake cron";
+
+    public bool IsSupported { get; set; } = true;
+
+    public IReadOnlyList<JobKind> CreatableKinds { get; set; } = [JobKind.Cron];
+
+    public List<ScheduledJob> Jobs { get; } = [];
+
+    public List<string> Calls { get; } = [];
+
+    public ServiceOperationResult Result { get; set; } = new(true, "done");
+
+    public Task<IReadOnlyList<ScheduledJob>> ListAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ScheduledJob>>([.. Jobs]);
+
+    public Task<ServiceOperationResult> CreateAsync(NewJob job, JobKind kind, CancellationToken cancellationToken = default)
+    {
+        Calls.Add($"create {kind} {job.Name} [{job.Trigger.Kind}] {job.Command}");
+        return Task.FromResult(Result);
+    }
+
+    public Task<ServiceOperationResult> RunNowAsync(ScheduledJob job, CancellationToken cancellationToken = default) => Record("run " + job.Name);
+
+    public Task<ServiceOperationResult> SetEnabledAsync(ScheduledJob job, bool enabled, CancellationToken cancellationToken = default) => Record($"{(enabled ? "enable" : "disable")} {job.Name}");
+
+    public Task<ServiceOperationResult> DeleteAsync(ScheduledJob job, CancellationToken cancellationToken = default) => Record("delete " + job.Name);
+
+    public string? HistoryCommand(ScheduledJob job) => "journalctl -u " + job.Name;
+
+    private Task<ServiceOperationResult> Record(string call)
+    {
+        Calls.Add(call);
+        return Task.FromResult(Result);
+    }
+}

@@ -523,6 +523,6 @@ public sealed class CommandTests : IDisposable
 
         public Task<ScheduledTaskInfo> CreateAsync(ScheduledTaskDefinition definition, CancellationToken cancellationToken = default) => inner.CreateAsync(definition, cancellationToken);
 
-        public TaskTriggerSpec ParseSchedule(string text) => Pickle.Windows.TaskScheduler.ScheduleParser.Parse(text);
+        public TaskTriggerSpec ParseSchedule(string text) => Pickle.Abstractions.Services.ScheduleParser.Parse(text);
     }
 }

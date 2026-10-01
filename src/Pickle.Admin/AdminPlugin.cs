@@ -3,6 +3,7 @@ using Pickle.Abstractions.Services;
 using Pickle.Admin.Logs;
 using Pickle.Admin.Packages;
 using Pickle.Admin.Privilege;
+using Pickle.Admin.Scheduling;
 using Pickle.Admin.Services;
 
 namespace Pickle.Admin;
@@ -28,6 +29,7 @@ public sealed class AdminPlugin : IPicklePlugin
         AddIfMissing<ILogSource>(services, () => CreateLogSource(runner));
         if (!OperatingSystem.IsWindows())
         {
+            AddIfMissing<IJobScheduler>(services, () => new UnixJobScheduler(runner, services.Require<IPrivilegeService>()));
             AddIfMissing<ISystemPackageManager>(services, () => PackageManagers.Detect(runner, services.Require<IPrivilegeService>()));
         }
 

@@ -79,7 +79,7 @@ internal sealed class HostsCommand : PanelCommand
         }
 
         var result = await hosts.WriteAsync(document, cancellationToken).ConfigureAwait(false);
-        return Report(output, result);
+        return ResultOutput.Report(output, result);
     }
 
     protected override async Task<int> ListAsync(CommandOutput output, IReadOnlyList<string> args, CancellationToken cancellationToken)
@@ -91,23 +91,6 @@ internal sealed class HostsCommand : PanelCommand
         }
 
         return 0;
-    }
-
-    internal static int Report(CommandOutput output, ServiceOperationResult result)
-    {
-        if (result.Success)
-        {
-            output.Success(result.Message);
-            return 0;
-        }
-
-        output.Failure(result.Message);
-        if (result.ShellCommand is { } command)
-        {
-            output.Muted("It needs a password. Run: " + command);
-        }
-
-        return 1;
     }
 
     private sealed record HostRow(string Address, string Names, bool Enabled, string? Comment);
@@ -168,7 +151,7 @@ internal sealed class EnvCommand(bool pathOnly) : PanelCommand
                 list.RemoveAt(index);
             }
 
-            return Confirmed(output, args, store, scope) ? HostsCommand.Report(output, await store.SetPathAsync(scope, list.Items, cancellationToken).ConfigureAwait(false)) : Cancelled(output);
+            return Confirmed(output, args, store, scope) ? ResultOutput.Report(output, await store.SetPathAsync(scope, list.Items, cancellationToken).ConfigureAwait(false)) : Cancelled(output);
         }
 
         switch (verb)
@@ -189,9 +172,9 @@ internal sealed class EnvCommand(bool pathOnly) : PanelCommand
                     return UsageError(output, "Give a name and a value.");
                 }
 
-                return Confirmed(output, args, store, scope) ? HostsCommand.Report(output, await store.SetAsync(scope, first, args.Rest(1), cancellationToken).ConfigureAwait(false)) : Cancelled(output);
+                return Confirmed(output, args, store, scope) ? ResultOutput.Report(output, await store.SetAsync(scope, first, args.Rest(1), cancellationToken).ConfigureAwait(false)) : Cancelled(output);
             default:
-                return Confirmed(output, args, store, scope) ? HostsCommand.Report(output, await store.SetAsync(scope, first, null, cancellationToken).ConfigureAwait(false)) : Cancelled(output);
+                return Confirmed(output, args, store, scope) ? ResultOutput.Report(output, await store.SetAsync(scope, first, null, cancellationToken).ConfigureAwait(false)) : Cancelled(output);
         }
     }
 

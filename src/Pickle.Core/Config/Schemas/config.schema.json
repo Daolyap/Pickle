@@ -290,6 +290,108 @@
         }
       }
     },
+    "weather": {
+      "type": "object",
+      "description": "The weather prompt segment (Open-Meteo; no account needed). Off until enabled: it sends the place or coordinates to open-meteo.com.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Fetch the weather in the background and let the weather segment show it."
+        },
+        "location": {
+          "type": "string",
+          "default": "",
+          "description": "A place name (Paris), coordinates (48.85,2.35) or auto to look it up from your IP address."
+        },
+        "units": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "metric", "imperial"],
+          "description": "Temperature and wind units; auto follows the system region."
+        },
+        "refreshMinutes": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 1440,
+          "description": "How often the weather is refreshed, in minutes."
+        },
+        "format": {
+          "type": "string",
+          "default": "{icon} {temp}{unit}",
+          "description": "Text of the segment. Placeholders: {icon} {temp} {unit} {feels} {condition} {wind} {city}."
+        }
+      }
+    },
+    "music": {
+      "type": "object",
+      "description": "The music prompt segment (what is playing). Off until enabled: it asks the media player every few seconds.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Poll the media player in the background and let the music segment show the current track."
+        },
+        "player": {
+          "type": "string",
+          "default": "auto",
+          "description": "auto, or the name of the player to follow (spotify, vlc, music)."
+        },
+        "maxLength": {
+          "type": "integer",
+          "default": 40,
+          "minimum": 10,
+          "maximum": 200,
+          "description": "Longest text the segment shows; longer titles are cut with an ellipsis."
+        },
+        "hideWhenPaused": {
+          "type": "boolean",
+          "default": true,
+          "description": "Hide the segment while the player is paused or stopped."
+        },
+        "pollSeconds": {
+          "type": "integer",
+          "default": 15,
+          "minimum": 15,
+          "maximum": 300,
+          "description": "How often the player is asked, in seconds (background jobs tick every 15 seconds)."
+        },
+        "format": {
+          "type": "string",
+          "default": "♪ {artist} – {title}",
+          "description": "Text of the segment. Placeholders: {artist} {title} {player} {state}."
+        }
+      }
+    },
+    "battery": {
+      "type": "object",
+      "description": "Defaults of the battery prompt segment (a theme's own segment options win).",
+      "additionalProperties": false,
+      "properties": {
+        "hideAbove": {
+          "type": "integer",
+          "default": 95,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Hide the segment on AC power at or above this charge (100 keeps it visible on a laptop)."
+        },
+        "low": {
+          "type": "integer",
+          "default": 15,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "At or below this charge, when not charging, the segment turns red."
+        },
+        "chargingMarker": {
+          "type": "string",
+          "default": "↑",
+          "description": "Shown after the percentage while charging."
+        }
+      }
+    },
     "plugins": {
       "type": "object",
       "description": "Plugins (PowerShell modules and .NET assemblies).",

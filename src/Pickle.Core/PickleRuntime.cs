@@ -60,6 +60,7 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         LineEditor = new LineEditor(this);
         ProfileLoader = new ProfileLoader(this);
         Background = new BackgroundWork(this);
+        _segmentData = new Prompt.Segments.Live.SegmentDataComponent(this);
 
         ByHost[Engine.Host.InstanceId] = this;
         ServiceRegistry.Add<IPickleShell>(Engine);
@@ -160,9 +161,11 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public IHookRegistry Hooks => HookRegistry;
     public IPickleServices Services => ServiceRegistry;
 
+    private readonly Prompt.Segments.Live.SegmentDataComponent _segmentData;
+
     private IEnumerable<object> Components =>
     [
-        History, Aliases, Highlighter, Autosuggest, Completion, Prompt, Translation, Plugins, Sync, LineEditor, ProfileLoader, Background,
+        History, Aliases, Highlighter, Autosuggest, Completion, Prompt, Translation, Plugins, Sync, LineEditor, ProfileLoader, Background, _segmentData,
     ];
 
     /// <summary>Phase 1: components register actions/commands/segments/session contributions.</summary>

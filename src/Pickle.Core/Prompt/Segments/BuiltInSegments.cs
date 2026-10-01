@@ -25,6 +25,8 @@ public static class BuiltInSegments
         new GoSegment(environment),
         new RustSegment(environment),
         new BatterySegment(environment),
+        new Live.WeatherSegment(),
+        new Live.MusicSegment(),
         new JobsSegment(),
         new TextSegment(),
     ];

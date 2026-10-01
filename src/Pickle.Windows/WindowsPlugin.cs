@@ -57,6 +57,7 @@ public sealed class WindowsPlugin : IPicklePlugin
         var services = context.Services;
         AddIfMissing<ISystemServiceManager>(services, () => new Services.WindowsServiceManager(() => context.Shell, services.Require<IElevationBroker>()));
         AddIfMissing<ILogSource>(services, () => new Logs.WindowsEventLogSource(() => context.Shell));
+        AddIfMissing<IMusicSource>(services, () => new Music.WindowsMusicSource(new Processes.ProcessRunner(context.Log)));
         AddIfMissing<IHostsService>(services, () => new Services.WindowsHostsService(services.Require<IElevationBroker>()));
         AddIfMissing<IEnvironmentStore>(services, () => new Services.WindowsEnvironmentStore(context.Config, services.Require<IElevationBroker>()));
     }

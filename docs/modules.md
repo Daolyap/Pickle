@@ -33,6 +33,35 @@ Pickle decides per user: `installer selection + modules.enabled − modules.disa
 
 `pk module list --all` also shows hidden modules such as `example`.
 
+### In the installers
+
+`packaging/modules.json` lists the modules the installers offer (every module except the hidden `example`);
+`packaging/modules.py` turns it into the installer pieces, and `PackagingTests` fails when the file and the code disagree.
+
+| Installer | What a module becomes |
+|---|---|
+| MSI | An unticked feature `Module_<id>` under *Optional modules* in the Customize page, writing `HKLM\Software\Pickle\Modules\<id> = 1`. Choices survive a major upgrade (each feature starts ticked when the old version wrote its value). Silent installs: `msiexec /i pickle.msi /qn ADDLOCAL=Main,Module_docker,Module_vault` (`ADDLOCAL=ALL` for everything). |
+| RPM | A noarch sub-package `pickle-module-<id>` that only drops `/etc/pickle/modules.d/<id>` and recommends the tool the module drives (`podman`, `nmap`, `gh`, `kubernetes-client`, `libsecret`, `distrobox`…) as a weak dependency; `pickle-modules-all` depends on every one. `dnf remove pickle-module-docker` turns it off again. |
+| Scoop, winget, portable exe, tar.gz | Nothing is installed with them: the first start offers the checklist, or set `PICKLE_MODULES=docker,nmap`, or put an (empty) file named after the module in a `modules.d` folder next to the executable. |
+
+Adding a module means adding its entry to `packaging/modules.json` (id, name, description exactly as in its
+`ModuleDescriptor`, platforms, `rpmRecommends`); the MSI feature, the RPM package and the marker all follow from that.
+
+## Notes on the modules
+
+- **vault**: `pk secret set|get|list|remove|run|lock|status`. Backends: Windows Credential Manager (2560 bytes per secret),
+  the Secret Service through `secret-tool` (libsecret), the macOS Keychain through `security -i`, and an encrypted file
+  (AES-256-GCM, PBKDF2-SHA256 600 000 rounds, key kept in memory for `extensions.vault.unlockMinutes`) when none works.
+  `extensions.vault.backend` picks one (`auto` by default). `pk secret get` returns a `SecureString` (`--plain` for text);
+  `pk secret run -e GH_TOKEN=github-token gh api user` sets the variable only while that command runs. Names are lower-case
+  `[a-z0-9._-]`, at most 64 characters.
+- **wsl**: backends are found by their tools: `wsl.exe`, `distrobox`, `toolbox` (with `podman`), `lxc` and `incus`. Names and
+  images are validated before they reach any program; removing or wiping always asks, and a backend that fails does not hide the
+  others. `pk wsl` and `pk distros` are the same command.
+- **explain**: offline only; it never runs an unknown program to ask for `--help`. Your own knowledge files go in
+  `<data dir>/explain/*.json` (same format as `src/Pickle.Modules/Explain/pack.json`) and override the built-in entries.
+- **themes**: copies its themes into your themes folder once (yours are never overwritten).
+
 ## Writing a module
 
 Copy `src/Pickle.Modules/Example/` (it is built and tested on every run, so it cannot rot) and follow the
@@ -55,7 +84,7 @@ What a module can use (all through `IPickleContext`, never `System.Console`, nev
 | Prompt segment | `IPromptSegment` → `context.PromptSegments.Register` (add `{ "type": "…" }` to a theme) |
 | Hook | `context.Hooks.Register(HookKind.PostExecute, …)` |
 | Command lines for the shell | `PowerShellQuote.Command("docker", "logs", "-f", id)`; never concatenate user input |
-| Elevation (Windows) | `IElevationBroker` with an allowlisted operation; on Linux the privileged step goes through `IPrivilegedRunner` |
+| Elevation (Windows) | `IElevationBroker` with an allowlisted operation; on Linux the privileged step goes through `IPrivilegeService` |
 
 Rules a module must keep: warnings are errors; Windows-only code is `[SupportedOSPlatform("windows")]` and guarded;
 a module's `Initialize` must be cheap (no process starts; do work lazily when a command or panel runs); a missing tool is

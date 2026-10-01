@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Themes\Packs\*.json" LogicalName="Pickle.Modules.Themes.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Explain\pack.json" LogicalName="Pickle.Modules.Explain.pack.json" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Pickle.Modules.Tests" />

@@ -1,6 +1,7 @@
 using Pickle.Abstractions.Services;
 using Pickle.Modules.Docker;
 using Pickle.Modules.Example;
+using Pickle.Modules.Explain;
 using Pickle.Modules.GitHub;
 using Pickle.Modules.Kubernetes;
 using Pickle.Modules.Languages;
@@ -24,6 +25,7 @@ public static class OptionalModules
         GitHubModule.Descriptor,
         LanguagesModule.Descriptor,
         NotifierModule.Descriptor,
+        ExplainModule.Descriptor,
         ThemePacksModule.Descriptor,
         ExampleModule.Descriptor,
     ];

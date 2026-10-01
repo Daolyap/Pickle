@@ -181,6 +181,7 @@ public sealed class SchedulingTests : IDisposable
     [Fact]
     public async Task CreatingAUserTimerWritesUnitFilesThenReloadsAndEnables()
     {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "systemd timers exist on Linux only");
         var runner = new FakeProgramRunner().On("systemctl", "--user", string.Empty).On("sh", "-c", string.Empty);
         var scheduler = new UnixJobScheduler(runner, new UnixPrivilegeService(runner, () => false, _ => null), () => Now, Path.Combine(_dir, "units"), _dir);
 
@@ -198,6 +199,7 @@ public sealed class SchedulingTests : IDisposable
     [Fact]
     public async Task OnlyPickleTimersCanBeDeletedAndSystemOnesGoThroughSudo()
     {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "systemd timers exist on Linux only");
         var runner = new FakeProgramRunner().On("systemctl", "--user", string.Empty).On("systemctl", "start", string.Empty).On("sudo", "-n", string.Empty);
         var scheduler = new UnixJobScheduler(runner, new UnixPrivilegeService(runner, () => false, _ => null), () => Now, _dir, _dir);
         var system = new ScheduledJob("fstrim.timer", "fstrim", JobKind.SystemdTimer, "weekly", "fstrim.service", true) { Scope = "system" };

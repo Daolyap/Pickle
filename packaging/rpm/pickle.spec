@@ -33,6 +33,10 @@ Pickle hosts the real PowerShell 7 engine and replaces the interactive experienc
 autosuggestions, fuzzy history, a completion menu, a themeable prompt, full-screen panels (files, git,
 jobs, settings, command wizards), aliases, plugins, sync and Linux-syntax translation.
 
+# One pickle-module-<id> sub-package per optional module (a marker in /etc/pickle/modules.d that turns it on for every
+# user) and pickle-modules-all: packaging/modules.py replaces the lines below when build-rpm.sh generates the final spec.
+# @@MODULE_PACKAGES@@
+
 %prep
 
 %build
@@ -43,9 +47,15 @@ install -d %{buildroot}%{_bindir}
 ln -s ../lib/pickle/pickle %{buildroot}%{_bindir}/pickle
 install -Dm0644 %{SOURCE1} %{buildroot}%{_licensedir}/%{name}/LICENSE
 install -Dm0644 %{SOURCE2} %{buildroot}%{_docdir}/%{name}/README.md
+install -d %{buildroot}/etc/pickle/modules.d
+# @@MODULE_INSTALL@@
 
 %files
 /usr/lib/pickle/pickle
 %{_bindir}/pickle
 %license %{_licensedir}/%{name}/LICENSE
 %doc %{_docdir}/%{name}/README.md
+%dir /etc/pickle
+%dir /etc/pickle/modules.d
+
+# @@MODULE_FILES@@

@@ -12,7 +12,9 @@ trap 'rm -rf "$top"' EXIT
 mkdir -p "$top/SOURCES" "$out"
 cp "$binary" "$top/SOURCES/pickle"
 cp "$root/LICENSE" "$root/README.md" "$top/SOURCES/"
-rpmbuild -bb "$root/packaging/rpm/pickle.spec" \
+# The spec's marker lines become the optional-module sub-packages (packaging/modules.json).
+python3 "$root/packaging/modules.py" rpm-spec "$root/packaging/rpm/pickle.spec" > "$top/pickle.spec"
+rpmbuild -bb "$top/pickle.spec" \
   --define "_topdir $top" \
   --define "pickle_version $rpm_version" \
   --target x86_64

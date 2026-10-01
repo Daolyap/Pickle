@@ -85,9 +85,16 @@ try {
     throw "pickle.exe could not write a Windows Terminal fragment, which the MSI needs at install time: $($_.Exception.Message)"
 }
 
+# One feature per optional module (packaging/modules.json), each writing HKLM\Software\Pickle\Modules\<id>.
+$python = (Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1)
+if (-not $python) { throw 'Python 3 is needed to generate the module features (packaging/modules.py).' }
+$modulesWxs = Join-Path $work 'Modules.wxs'
+& $python.Source (Join-Path $PSScriptRoot '../modules.py') wix | Set-Content -Path $modulesWxs -Encoding utf8
+if ($LASTEXITCODE -ne 0) { throw "packaging/modules.py failed ($LASTEXITCODE)" }
+
 $arch = if ($Rid -eq 'win-arm64') { 'arm64' } else { 'x64' }
 $msi = Join-Path $Output "pickle-$Version-$Rid.msi"
-wix build packaging/wix/Package.wxs `
+wix build packaging/wix/Package.wxs $modulesWxs `
     -arch $arch `
     -ext WixToolset.UI.wixext `
     -ext WixToolset.Util.wixext `

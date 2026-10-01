@@ -135,7 +135,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Install build tools and .NET runtime dependencies
-        run: dnf install -y --setopt=install_weak_deps=False git tar gzip findutils rpm-build libicu openssl-libs krb5-libs zlib
+        run: dnf install -y --setopt=install_weak_deps=False git tar gzip findutils rpm-build python3 libicu openssl-libs krb5-libs zlib
 
       - uses: actions/checkout@v4
 
@@ -151,10 +151,16 @@ jobs:
 
       - name: Install and smoke test
         run: |
-          dnf install -y artifacts/rpm/*.rpm
+          # Main package plus one module (the others only add weak dependencies on tools like nmap and podman).
+          dnf install -y --setopt=install_weak_deps=False artifacts/rpm/pickle-[0-9]*.rpm artifacts/rpm/pickle-module-explain-*.rpm
           rpm -qi pickle
+          rpm -qp --provides artifacts/rpm/pickle-modules-all-*.rpm
+          test "$(ls artifacts/rpm/pickle-module-*.rpm | wc -l)" -ge 8
+          test -f /etc/pickle/modules.d/explain
           cd /tmp
           pickle -c 'Get-Date -Format yyyy; (Get-Command Get-FileHash).Source; (Get-Module -ListAvailable Microsoft.PowerShell.PSResourceGet).Name'
+          pickle -c 'pk module list | Out-String' | grep -i explain
+          pickle -c 'pk explain tar -xzf a.tgz' | grep -i extract
 
       - uses: actions/upload-artifact@v4
         with:

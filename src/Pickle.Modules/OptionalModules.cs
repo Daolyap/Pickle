@@ -1,4 +1,5 @@
 using Pickle.Abstractions.Services;
+using Pickle.Modules.Distros;
 using Pickle.Modules.Docker;
 using Pickle.Modules.Example;
 using Pickle.Modules.Explain;
@@ -28,6 +29,7 @@ public static class OptionalModules
         NotifierModule.Descriptor,
         ExplainModule.Descriptor,
         VaultModule.Descriptor,
+        WslModule.Descriptor,
         ThemePacksModule.Descriptor,
         ExampleModule.Descriptor,
     ];

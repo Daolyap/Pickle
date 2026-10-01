@@ -13,6 +13,9 @@ public abstract class PanelCommand : PickleCommandBase
     /// <summary>The non-interactive output: write rows with <see cref="CommandOutput.Object"/>.</summary>
     protected abstract Task<int> ListAsync(CommandOutput output, IReadOnlyList<string> args, CancellationToken cancellationToken);
 
+    /// <summary>What the panel receives as <see cref="PanelContext.Argument"/> (default: the words after the command).</summary>
+    protected virtual string? PanelArgument(IReadOnlyList<string> args) => args.Count == 0 ? null : string.Join(' ', args);
+
     protected override Task<int> RunAsync(CommandOutput output, IReadOnlyList<string> args, CancellationToken cancellationToken)
     {
         var pickle = output.Pickle;
@@ -22,7 +25,7 @@ public abstract class PanelCommand : PickleCommandBase
             return ListAsync(output, listing ? [.. args.Skip(1)] : args, cancellationToken);
         }
 
-        var result = host.Show(PanelId, args.Count == 0 ? null : string.Join(' ', args));
+        var result = host.Show(PanelId, PanelArgument(args));
         switch (result?.Kind)
         {
             case PanelResultKind.RunCommand:

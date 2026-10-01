@@ -1,4 +1,5 @@
 using Pickle.Abstractions;
+using Pickle.Tui.Panels.Admin.EnvEditor;
 
 namespace Pickle.Tui.Panels.Admin;
 
@@ -9,11 +10,15 @@ public sealed class AdminPanelsPlugin : IPicklePlugin
 
     public string DisplayName => "Administration panels";
 
-    public string Description => "Services (Alt+V), logs, packages, hosts/PATH/environment and timers.";
+    public string Description => "Services (Alt+V), hosts/PATH/environment (Alt+O), logs, packages and timers.";
 
     public void Initialize(IPickleContext context)
     {
         context.Panels.Register(ServicesPanel.Descriptor);
         context.Commands.Register(new ServicesCommand());
+        context.Panels.Register(EnvironmentPanel.Descriptor);
+        context.Commands.Register(new HostsCommand());
+        context.Commands.Register(new EnvCommand(pathOnly: false));
+        context.Commands.Register(new EnvCommand(pathOnly: true));
     }
 }

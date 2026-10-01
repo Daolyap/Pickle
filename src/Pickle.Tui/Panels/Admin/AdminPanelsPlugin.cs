@@ -16,6 +16,8 @@ public sealed class AdminPanelsPlugin : IPicklePlugin
     {
         context.Panels.Register(ServicesPanel.Descriptor);
         context.Commands.Register(new ServicesCommand());
+        context.Panels.Register(LogsPanel.Descriptor);
+        context.Commands.Register(new LogsCommand());
         context.Panels.Register(EnvironmentPanel.Descriptor);
         context.Commands.Register(new HostsCommand());
         context.Commands.Register(new EnvCommand(pathOnly: false));

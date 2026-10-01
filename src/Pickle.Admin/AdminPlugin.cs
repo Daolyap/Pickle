@@ -1,5 +1,6 @@
 using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
+using Pickle.Admin.Logs;
 using Pickle.Admin.Privilege;
 using Pickle.Admin.Services;
 
@@ -23,12 +24,24 @@ public sealed class AdminPlugin : IPicklePlugin
         var runner = services.Require<IProgramRunner>();
         AddIfMissing<IPrivilegeService>(services, () => new UnixPrivilegeService(runner));
         AddIfMissing<ISystemServiceManager>(services, () => CreateServiceManager(runner, services.Require<IPrivilegeService>()));
+        AddIfMissing<ILogSource>(services, () => CreateLogSource(runner));
         AddIfMissing<IHostsService>(services, () => new Hosts.UnixHostsService(services.Require<IPrivilegeService>()));
         AddIfMissing<IEnvironmentStore>(services, () => new EnvVars.UnixEnvironmentStore(context.Config, services.Require<IPrivilegeService>()));
     }
 
     private static ISystemServiceManager CreateServiceManager(IProgramRunner runner, IPrivilegeService privilege) =>
         OperatingSystem.IsMacOS() ? new LaunchdServiceManager(runner, privilege) : new SystemdServiceManager(runner, privilege);
+
+    private static ILogSource CreateLogSource(IProgramRunner runner)
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            return new MacLogSource(runner);
+        }
+
+        var journal = new JournaldLogSource(runner);
+        return journal.IsSupported ? journal : new SyslogFileLogSource();
+    }
 
     internal static void AddIfMissing<T>(IPickleServices services, Func<T> create)
         where T : class

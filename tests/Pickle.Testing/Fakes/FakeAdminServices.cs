@@ -122,3 +122,27 @@ public sealed class FakeEnvironmentStore : IEnvironmentStore
         return Task.FromResult(Result);
     }
 }
+
+public sealed class FakeLogSource : ILogSource
+{
+    public string Name { get; set; } = "fake log";
+
+    public bool IsSupported { get; set; } = true;
+
+    public IReadOnlyList<string> Sources { get; set; } = ["system", "kernel"];
+
+    public List<LogEntry> Entries { get; } = [];
+
+    public List<LogQuery> Queries { get; } = [];
+
+    public Task<IReadOnlyList<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken = default)
+    {
+        Queries.Add(query);
+        return Task.FromResult<IReadOnlyList<LogEntry>>([.. Entries
+            .Where(e => e.Severity >= query.MinSeverity)
+            .Where(e => query.Text is null || e.Message.Contains(query.Text, StringComparison.OrdinalIgnoreCase))
+            .Take(query.Max)]);
+    }
+
+    public string? FollowCommand(LogQuery query) => $"journalctl -f ({query.Source ?? "default"})";
+}

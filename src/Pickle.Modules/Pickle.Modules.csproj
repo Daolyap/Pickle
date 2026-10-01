@@ -11,6 +11,9 @@
     <PackageReference Include="Terminal.Gui" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Themes\Packs\*.json" LogicalName="Pickle.Modules.Themes.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="Pickle.Modules.Tests" />
   </ItemGroup>
 </Project>

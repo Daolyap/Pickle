@@ -1,0 +1,156 @@
+{
+  "name": "monokai",
+  "description": "The classic Monokai: warm greens and pinks on charcoal, rounded blocks.",
+  "terminal": {
+    "background": "#272822",
+    "foreground": "#F8F8F2",
+    "cursorColor": "#F8F8F2",
+    "selectionBackground": "#49483E",
+    "black": "#272822",
+    "red": "#F92672",
+    "green": "#A6E22E",
+    "yellow": "#E6DB74",
+    "blue": "#66D9EF",
+    "purple": "#AE81FF",
+    "cyan": "#A1EFE4",
+    "white": "#F8F8F2",
+    "brightBlack": "#75715E",
+    "brightRed": "#F92672",
+    "brightGreen": "#A6E22E",
+    "brightYellow": "#E6DB74",
+    "brightBlue": "#66D9EF",
+    "brightPurple": "#AE81FF",
+    "brightCyan": "#A1EFE4",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#A1EFE4",
+    "unknownCommand": "#F92672",
+    "parameter": "#75715E",
+    "string": "#A6E22E",
+    "number": "#AE81FF",
+    "variable": "#F8F8F2",
+    "operator": "#66D9EF",
+    "keyword": "#66D9EF",
+    "comment": "#75715E",
+    "type": "#A1EFE4",
+    "member": "#F8F8F2",
+    "error": "#F92672",
+    "suggestion": "#75715E",
+    "selectionBackground": "#49483E",
+    "translated": "#75715E"
+  },
+  "ui": {
+    "accent": "#A6E22E",
+    "muted": "#75715E",
+    "success": "#A6E22E",
+    "warning": "#E6DB74",
+    "error": "#F92672",
+    "info": "#66D9EF",
+    "panelBackground": "#272822",
+    "panelForeground": "#F8F8F2",
+    "panelBorder": "#49483E",
+    "highlightBackground": "#49483E",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#3E3D32",
+    "menuForeground": "#F8F8F2",
+    "menuSelectedBackground": "#A6E22E",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#75715E",
+    "matchHighlight": "#E6DB74"
+  },
+  "prompt": {
+    "separator": "round",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#A6E22E",
+    "promptCharErrorColor": "#F92672",
+    "continuationPrompt": "\u2502 ",
+    "transientTemplate": "{time} {promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#000000",
+        "background": "#F92672",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf0e7"
+        }
+      },
+      {
+        "type": "cwd",
+        "foreground": "#000000",
+        "background": "#A6E22E",
+        "template": " {icon} {value} ",
+        "icon": "\uf07c",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#000000",
+        "background": "#A6E22E",
+        "template": " {icon} {value} ",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#000000",
+        "background": "#E6DB74",
+        "template": " {icon} {value} ",
+        "icon": "\uf252"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#000000",
+        "background": "#A1EFE4",
+        "template": " {icon} {value} ",
+        "icon": "\uf013"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#000000",
+        "background": "#F92672",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf00d"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#000000",
+        "background": "#E6DB74",
+        "template": " {icon} {value} ",
+        "icon": "\ue73c"
+      },
+      {
+        "type": "node",
+        "foreground": "#000000",
+        "background": "#A6E22E",
+        "template": " {icon} {value} ",
+        "icon": "\ue718"
+      },
+      {
+        "type": "k8s",
+        "foreground": "#000000",
+        "background": "#66D9EF",
+        "template": " {icon} {value} ",
+        "icon": "\udb84\udcfe"
+      },
+      {
+        "type": "time",
+        "foreground": "#F8F8F2",
+        "background": "#49483E",
+        "template": " {icon} {value} ",
+        "icon": "\uf017",
+        "options": {
+          "format": "HH:mm:ss"
+        }
+      }
+    ]
+  }
+}

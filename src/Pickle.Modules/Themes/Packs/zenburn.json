@@ -1,0 +1,122 @@
+{
+  "name": "zenburn",
+  "description": "Zenburn: low-contrast and gentle, for long sessions.",
+  "terminal": {
+    "background": "#3F3F3F",
+    "foreground": "#DCDCCC",
+    "cursorColor": "#DCDCCC",
+    "selectionBackground": "#5F5F5F",
+    "black": "#1E2320",
+    "red": "#CC9393",
+    "green": "#7F9F7F",
+    "yellow": "#F0DFAF",
+    "blue": "#8CD0D3",
+    "purple": "#DC8CC3",
+    "cyan": "#93E0E3",
+    "white": "#DCDCCC",
+    "brightBlack": "#709080",
+    "brightRed": "#CC9393",
+    "brightGreen": "#7F9F7F",
+    "brightYellow": "#F0DFAF",
+    "brightBlue": "#8CD0D3",
+    "brightPurple": "#DC8CC3",
+    "brightCyan": "#93E0E3",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#93E0E3",
+    "unknownCommand": "#CC9393",
+    "parameter": "#709080",
+    "string": "#7F9F7F",
+    "number": "#DC8CC3",
+    "variable": "#DCDCCC",
+    "operator": "#8CD0D3",
+    "keyword": "#8CD0D3",
+    "comment": "#7F9F7F",
+    "type": "#93E0E3",
+    "member": "#DCDCCC",
+    "error": "#CC9393",
+    "suggestion": "#7F9F7F",
+    "selectionBackground": "#5F5F5F",
+    "translated": "#7F9F7F"
+  },
+  "ui": {
+    "accent": "#F0DFAF",
+    "muted": "#709080",
+    "success": "#7F9F7F",
+    "warning": "#F0DFAF",
+    "error": "#CC9393",
+    "info": "#8CD0D3",
+    "panelBackground": "#3F3F3F",
+    "panelForeground": "#DCDCCC",
+    "panelBorder": "#5F5F5F",
+    "highlightBackground": "#5F5F5F",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#4F4F4F",
+    "menuForeground": "#DCDCCC",
+    "menuSelectedBackground": "#F0DFAF",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#7F9F7F",
+    "matchHighlight": "#F0DFAF"
+  },
+  "prompt": {
+    "separator": "plain",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#F0DFAF",
+    "promptCharErrorColor": "#CC9393",
+    "continuationPrompt": "\u2219 ",
+    "transientTemplate": "{promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#CC9393",
+        "options": {
+          "symbol": "ADMIN"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#F0DFAF",
+        "template": "({value})"
+      },
+      {
+        "type": "cwd",
+        "foreground": "#F0DFAF",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#7F9F7F",
+        "template": "{icon} {value}",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#F0DFAF",
+        "template": "took {value}"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#93E0E3",
+        "template": "\u2699 {value}"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#CC9393"
+      },
+      {
+        "type": "time",
+        "foreground": "#709080",
+        "options": {
+          "format": "HH:mm"
+        }
+      }
+    ]
+  }
+}

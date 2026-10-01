@@ -1,0 +1,122 @@
+{
+  "name": "one-light",
+  "description": "Atom's One Light: a calm light theme with plain segments.",
+  "terminal": {
+    "background": "#FAFAFA",
+    "foreground": "#383A42",
+    "cursorColor": "#383A42",
+    "selectionBackground": "#E5E5E6",
+    "black": "#383A42",
+    "red": "#E45649",
+    "green": "#50A14F",
+    "yellow": "#C18401",
+    "blue": "#4078F2",
+    "purple": "#A626A4",
+    "cyan": "#0184BC",
+    "white": "#A0A1A7",
+    "brightBlack": "#696C77",
+    "brightRed": "#E45649",
+    "brightGreen": "#50A14F",
+    "brightYellow": "#C18401",
+    "brightBlue": "#4078F2",
+    "brightPurple": "#A626A4",
+    "brightCyan": "#0184BC",
+    "brightWhite": "#383A42"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#0184BC",
+    "unknownCommand": "#E45649",
+    "parameter": "#696C77",
+    "string": "#50A14F",
+    "number": "#A626A4",
+    "variable": "#383A42",
+    "operator": "#4078F2",
+    "keyword": "#4078F2",
+    "comment": "#A0A1A7",
+    "type": "#0184BC",
+    "member": "#383A42",
+    "error": "#E45649",
+    "suggestion": "#A0A1A7",
+    "selectionBackground": "#E5E5E6",
+    "translated": "#A0A1A7"
+  },
+  "ui": {
+    "accent": "#4078F2",
+    "muted": "#696C77",
+    "success": "#50A14F",
+    "warning": "#C18401",
+    "error": "#E45649",
+    "info": "#4078F2",
+    "panelBackground": "#FAFAFA",
+    "panelForeground": "#383A42",
+    "panelBorder": "#E5E5E6",
+    "highlightBackground": "#E5E5E6",
+    "highlightForeground": "#383A42",
+    "menuBackground": "#F0F0F0",
+    "menuForeground": "#383A42",
+    "menuSelectedBackground": "#4078F2",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#A0A1A7",
+    "matchHighlight": "#C18401"
+  },
+  "prompt": {
+    "separator": "plain",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#4078F2",
+    "promptCharErrorColor": "#E45649",
+    "continuationPrompt": "\u2219 ",
+    "transientTemplate": "{promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#E45649",
+        "options": {
+          "symbol": "ADMIN"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#C18401",
+        "template": "({value})"
+      },
+      {
+        "type": "cwd",
+        "foreground": "#4078F2",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#50A14F",
+        "template": "{icon} {value}",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#C18401",
+        "template": "took {value}"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#0184BC",
+        "template": "\u2699 {value}"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#E45649"
+      },
+      {
+        "type": "time",
+        "foreground": "#696C77",
+        "options": {
+          "format": "HH:mm"
+        }
+      }
+    ]
+  }
+}

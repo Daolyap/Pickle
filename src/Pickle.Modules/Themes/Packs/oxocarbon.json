@@ -1,0 +1,156 @@
+{
+  "name": "oxocarbon",
+  "description": "IBM Carbon's Oxocarbon: near-black with electric pink and blue, rounded blocks.",
+  "terminal": {
+    "background": "#161616",
+    "foreground": "#F2F4F8",
+    "cursorColor": "#F2F4F8",
+    "selectionBackground": "#393939",
+    "black": "#262626",
+    "red": "#EE5396",
+    "green": "#42BE65",
+    "yellow": "#FFE97B",
+    "blue": "#33B1FF",
+    "purple": "#BE95FF",
+    "cyan": "#08BDBA",
+    "white": "#DDE1E6",
+    "brightBlack": "#525252",
+    "brightRed": "#EE5396",
+    "brightGreen": "#42BE65",
+    "brightYellow": "#FFE97B",
+    "brightBlue": "#33B1FF",
+    "brightPurple": "#BE95FF",
+    "brightCyan": "#08BDBA",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#08BDBA",
+    "unknownCommand": "#EE5396",
+    "parameter": "#525252",
+    "string": "#42BE65",
+    "number": "#BE95FF",
+    "variable": "#F2F4F8",
+    "operator": "#33B1FF",
+    "keyword": "#33B1FF",
+    "comment": "#6F6F6F",
+    "type": "#08BDBA",
+    "member": "#F2F4F8",
+    "error": "#EE5396",
+    "suggestion": "#6F6F6F",
+    "selectionBackground": "#393939",
+    "translated": "#6F6F6F"
+  },
+  "ui": {
+    "accent": "#78A9FF",
+    "muted": "#525252",
+    "success": "#42BE65",
+    "warning": "#FFE97B",
+    "error": "#EE5396",
+    "info": "#33B1FF",
+    "panelBackground": "#161616",
+    "panelForeground": "#F2F4F8",
+    "panelBorder": "#393939",
+    "highlightBackground": "#393939",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#262626",
+    "menuForeground": "#F2F4F8",
+    "menuSelectedBackground": "#78A9FF",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#6F6F6F",
+    "matchHighlight": "#FFE97B"
+  },
+  "prompt": {
+    "separator": "round",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#78A9FF",
+    "promptCharErrorColor": "#EE5396",
+    "continuationPrompt": "\u2502 ",
+    "transientTemplate": "{time} {promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#000000",
+        "background": "#EE5396",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf0e7"
+        }
+      },
+      {
+        "type": "cwd",
+        "foreground": "#000000",
+        "background": "#78A9FF",
+        "template": " {icon} {value} ",
+        "icon": "\uf07c",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#000000",
+        "background": "#42BE65",
+        "template": " {icon} {value} ",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#000000",
+        "background": "#FFE97B",
+        "template": " {icon} {value} ",
+        "icon": "\uf252"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#000000",
+        "background": "#08BDBA",
+        "template": " {icon} {value} ",
+        "icon": "\uf013"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#000000",
+        "background": "#EE5396",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf00d"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#000000",
+        "background": "#FFE97B",
+        "template": " {icon} {value} ",
+        "icon": "\ue73c"
+      },
+      {
+        "type": "node",
+        "foreground": "#000000",
+        "background": "#42BE65",
+        "template": " {icon} {value} ",
+        "icon": "\ue718"
+      },
+      {
+        "type": "k8s",
+        "foreground": "#000000",
+        "background": "#33B1FF",
+        "template": " {icon} {value} ",
+        "icon": "\udb84\udcfe"
+      },
+      {
+        "type": "time",
+        "foreground": "#F2F4F8",
+        "background": "#393939",
+        "template": " {icon} {value} ",
+        "icon": "\uf017",
+        "options": {
+          "format": "HH:mm:ss"
+        }
+      }
+    ]
+  }
+}

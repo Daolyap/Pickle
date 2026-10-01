@@ -1,0 +1,156 @@
+{
+  "name": "kanagawa",
+  "description": "Kanagawa: inks and washi paper after Hokusai's wave, Powerline blocks.",
+  "terminal": {
+    "background": "#1F1F28",
+    "foreground": "#DCD7BA",
+    "cursorColor": "#DCD7BA",
+    "selectionBackground": "#2D4F67",
+    "black": "#16161D",
+    "red": "#C34043",
+    "green": "#76946A",
+    "yellow": "#C0A36E",
+    "blue": "#7E9CD8",
+    "purple": "#957FB8",
+    "cyan": "#6A9589",
+    "white": "#C8C093",
+    "brightBlack": "#727169",
+    "brightRed": "#C34043",
+    "brightGreen": "#76946A",
+    "brightYellow": "#C0A36E",
+    "brightBlue": "#7E9CD8",
+    "brightPurple": "#957FB8",
+    "brightCyan": "#6A9589",
+    "brightWhite": "#FFFFFF"
+  },
+  "syntax": {
+    "default": "default",
+    "command": "#6A9589",
+    "unknownCommand": "#C34043",
+    "parameter": "#727169",
+    "string": "#76946A",
+    "number": "#957FB8",
+    "variable": "#DCD7BA",
+    "operator": "#7E9CD8",
+    "keyword": "#7E9CD8",
+    "comment": "#727169",
+    "type": "#6A9589",
+    "member": "#DCD7BA",
+    "error": "#C34043",
+    "suggestion": "#727169",
+    "selectionBackground": "#2D4F67",
+    "translated": "#727169"
+  },
+  "ui": {
+    "accent": "#7E9CD8",
+    "muted": "#727169",
+    "success": "#76946A",
+    "warning": "#C0A36E",
+    "error": "#C34043",
+    "info": "#7E9CD8",
+    "panelBackground": "#1F1F28",
+    "panelForeground": "#DCD7BA",
+    "panelBorder": "#2D4F67",
+    "highlightBackground": "#2D4F67",
+    "highlightForeground": "#FFFFFF",
+    "menuBackground": "#2A2A37",
+    "menuForeground": "#DCD7BA",
+    "menuSelectedBackground": "#7E9CD8",
+    "menuSelectedForeground": "#000000",
+    "menuDescription": "#727169",
+    "matchHighlight": "#C0A36E"
+  },
+  "prompt": {
+    "separator": "powerline",
+    "newlineBeforeInput": false,
+    "promptChar": "\u276f",
+    "promptCharColor": "#7E9CD8",
+    "promptCharErrorColor": "#C34043",
+    "continuationPrompt": "\u2502 ",
+    "transientTemplate": "{time} {promptChar} ",
+    "left": [
+      {
+        "type": "admin",
+        "foreground": "#FFFFFF",
+        "background": "#C34043",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf0e7"
+        }
+      },
+      {
+        "type": "cwd",
+        "foreground": "#000000",
+        "background": "#7E9CD8",
+        "template": " {icon} {value} ",
+        "icon": "\uf07c",
+        "options": {
+          "maxDepth": "3"
+        }
+      },
+      {
+        "type": "git",
+        "foreground": "#000000",
+        "background": "#76946A",
+        "template": " {icon} {value} ",
+        "icon": "\ue0a0"
+      },
+      {
+        "type": "duration",
+        "foreground": "#000000",
+        "background": "#C0A36E",
+        "template": " {icon} {value} ",
+        "icon": "\uf252"
+      },
+      {
+        "type": "jobs",
+        "foreground": "#000000",
+        "background": "#6A9589",
+        "template": " {icon} {value} ",
+        "icon": "\uf013"
+      }
+    ],
+    "right": [
+      {
+        "type": "status",
+        "foreground": "#FFFFFF",
+        "background": "#C34043",
+        "template": " {value} ",
+        "options": {
+          "symbol": "\uf00d"
+        }
+      },
+      {
+        "type": "venv",
+        "foreground": "#000000",
+        "background": "#C0A36E",
+        "template": " {icon} {value} ",
+        "icon": "\ue73c"
+      },
+      {
+        "type": "node",
+        "foreground": "#000000",
+        "background": "#76946A",
+        "template": " {icon} {value} ",
+        "icon": "\ue718"
+      },
+      {
+        "type": "k8s",
+        "foreground": "#000000",
+        "background": "#7E9CD8",
+        "template": " {icon} {value} ",
+        "icon": "\udb84\udcfe"
+      },
+      {
+        "type": "time",
+        "foreground": "#DCD7BA",
+        "background": "#2D4F67",
+        "template": " {icon} {value} ",
+        "icon": "\uf017",
+        "options": {
+          "format": "HH:mm:ss"
+        }
+      }
+    ]
+  }
+}

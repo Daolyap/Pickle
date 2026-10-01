@@ -96,18 +96,32 @@ public class PackagingTests
         }
     }
 
+    // "python3" can be the Microsoft Store stub on Windows (it prints a hint and fails): use the first candidate that really is Python 3.
+    private static async Task<string?> FindPython(ProgramRunnerService runner)
+    {
+        foreach (var name in new[] { "python3", "python", "py" })
+        {
+            if (runner.Find(name) is { } path && await runner.RunAsync(path, ["--version"], new ProgramRunOptions { Timeout = TimeSpan.FromSeconds(10) }) is { Success: true } version
+                && (version.StdOut + version.StdErr).StartsWith("Python 3", StringComparison.Ordinal))
+            {
+                return path;
+            }
+        }
+
+        return null;
+    }
+
     private static async Task<string?> Generate(params string[] arguments)
     {
         var runner = new ProgramRunnerService();
-        var python = runner.Find("python3") ?? runner.Find("python");
-        if (python is null)
+        if (await FindPython(runner) is not { } python)
         {
             return null;
         }
 
         var result = await runner.RunAsync(python, [Path.Combine(Root(), "packaging", "modules.py"), .. arguments], new ProgramRunOptions { Timeout = TimeSpan.FromSeconds(30) });
         Assert.True(result.Success, result.StdErr);
-        return result.StdOut;
+        return result.StdOut.Replace("\r\n", "\n", StringComparison.Ordinal);
     }
 
     [Fact]

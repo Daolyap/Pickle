@@ -14,11 +14,15 @@ public sealed class EnvironmentPanelTests : IDisposable
     private readonly FakeHostsService _hosts = new() { Text = "# my hosts\n127.0.0.1 localhost\n10.0.0.5 web web.lan  # dev box\n" };
     private readonly FakeEnvironmentStore _env = new();
 
+    // Real folders and full paths on every OS: the PATH editor checks them against the file system ("/usr/bin" is not a full path on Windows).
+    private static readonly string Existing = Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    private static readonly string Missing = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, "definitely", "not", "here");
+
     public EnvironmentPanelTests()
     {
         _t.Runtime.Services.Add<IHostsService>(_hosts);
         _t.Runtime.Services.Add<IEnvironmentStore>(_env);
-        _env.Path(EnvironmentScope.User).AddRange(["/usr/bin", "/definitely/not/here", "/usr/bin"]);
+        _env.Path(EnvironmentScope.User).AddRange([Existing, Missing, Existing]);
         _env.Values(EnvironmentScope.User)["EDITOR"] = "nano";
     }
 
@@ -112,7 +116,7 @@ public sealed class EnvironmentPanelTests : IDisposable
         var (panel, _) = Open("path");
         var script = new UiScript()
             .WaitFor("loaded", _ => panel.List.TotalCount == 3)
-            .Do("flags", _ => Assert.Equal(["/usr/bin:", "/definitely/not/here:missing", "/usr/bin:duplicate"], panel.List.VisibleItems.Select(r => r.Text + ":" + r.Hint).ToArray()))
+            .Do("flags", _ => Assert.Equal([Existing + ":", Missing + ":missing", Existing + ":duplicate"], panel.List.VisibleItems.Select(r => r.Text + ":" + r.Hint).ToArray()))
             .Do("select the missing entry", _ => panel.List.Select(panel.List.VisibleItems[1]))
             .Press(Key.F4)
             .WaitFor("removed", _ => panel.List.TotalCount == 2 && panel.Mode.IsDirty)
@@ -123,7 +127,7 @@ public sealed class EnvironmentPanelTests : IDisposable
         TuiHarness.Run(panel, script);
 
         script.AssertOk();
-        Assert.Equal(["path User /usr/bin|/usr/bin"], _env.Calls);
+        Assert.Equal([$"path User {Existing}|{Existing}"], _env.Calls);
     }
 
     [Fact]

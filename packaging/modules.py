@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Turns packaging/modules.json (the optional modules) into installer pieces.
 
-  modules.py wix                    the WiX fragment: one feature per module (off by default), each writing
+  modules.py wix [out-file]         the WiX fragment: one feature per module (off by default), each writing
                                     HKLM\\Software\\Pickle\\Modules\\<id> = 1, which Pickle reads at start
-  modules.py rpm-spec <pickle.spec> the spec with its @@MODULE_*@@ marker lines replaced by one pickle-module-<id>
+  modules.py rpm-spec <pickle.spec> [out-file]
+                                    the spec with its @@MODULE_*@@ marker lines replaced by one pickle-module-<id>
                                     sub-package per module (a marker file in /etc/pickle/modules.d) and pickle-modules-all
   modules.py check                  validates the JSON
 
@@ -140,11 +141,21 @@ def rpm_spec(spec_path, modules):
     return text
 
 
+def emit(text, path=None):
+    # UTF-8 with \n on every OS (a Windows console would otherwise use its code page and \r\n).
+    if path:
+        with open(path, "w", encoding="utf-8", newline="\n") as file:
+            file.write(text)
+    else:
+        sys.stdout.reconfigure(encoding="utf-8", newline="\n")
+        sys.stdout.write(text)
+
+
 def main(argv):
     if len(argv) >= 2 and argv[1] == "wix":
-        sys.stdout.write(wix(load()))
+        emit(wix(load()), argv[2] if len(argv) > 2 else None)
     elif len(argv) >= 3 and argv[1] == "rpm-spec":
-        sys.stdout.write(rpm_spec(argv[2], load()))
+        emit(rpm_spec(argv[2], load()), argv[3] if len(argv) > 3 else None)
     elif len(argv) >= 2 and argv[1] == "check":
         print(f"{len(load())} modules")
     else:

@@ -65,21 +65,26 @@ public class AdminModelTests
     public void PathListEditsAndFlagsProblems()
     {
         var sep = PathList.Separator;
-        var list = PathList.Parse($"/usr/bin{sep}/nope{sep}/usr/bin{sep}relative", sep);
+        // "/usr/bin" is not a full path on Windows (no drive), so build the folders from the platform's root.
+        var root = Path.GetPathRoot(Path.GetFullPath(Path.DirectorySeparatorChar.ToString()))!;
+        var bin = Path.Combine(root, "usr", "bin");
+        var nope = Path.Combine(root, "nope");
+        var tool = Path.Combine(root, "opt", "tool");
+        var list = PathList.Parse($"{bin}{sep}{nope}{sep}{bin}{sep}relative", sep);
 
-        Assert.Equal(["/usr/bin", "/nope", "/usr/bin", "relative"], list.Items);
-        Func<string, bool> exists = d => d == "/usr/bin";
+        Assert.Equal([bin, nope, bin, "relative"], list.Items);
+        Func<string, bool> exists = d => d == bin;
         Assert.Null(list.Problem(0, exists, x => x));
-        Assert.Equal(OperatingSystem.IsWindows() ? "relative" : "missing", list.Problem(1, exists, x => x));
-        Assert.Equal(OperatingSystem.IsWindows() ? "relative" : "duplicate", list.Problem(2, exists, x => x));
+        Assert.Equal("missing", list.Problem(1, exists, x => x));
+        Assert.Equal("duplicate", list.Problem(2, exists, x => x));
         Assert.Equal("relative", list.Problem(3, exists, x => x));
 
         Assert.True(list.Move(1, -1));
-        Assert.Equal("/nope", list.Items[0]);
+        Assert.Equal(nope, list.Items[0]);
         Assert.False(list.Move(0, -1));
         list.RemoveAt(0);
-        list.Add("/opt/tool", 0);
-        Assert.Equal("/opt/tool", list.Items[0]);
+        list.Add(tool, 0);
+        Assert.Equal(tool, list.Items[0]);
         Assert.Throws<ArgumentException>(() => list.Add("a" + sep + "b"));
         Assert.Throws<ArgumentException>(() => list.Add(" "));
     }

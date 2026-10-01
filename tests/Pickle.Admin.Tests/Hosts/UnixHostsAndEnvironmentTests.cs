@@ -1,3 +1,4 @@
+using Pickle.Abstractions;
 using Pickle.Abstractions.Services;
 using Pickle.Admin.EnvVars;
 using Pickle.Admin.Hosts;
@@ -55,7 +56,8 @@ public sealed class UnixHostsAndEnvironmentTests : IDisposable
         var result = await service.WriteAsync(document);
 
         Assert.False(result.Success);
-        Assert.StartsWith("sudo cp -p -- " + hosts + " " + hosts + ".pickle-backup; sudo install -m 0644 -o root -- ", result.ShellCommand, StringComparison.Ordinal);
+        // PowerShellQuote leaves plain paths bare and single-quotes anything else (a Windows temp path has backslashes).
+        Assert.StartsWith("sudo cp -p -- " + PowerShellQuote.Word(hosts) + " " + PowerShellQuote.Word(hosts + ".pickle-backup") + "; sudo install -m 0644 -o root -- ", result.ShellCommand, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -85,6 +87,7 @@ public sealed class UnixHostsAndEnvironmentTests : IDisposable
     [Fact]
     public async Task PickleScopeNeedsNoPrivilegesAndMachineScopeInstallsViaOneCommand()
     {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "The machine-wide scope (/etc/environment) exists on Linux only");
         using var t = TestPickle.Create();
         var file = Path.Combine(_dir, "environment");
         File.WriteAllText(file, "LANG=C\n");

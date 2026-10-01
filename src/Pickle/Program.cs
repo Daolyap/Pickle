@@ -64,4 +64,4 @@ if (options.UninstallPrompt)
         : 1;
 }
 
-return PickleApp.Run(options, BuiltInPlugins.Create());
+return PickleApp.Run(options, BuiltInPlugins.Create(), optionalModules: BuiltInPlugins.OptionalModules());

@@ -1,4 +1,5 @@
 using Pickle.Abstractions;
+using Pickle.Abstractions.Services;
 
 namespace Pickle;
 
@@ -24,4 +25,7 @@ internal static class BuiltInPlugins
         new Tui.Panels.Themes.ThemeGalleryPanelPlugin(),
         new Tui.Panels.Ssh.SshPanelPlugin(),
     ];
+
+    /// <summary>The optional modules (Docker, Kubernetes, nmap, …); only those selected at install or with <c>pk module</c> are loaded.</summary>
+    public static IReadOnlyList<ModuleDescriptor> OptionalModules() => Modules.OptionalModules.All;
 }

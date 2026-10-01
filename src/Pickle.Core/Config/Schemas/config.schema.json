@@ -246,6 +246,34 @@
         }
       }
     },
+    "modules": {
+      "type": "object",
+      "description": "Optional modules (Docker, Kubernetes, nmap, ...): which are turned on. Manage them with pk module.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of modules turned on for this user, on top of what the installer selected."
+        },
+        "disabled": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of modules turned off for this user, even when the installer selected them."
+        },
+        "askAtSetup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Offer the optional modules at the first start and in pk setup."
+        }
+      }
+    },
     "plugins": {
       "type": "object",
       "description": "Plugins (PowerShell modules and .NET assemblies).",

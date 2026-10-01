@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Pickle.Modules\Pickle.Modules.csproj" />
+    <ProjectReference Include="..\..\src\Pickle.Tui\Pickle.Tui.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The same headless Terminal.Gui harness as the panel tests. -->
+    <Compile Include="..\Pickle.Tui.Tests\TuiHarness.cs" Link="TuiHarness.cs" />
+  </ItemGroup>
+</Project>

@@ -12,5 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Pickle.Tui.Tests" />
+    <InternalsVisibleTo Include="Pickle.Modules.Tests" />
   </ItemGroup>
 </Project>

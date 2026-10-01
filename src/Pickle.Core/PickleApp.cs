@@ -9,7 +9,7 @@ namespace Pickle.Core;
 /// <summary>Runs Pickle in the mode selected by <see cref="PickleOptions"/>. Called by pickle.exe's Program.</summary>
 public static class PickleApp
 {
-    public static int Run(PickleOptions options, IReadOnlyList<IPicklePlugin> builtInPlugins, ITerminal? terminal = null, PicklePaths? paths = null)
+    public static int Run(PickleOptions options, IReadOnlyList<IPicklePlugin> builtInPlugins, ITerminal? terminal = null, PicklePaths? paths = null, IReadOnlyList<Abstractions.Services.ModuleDescriptor>? optionalModules = null)
     {
         paths ??= PicklePaths.Resolve();
         paths.EnsureCreated();
@@ -20,7 +20,7 @@ public static class PickleApp
         using var runtime = new PickleRuntime(options, terminal, paths, log);
         log.Info("startup", $"Pickle {PickleRuntime.Version} (PowerShell {PickleRuntime.PowerShellVersion}) starting; args mode: {Mode(options)}");
         runtime.InitializeComponents();
-        runtime.Start(builtInPlugins);
+        runtime.Start(builtInPlugins, optionalModules);
 
         if (options.Command is not null)
         {

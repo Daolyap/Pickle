@@ -10,7 +10,7 @@ namespace Pickle.Core.Hosting;
 public sealed class FirstRun : IFirstRunOffers
 {
     /// <summary>Bump when adding offers that people who already went through setup should see.</summary>
-    public const int SetupVersion = 2;
+    public const int SetupVersion = 3;
 
     private readonly List<FirstRunOffer> _offers = [];
 

@@ -53,7 +53,9 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         Completion = new CompletionEngine(this);
         Prompt = new PromptEngine(this);
         Translation = new TranslationPipeline(this);
-        Plugins = new PluginManager(this);
+        PluginManager = new PluginManager(this);
+        Plugins = PluginManager;
+        ModuleCatalog = new Modules.ModuleCatalog(this);
         Sync = new SyncService(this);
         LineEditor = new LineEditor(this);
         ProfileLoader = new ProfileLoader(this);
@@ -64,6 +66,8 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         ServiceRegistry.Add<IGitService>(new GitService(log));
         ServiceRegistry.Add<IFirstRunOffers>(FirstRun);
         ServiceRegistry.Add<IBackgroundWork>(Background);
+        ServiceRegistry.Add<IModuleCatalog>(ModuleCatalog);
+        ServiceRegistry.Add<IProgramRunner>(new Commands.ProgramRunnerService());
         ServiceRegistry.Add(this);
     }
 
@@ -126,6 +130,10 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     public IPromptRenderer Prompt { get; }
     public ITranslationPipeline Translation { get; }
     public IPluginManager Plugins { get; }
+    internal PluginManager PluginManager { get; }
+
+    /// <summary>The optional modules and which of them are on (<c>pk module</c>).</summary>
+    public Modules.ModuleCatalog ModuleCatalog { get; }
     public ISyncService Sync { get; }
     public ILineEditor LineEditor { get; }
     public ProfileLoader ProfileLoader { get; }
@@ -163,6 +171,8 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
         Startup.Mark("runtime");
         CommandRegistry.Register(new Commands.VersionCommand(this));
         CommandRegistry.Register(new Commands.SetupCommand(this));
+        CommandRegistry.Register(new Modules.ModuleCommand(this));
+        FirstRun.Add(Modules.ModuleSetup.Offer(this));
         Update.UpdateCheck.Register(this);
         foreach (var component in Components.OfType<IRuntimeComponent>())
         {
@@ -173,8 +183,9 @@ public sealed class PickleRuntime : IPickleContext, IDisposable
     }
 
     /// <summary>Phase 2: open the runspace, load plugins, define aliases/shims, run the profile.</summary>
-    public void Start(IReadOnlyList<IPicklePlugin> builtInPlugins)
+    public void Start(IReadOnlyList<IPicklePlugin> builtInPlugins, IReadOnlyList<ModuleDescriptor>? optionalModules = null)
     {
+        ModuleCatalog.SetAvailable(optionalModules ?? []);
         Engine.Open();
         Startup.Mark("runspace");
         Plugins.LoadAll(builtInPlugins);

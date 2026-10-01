@@ -27,6 +27,9 @@ public sealed class PickleConfig
     public TranslationSettings Translation { get; set; } = new();
     public ShellSettings Shell { get; set; } = new();
     public PluginSettings Plugins { get; set; } = new();
+
+    /// <summary>Which optional modules (Docker, Kubernetes, …) are on for this user, on top of what the installer selected.</summary>
+    public ModuleSettings Modules { get; set; } = new();
     public SyncSettings Sync { get; set; } = new();
     public TerminalSettings Terminal { get; set; } = new();
     public WingetSettings Winget { get; set; } = new();
@@ -135,6 +138,22 @@ public sealed class PluginSettings
 
     /// <summary>SHA-256 hashes of .NET plugin assemblies the user has trusted.</summary>
     public List<string> TrustedAssemblies { get; set; } = [];
+}
+
+/// <summary>
+/// The user's choice of optional modules. The installer's selection (MSI features, RPM sub-packages, <c>modules.d</c>
+/// markers) is the starting point: <see cref="Enabled"/> adds to it and <see cref="Disabled"/> removes from it.
+/// </summary>
+public sealed class ModuleSettings
+{
+    /// <summary>Module ids turned on for this user (<c>pk module enable docker</c>).</summary>
+    public List<string> Enabled { get; set; } = [];
+
+    /// <summary>Module ids turned off for this user even when the installer selected them.</summary>
+    public List<string> Disabled { get; set; } = [];
+
+    /// <summary>Ask which optional modules to turn on at the first start and in <c>pk setup</c>.</summary>
+    public bool AskAtSetup { get; set; } = true;
 }
 
 public sealed class SyncSettings

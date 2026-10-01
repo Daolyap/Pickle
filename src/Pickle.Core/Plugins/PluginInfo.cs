@@ -20,6 +20,7 @@ public enum PluginStatus
 public sealed class PluginInfo
 {
     public const string BuiltInKind = "built-in";
+    public const string ModuleKind = "module";
     public const string PowerShellKind = "powershell";
     public const string DotnetKind = "dotnet";
 
@@ -27,7 +28,7 @@ public sealed class PluginInfo
 
     public string DisplayName { get; set; } = string.Empty;
 
-    /// <summary>"built-in", "powershell" or "dotnet".</summary>
+    /// <summary>"built-in", "module" (optional, compiled in), "powershell" or "dotnet".</summary>
     public required string Kind { get; init; }
 
     public PluginStatus Status { get; set; }
